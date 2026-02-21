@@ -32,6 +32,12 @@ table_*.png
 table_ascii_*.txt
 table_ascii_debug_*.json
 
+# Root-level ad-hoc test images (generated during development)
+output_test*.png
+test-table*.png
+pricing_table.png
+zeble-test.png
+
 # Exported zips (themes are tracked separately in themes/)
 themes_full_*.zip
 theme_*.zip
