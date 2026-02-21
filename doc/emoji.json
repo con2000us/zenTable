@@ -1,0 +1,8 @@
+[
+  {"Category":"Status","Icons":"✅ ❌ ⚠️ 🚀 💯","Description":"Common status indicators"},
+  {"Category":"Flags","Icons":"🇹🇼 🇯🇵 🇺🇸 🇬🇧 🇩🇪 🇫🇷","Description":"Country flags"},
+  {"Category":"Objects","Icons":"🖥️ 💾 📦 🔧 📊 💰","Description":"Tech and business"},
+  {"Category":"Nature","Icons":"🌲 🌊 🔥 🌈 ⭐ 🌙","Description":"Natural elements"},
+  {"Category":"Faces","Icons":"😀 😎 🤔 😱 🥳 🎉","Description":"Face expressions"},
+  {"Category":"Arrows","Icons":"⬆️ ⬇️ ⬅️ ➡️ ↗️ ↘️","Description":"Directional arrows"}
+]

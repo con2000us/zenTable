@@ -1,0 +1,7 @@
+[
+  {"Service":"🐳 Docker","Version":"24.0.7","Status":"🟢 Running","Uptime":"45d 12h","CPU":"12%","Memory":"4.2GB"},
+  {"Service":"☸️ Kubernetes","Version":"1.28.3","Status":"🟢 Running","Uptime":"30d 8h","CPU":"18%","Memory":"8.1GB"},
+  {"Service":"🗄️ PostgreSQL","Version":"15.4","Status":"🟢 Running","Uptime":"60d 0h","CPU":"8%","Memory":"2.5GB"},
+  {"Service":"⚡ Redis","Version":"7.2.3","Status":"🟡 Degraded","Uptime":"12d 5h","CPU":"45%","Memory":"1.8GB"},
+  {"Service":"📊 Grafana","Version":"10.2.0","Status":"🟢 Running","Uptime":"25d 3h","CPU":"5%","Memory":"512MB"}
+]

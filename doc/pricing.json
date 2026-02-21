@@ -1,0 +1,6 @@
+[
+  {"Plan":"🥉 Basic","Price":"$9/mo","Users":"1-5","Storage":"10GB","Support":"📧 Email"},
+  {"Plan":"🥈 Pro","Price":"$29/mo","Users":"6-20","Storage":"100GB","Support":"💬 Chat"},
+  {"Plan":"🥇 Enterprise","Price":"$99/mo","Users":"∞","Storage":"1TB","Support":"📞 Phone"},
+  {"Plan":"🏆 Ultimate","Price":"$299/mo","Users":"∞","Storage":"10TB","Support":"🤝 Dedicated"}
+]

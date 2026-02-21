@@ -1,0 +1,11 @@
+# PaddleOCR FastAPI 服務依賴（api/paddleocr_service.py）
+# 安裝：pip install -r requirements-ocr.txt
+# 建議在專案根目錄或獨立 venv 使用
+
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
+paddleocr>=2.0.1
+paddlepaddle>=2.5.0
+Pillow>=9.0.0
+numpy>=1.20.0

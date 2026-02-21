@@ -1,0 +1,7 @@
+[
+  {"Item":"MacBook Pro M3","SKU":"MBP-M3-001","Stock":45,"Location":"A-12","Status":"✅ Available"},
+  {"Item":"iPhone 15 Pro","SKU":"IP15P-256","Stock":12,"Location":"B-05","Status":"⚠️ Low Stock"},
+  {"Item":"AirPods Pro 2","SKU":"APP2-WH","Stock":0,"Location":"C-08","Status":"❌ Out of Stock"},
+  {"Item":"iPad Air 5","SKU":"IPA5-128","Stock":78,"Location":"A-15","Status":"✅ Available"},
+  {"Item":"Apple Watch 9","SKU":"AW9-45MM","Stock":23,"Location":"B-12","Status":"✅ Available"}
+]

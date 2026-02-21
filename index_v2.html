@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeble 測試面板 v2</title>
+    <script>
+        // ========== 主題配置 ==========
+        var defaultThemes = {
+            dark: { name: "深色", bg: "#1a1a2e", text: "#ffffff", header: "#0f3460", headerText: "#e94560", alt: "#16213e", border: "#4a5568", accent: "#e94560" },
+            light: { name: "淺色", bg: "#f8f9fa", text: "#212529", header: "#e9ecef", headerText: "#495057", alt: "#ffffff", border: "#dee2e6", accent: "#0d6efd" },
+            cyberpunk: { name: "賽博龐克", bg: "#0d0221", text: "#00ff9f", header: "#ff00ff", headerText: "#000000", alt: "#1a1a3e", border: "#00ff9f", accent: "#ffff00" },
+            forest: { name: "森林", bg: "#1a2f1a", text: "#90ee90", header: "#2d5a2d", headerText: "#ffffff", alt: "#243424", border: "#4a7a4a", accent: "#7fff00" },
+            ocean: { name: "海洋", bg: "#0a1929", text: "#64b5f6", header: "#1565c0", headerText: "#ffffff", alt: "#0d2137", border: "#2196f3", accent: "#00bcd4" },
+            sunset: { name: "日落", bg: "#2d1f1f", text: "#ffcc80", header: "#bf360c", headerText: "#ffffff", alt: "#3d2f2f", border: "#ff7043", accent: "#ffab40" },
+            rose: { name: "玫瑰", bg: "#2f1a1a", text: "#f8bbd9", header: "#c2185b", headerText: "#ffffff", alt: "#3f2a2a", border: "#ec407a", accent: "#f48fb1" },
+            midnight: { name: "午夜", bg: "#0f0f23", text: "#b0a0ff", header: "#2a2a4a", headerText: "#e0e0ff", alt: "#1a1a33", border: "#5a5a8a", accent: "#8070ff" }
+        };
+        var currentTheme = 'dark';
+        var themes = JSON.parse(JSON.stringify(defaultThemes));
+        
+        // ========== 範例數據 ==========
+        var examples = {
+            servers: [
+                {"伺服器": "台灣", "狀態": "運行中", "延遲": "15ms", "負載": "45%"},
+                {"伺服器": "日本", "狀態": "運行中", "延遲": "28ms", "負載": "62%"},
+                {"伺服器": "美國", "狀態": "維護", "延遲": "--", "負載": "0%"}
+            ],
+            status: [
+                {"專案": "Alpha", "狀態": "部署中", "進度": "75%"},
+                {"專案": "Beta", "狀態": "維護", "進度": "100%"},
+                {"專案": "Gamma", "狀態": "離線", "進度": "0%"}
+            ],
+            emoji: [
+                {"類別": "狀態", "範例": "✅ ✗ ✔ ⭕"},
+                {"類別": "動作", "範例": "🎉 🚀 💡 🔥"},
+                {"類別": "愛心", "範例": "❤️ 🧡 💛 💚"}
+            ],
+            pricing: [
+                {"方案": "入門", "價格": "$9/月", "功能": "基本"},
+                {"方案": "專業", "價格": "$29/月", "功能": "進階"},
+                {"方案": "企業", "價格": "$99/月", "功能": "全功能"}
+            ]
+        };
+        
+        // ========== 標籤頁函數 ==========
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(function(c) { c.style.display = 'none'; });
+            var tab = document.getElementById('tab-' + tabName);
+            if (tab) tab.style.display = 'block';
+            
+            // 更新左側面板按鈕狀態
+            var buttons = document.querySelectorAll('.panel:first-child .tabs .tab');
+            buttons.forEach(function(b) {
+                b.classList.remove('active');
+                if (b.getAttribute('onclick') && b.getAttribute('onclick').includes("'" + tabName + "'")) {
+                    b.classList.add('active');
+                }
+            });
+        }
+        
+        function switchTab(tabName) { showTab(tabName); }
+
+        function switchPreviewTab(tabName) {
+            document.querySelectorAll('.preview-content').forEach(function(c) { c.style.display = 'none'; });
+            var preview = document.getElementById('preview-' + tabName);
+            if (preview) preview.style.display = 'block';
+
+            // 更新預覽面板按鈕狀態 (中間面板)
+            var buttons = document.querySelectorAll('.panel:nth-child(2) .tabs .tab');
+            buttons.forEach(function(b) {
+                b.classList.remove('active');
+                if (b.getAttribute('onclick') && b.getAttribute('onclick').includes("'" + tabName + "'")) {
+                    b.classList.add('active');
+                }
+            });
+        }
+        
+        // ========== 主題相關 ==========
+        function renderThemeGrid() {
+            var grid = document.getElementById('themeGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            for (var key in themes) {
+                var theme = themes[key];
+                var btn = document.createElement('div');
+                btn.className = 'theme-btn' + (key === currentTheme ? ' active' : '');
+                btn.innerHTML = '<div class="color-dot" style="background:' + theme.accent + '"></div>' + theme.name;
+                btn.onclick = (function(k) { return function() { selectTheme(k); }; })(key);
+                grid.appendChild(btn);
+            }
+        }
+        
+        function renderThemeList() {
+            var list = document.getElementById('themeList');
+            if (!list) return;
+            var html = '';
+            for (var k in themes) {
+                html += '<span style="display:inline-block;padding:3px 8px;background:#0f0f1a;border-radius:4px;margin:2px;">' + themes[k].name + ' (' + k + ')</span>';
+            }
+            list.innerHTML = html;
+        }
+        
+        function selectTheme(themeName) {
+            currentTheme = themeName;
+            renderThemeGrid();
+            updatePreview();
+            checkContrast();
+            updateOutputCommand();
+        }
+        
+        function updateThemePreview() {
+            var box = document.getElementById('themePreviewBox');
+            if (!box) return;
+            var theme = themes[currentTheme];
+            box.style.background = theme.bg;
+            box.style.color = theme.text;
+            box.style.border = '2px solid ' + theme.border;
+            box.innerHTML = '<div style="background:' + theme.header + ';color:' + theme.headerText + ';padding:12px;font-weight:600;">' + theme.name + '</div><table style="width:100%;"><tr style="background:' + theme.alt + ';"><td>範例</td><td style="color:' + theme.accent + ';text-align:right;">強調</td></tr><tr><td>正常</td><td>內容</td></tr></table>';
+        }
+        
+        function resetCurrentTheme() {
+            themes[currentTheme] = JSON.parse(JSON.stringify(defaultThemes[currentTheme]));
+            updateThemePreview();
+            updatePreview();
+            checkContrast();
+        }
+        
+        function saveCustomTheme() {
+            localStorage.setItem('zeble_custom_theme', JSON.stringify(themes[currentTheme]));
+            alert('已儲存');
+        }
+        
+        function loadCustomTheme() {
+            var saved = localStorage.getItem('zeble_custom_theme');
+            if (saved) {
+                themes[currentTheme] = JSON.parse(saved);
+                updateThemePreview();
+                updatePreview();
+                checkContrast();
+                alert('已載入');
+            } else {
+                alert('沒有儲存的主題');
+            }
+        }
+        
+        // ========== 顏色輸入 ==========
+        function updateColorInput(el) {
+            var hex = document.getElementById(el.id + 'Hex');
+            if (hex) hex.value = el.value;
+        }
+        
+        // ========== 範例載入 ==========
+        function loadExample(name) {
+            if (examples[name]) {
+                document.getElementById('jsonData').value = JSON.stringify(examples[name], null, 2);
+                updatePreview();
+            }
+        }
+        
+        // ========== 預覽更新 (前端模擬) ==========
+        function updatePreview() {
+            var theme = themes[currentTheme];
+            var title = document.getElementById('tableTitle');
+            var footer = document.getElementById('tableFooter');
+            var jsonData = document.getElementById('jsonData');
+            var box = document.getElementById('tablePreviewBox');
+            if (!title || !jsonData || !box) return;
+            
+            var data;
+            try { data = JSON.parse(jsonData.value); } catch (e) {
+                box.innerHTML = '<div style="color:#ef4444;">JSON 格式錯誤</div>';
+                return;
+            }
+            
+            var headers = data.length > 0 ? Object.keys(data[0]) : [];
+            box.style.background = theme.bg;
+            box.style.color = theme.text;
+            box.style.border = '1px solid ' + theme.border;
+            
+            var html = '<div style="background:' + theme.header + ';color:' + theme.headerText + ';padding:15px;font-weight:600;">' + title.value + '</div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:' + theme.header + ';color:' + theme.headerText + ';">' + headers.map(function(h) { return '<th style="padding:12px;text-align:left;">' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+            
+            data.forEach(function(row, i) {
+                var bg = i % 2 === 0 ? theme.bg : theme.alt;
+                html += '<tr style="background:' + bg + ';border-bottom:1px solid ' + theme.border + ';">' + headers.map(function(h) { return '<td style="padding:10px;">' + (row[h] || '') + '</td>'; }).join('') + '</tr>';
+            });
+            html += '</tbody></table>';
+            
+            if (footer && footer.value) {
+                html += '<div style="padding:10px;color:' + theme.text + ';opacity:0.6;font-size:12px;border-top:1px solid ' + theme.border + ';">' + footer.value + '</div>';
+            }
+            box.innerHTML = html;
+        }
+        
+        // ========== 對比度 ==========
+        function getLuminance(hex) {
+            var rgb = parseInt(hex.slice(1), 16);
+            var r = ((rgb >> 16) & 0xff) / 255;
+            var g = ((rgb >> 8) & 0xff) / 255;
+            var b = (rgb & 0xff) / 255;
+            var RGB = [r, g, b].map(function(c) { return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+            return 0.2126 * RGB[0] + 0.7152 * RGB[1] + 0.0722 * RGB[2];
+        }
+        
+        function getContrastRatio(fg, bg) {
+            var L1 = getLuminance(fg);
+            var L2 = getLuminance(bg);
+            return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+        }
+        
+        function getContrastBadge(ratio) {
+            if (ratio >= 7) return '<span style="color:#22c55e;">AAA ' + ratio.toFixed(2) + ':1</span>';
+            if (ratio >= 4.5) return '<span style="color:#22c55e;">AA ' + ratio.toFixed(2) + ':1</span>';
+            if (ratio >= 3) return '<span style="color:#f59e0b;">大字 ' + ratio.toFixed(2) + ':1</span>';
+            return '<span style="color:#ef4444;">❌ ' + ratio.toFixed(2) + ':1</span>';
+        }
+        
+        function checkContrast() {
+            var theme = themes[currentTheme];
+            var report = '<strong>' + theme.name + '</strong><br>';
+            report += '文字: ' + getContrastBadge(getContrastRatio(theme.text, theme.bg)) + '<br>';
+            report += '標題: ' + getContrastBadge(getContrastRatio(theme.headerText, theme.header)) + '<br>';
+            var contrastEl = document.getElementById('contrastReport');
+            if (contrastEl) contrastEl.innerHTML = report;
+        }
+        
+        // ========== 輸出指令 ==========
+        function updateOutputCommand() {
+            var mode = document.getElementById('renderMode');
+            var rows = document.getElementById('rowsPerPage');
+            var page = document.getElementById('pageNum');
+            var maxP = document.getElementById('maxPages');
+            var out = document.getElementById('commandOutput');
+            if (!mode || !rows || !page || !out) return;
+            
+            var cmd = 'python3 zeble.py zeble_data.json output.png';
+            if (currentTheme !== 'dark') cmd += ' --' + currentTheme;
+            if (mode.value === 'css') cmd = 'python3 zeble_render.py zeble_data.json output.png --force-css';
+            else if (mode.value === 'ascii') cmd = 'python3 zeble.py zeble_data.json output.txt --ascii';
+            if (rows.value !== '10') cmd += ' --rows-per-page ' + rows.value;
+            if (page.value !== '1') cmd += ' --page ' + page.value;
+            if (maxP && maxP.value !== '0') cmd += ' --max-pages ' + maxP.value;
+            
+            out.textContent = cmd;
+        }
+        
+        function generateCommand() {
+            downloadData();
+            updateOutputCommand();
+        }
+        
+        function copyCommand() {
+            navigator.clipboard.writeText(document.getElementById('commandOutput').textContent).then(function() { alert('已複製'); });
+        }
+        
+        function executeCommand() {
+            var status = document.getElementById('execStatus');
+            status.innerHTML = '<span style="color:#3b82f6;">執行中...</span>';
+            setTimeout(function() { status.innerHTML = '<span style="color:#22c55e;">完成</span>'; }, 1000);
+        }
+        
+        // ========== 下載 ==========
+        function getFormData() {
+            var theme = themes[currentTheme];
+            var data;
+            try { data = JSON.parse(document.getElementById('jsonData').value); }
+            catch(e) { data = []; }
+            
+            return {
+                title: document.getElementById('tableTitle').value,
+                footer: document.getElementById('tableFooter').value || null,
+                rows: data,
+                theme: {
+                    bg_color: theme.bg, text_color: theme.text,
+                    header_bg: theme.header, header_text: theme.headerText,
+                    alt_row_color: theme.alt, border_color: theme.border,
+                    highlight_color: theme.accent
+                }
+            };
+        }
+        
+        function downloadData() {
+            var blob = new Blob([JSON.stringify(getFormData(), null, 2)], {type: 'application/json'});
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'zeble_data.json';
+            a.click();
+        }
+        
+        function downloadTheme() {
+            var blob = new Blob([JSON.stringify(themes[currentTheme], null, 2)], {type: 'application/json'});
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'zeble_theme_' + currentTheme + '.json';
+            a.click();
+        }
+        
+        // ========== 真實後端渲染 ==========
+        function renderBackend() {
+            var box = document.getElementById('imagePreviewBox');
+            var asciiBox = document.getElementById('asciiPreviewBox');
+            if (!box) return;
+
+            // 切換到圖片預覽 Tab
+            switchPreviewTab('image');
+            
+            box.innerHTML = '<div style="padding:40px;color:#e94560;">渲染中...</div>';
+            if (asciiBox) asciiBox.textContent = '載入中...';
+
+            var formData = new FormData();
+            var data = getFormData();
+            
+            // 準備資料
+            // 由於 gentable_pil.php 期望的格式是 JSON 字串放在 'data' 欄位
+            // 我們直接使用 JSON.stringify 將整個物件轉字串
+            // 注意：getFormData 已經回傳了 {title, rows, theme: {...}} 結構
+            // gentable_pil.php 解碼後會使用 ['title'] 和 ['rows']
+            formData.append('data', JSON.stringify(data));
+            
+            // 主題名稱
+            formData.append('theme', currentTheme);
+
+            // 處理樣式參數 (覆蓋 theme 設定)
+            // PIL 模式支援個別參數
+            var styleParams = [
+                'bg_color', 'text_color', 'header_bg', 'header_text', 
+                'alt_row_color', 'border_color', 'font_size', 
+                'row_height', 'header_height'
+            ];
+            
+            // 從 DOM 獲取數值
+            var getVal = function(id) { var el = document.getElementById(id); return el ? el.value : null; };
+            var p;
+            
+            // 字體大小
+            if (p = getVal('titleFontSize')) formData.append('title_font_size', p);
+            if (p = getVal('headerFontSize')) formData.append('header_font_size', p);
+            if (p = getVal('bodyFontSize')) formData.append('font_size', p);
+            
+            // 尺寸
+            if (p = getVal('rowHeight')) formData.append('row_height', p);
+            if (p = getVal('headerHeight')) formData.append('header_height', p);
+
+            // 顏色 (從當前主題取得，因為 UI 上沒有個別顏色的 input，除了 highlight)
+            // 如果要支援即時修改顏色，需要在 UI 上增加對應的 color input
+            // 目前僅支援預覽中的樣式參數
+
+            // 決定呼叫哪個 API
+            var mode = document.getElementById('renderMode').value;
+            var endpoint = 'gentable_pil.php'; // 預設 PIL
+            if (mode === 'css') endpoint = 'gentable_css.php';
+            else if (mode === 'ascii') endpoint = 'gentable_ascii.php';
+            else if (mode === 'auto') endpoint = 'gentable_pil.php';
+
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    if (result.mode === 'ascii' || (result.text && !result.image)) {
+                        // ASCII 模式
+                         switchPreviewTab('ascii');
+                         if (asciiBox) asciiBox.textContent = result.text;
+                         box.innerHTML = '<div style="padding:20px;">ASCII 模式請看 ASCII 標籤</div>';
+                    } else {
+                        // 圖片模式
+                        var imgUrl = result.image + '?t=' + new Date().getTime(); // 防止快取
+                        box.innerHTML = '<div class="image-preview"><img src="' + imgUrl + '" style="max-width:100%;box-shadow:0 5px 15px rgba(0,0,0,0.5);"></div>';
+                        
+                        // 如果也有 ASCII (混合模式?)
+                        if (result.text && asciiBox) asciiBox.textContent = result.text;
+                    }
+                } else {
+                    box.innerHTML = '<div style="color:#ef4444;padding:20px;">錯誤: ' + (result.error || '未知錯誤') + '<br><small>' + (result.debug || '') + '</small></div>';
+                    console.error(result.debug);
+                }
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+                box.innerHTML = '<div style="color:#ef4444;padding:20px;">請求失敗: ' + error.message + '</div>';
+            });
+        }
+        
+        function resetAllParams() {
+            if (confirm('重置所有參數？')) {
+                document.getElementById('tableTitle').value = '狀態監控';
+                document.getElementById('tableFooter').value = 'Generated by Zeble';
+                document.getElementById('jsonData').value = JSON.stringify(examples.servers, null, 2);
+                document.getElementById('rowsPerPage').value = 10;
+                document.getElementById('pageNum').value = 1;
+                var maxP = document.getElementById('maxPages');
+                if (maxP) maxP.value = 0;
+                selectTheme('dark');
+            }
+        }
+        
+        // ========== 初始化 ==========
+        window.onload = function() {
+            renderThemeGrid();
+            renderThemeList();
+            updatePreview();
+            checkContrast();
+            updateOutputCommand();
+            showTab('data');
+        };
+    </script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f0f1a; color: #e0e0e0; padding: 20px; min-height: 100vh; }
+        h1 { color: #e94560; margin-bottom: 20px; font-size: 24px; }
+        h2 { color: #e94560; margin: 0 0 15px 0; font-size: 16px; }
+        h3 { color: #888; margin: 15px 0 10px 0; font-size: 12px; text-transform: uppercase; }
+        .layout { display: grid; grid-template-columns: 320px 1fr 320px; gap: 20px; height: calc(100vh - 80px); }
+        .panel { background: #1a1a2e; border-radius: 12px; padding: 15px; overflow-y: auto; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; }
+        input, select, textarea { width: 100%; padding: 8px 10px; margin-bottom: 10px; background: #0f0f1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 13px; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #e94560; }
+        textarea { resize: vertical; font-family: monospace; }
+        button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-right: 5px; margin-bottom: 5px; }
+        button:hover { opacity: 0.9; }
+        .btn-primary { background: #e94560; color: #fff; }
+        .btn-success { background: #22c55e; color: #000; }
+        .btn-secondary { background: #333; color: #fff; }
+        .btn-block { width: 100%; margin-right: 0; }
+        .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
+        .theme-btn { padding: 10px 8px; background: #0f0f1a; border: 2px solid #333; border-radius: 8px; font-size: 11px; text-align: center; cursor: pointer; }
+        .theme-btn:hover { border-color: #555; }
+        .theme-btn.active { border-color: #e94560; background: rgba(233,69,96,0.1); }
+        .theme-btn .color-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-bottom: 4px; }
+        .preview-container { background: #0f0f1a; border-radius: 8px; padding: 15px; min-height: 200px; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab { padding: 6px 12px; background: #0f0f1a; border: none; border-radius: 4px; color: #888; font-size: 12px; cursor: pointer; }
+        .tab.active { background: #e94560; color: #fff; }
+        .param-group { background: #16213e; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+        .param-group-title { font-size: 13px; color: #e94560; margin-bottom: 10px; }
+        .param-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .code-block { background: #0a0a15; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; white-space: pre-wrap; overflow-x: auto; color: #90ee90; }
+        .image-preview { text-align: center; }
+        .image-preview img { max-width: 100%; border-radius: 8px; }
+        .image-preview-placeholder { padding: 40px; color: #555; border: 2px dashed #333; border-radius: 8px; }
+        @media (max-width: 1200px) { .layout { grid-template-columns: 1fr 1fr; } .panel:last-child { grid-column: span 2; } }
+        @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } .panel:last-child { grid-column: span 1; } }
+    </style>
+</head>
+<body>
+    <h1>Zeble 測試面板 <span style="font-size:14px;color:#666;">v2</span></h1>
+    
+    <div class="layout">
+        <!-- 左側：參數控制 -->
+        <div class="panel">
+            <div class="panel-header"><h2>參數設定</h2><button class="btn-secondary" onclick="resetAllParams()">重置</button></div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('data')">數據</button>
+                <button class="tab" onclick="switchTab('theme')">主題</button>
+                <button class="tab" onclick="switchTab('style')">樣式</button>
+                <button class="tab" onclick="switchTab('output')">輸出</button>
+            </div>
+            
+            <!-- 數據 -->
+            <div id="tab-data" class="tab-content">
+                <div class="param-group">
+                    <div class="param-group-title">基本資訊</div>
+                    <label>表格標題</label><input type="text" id="tableTitle" value="狀態監控" onchange="updatePreview()">
+                    <label>底部文字</label><input type="text" id="tableFooter" value="Generated by Zeble" onchange="updatePreview()">
+                </div>
+                <div class="param-group">
+                    <div class="param-group-title">數據內容</div>
+                    <div style="margin-bottom:10px;">
+                        <button class="tab" onclick="loadExample('servers')" style="margin:2px;">伺服器</button>
+                        <button class="tab" onclick="loadExample('status')" style="margin:2px;">狀態</button>
+                        <button class="tab" onclick="loadExample('emoji')" style="margin:2px;">Emoji</button>
+                        <button class="tab" onclick="loadExample('pricing')" style="margin:2px;">價格</button>
+                    </div>
+                    <textarea id="jsonData" style="height:200px;font-size:11px;" onchange="updatePreview()">[
+  {"伺服器": "台灣", "狀態": "運行中", "延遲": "15ms", "負載": "45%"},
+  {"伺服器": "日本", "狀態": "運行中", "延遲": "28ms", "負載": "62%"},
+  {"伺服器": "美國", "狀態": "維護", "延遲": "--", "負載": "0%"}
+]</textarea>
+                </div>
+                <button class="btn-primary btn-block" onclick="renderBackend()">渲染圖片</button>
+            </div>
+            
+            <!-- 主題 -->
+            <div id="tab-theme" class="tab-content" style="display:none;">
+                <div class="param-group">
+                    <div class="param-group-title">選擇主題</div>
+                    <div class="theme-grid" id="themeGrid"></div>
+                </div>
+                <div class="param-group">
+                    <div class="param-group-title">預覽</div>
+                    <div id="themePreviewBox" class="preview-container" style="padding:10px;"></div>
+                </div>
+                <div class="param-group">
+                    <button class="btn-secondary" onclick="saveCustomTheme()">儲存</button>
+                    <button class="btn-secondary" onclick="loadCustomTheme()">載入</button>
+                    <button class="btn-secondary" onclick="resetCurrentTheme()">重置</button>
+                </div>
+            </div>
+            
+            <!-- 樣式 -->
+            <div id="tab-style" class="tab-content" style="display:none;">
+                <div class="param-group">
+                    <div class="param-group-title">字體大小</div>
+                    <div class="param-row">
+                        <div><label>標題</label><input type="number" id="titleFontSize" value="22" min="12" max="48"></div>
+                        <div><label>表頭</label><input type="number" id="headerFontSize" value="18" min="10" max="36"></div>
+                    </div>
+                    <label>內文</label><input type="number" id="bodyFontSize" value="14" min="10" max="32">
+                </div>
+                <div class="param-group">
+                    <div class="param-group-title">尺寸</div>
+                    <div class="param-row">
+                        <div><label>列高度</label><input type="number" id="rowHeight" value="36" min="24" max="80"></div>
+                        <div><label>表頭高度</label><input type="number" id="headerHeight" value="44" min="32" max="80"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 輸出 -->
+            <div id="tab-output" class="tab-content" style="display:none;">
+                <div class="param-group">
+                    <div class="param-group-title">渲染模式</div>
+                    <select id="renderMode" onchange="updateOutputCommand()">
+                        <option value="auto">自動</option>
+                        <option value="css">CSS + Chrome</option>
+                        <option value="pil">PIL</option>
+                        <option value="ascii">ASCII</option>
+                    </select>
+                </div>
+                <div class="param-group">
+                    <div class="param-group-title">分頁</div>
+                    <div class="param-row">
+                        <div><label>每頁筆數</label><input type="number" id="rowsPerPage" value="10" min="1" onchange="updateOutputCommand()"></div>
+                        <div><label>指定頁數</label><input type="number" id="pageNum" value="1" min="1" onchange="updateOutputCommand()"></div>
+                    </div>
+                    <label>最大頁數</label><input type="number" id="maxPages" value="0" min="0" placeholder="0=無限制" onchange="updateOutputCommand()">
+                </div>
+                <button class="btn-success btn-block" onclick="generateCommand()">生成指令</button>
+                <button class="btn-secondary btn-block" onclick="downloadData()" style="margin-top:8px;">下載 JSON</button>
+                <button class="btn-secondary btn-block" onclick="downloadTheme()" style="margin-top:8px;">下載主題</button>
+            </div>
+        </div>
+        
+        <!-- 中間：預覽 -->
+        <div class="panel">
+            <div class="panel-header"><h2>預覽</h2><button class="btn-secondary" onclick="renderBackend()">重新渲染</button></div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchPreviewTab('table')">表格</button>
+                <button class="tab" onclick="switchPreviewTab('image')">圖片</button>
+                <button class="tab" onclick="switchPreviewTab('ascii')">ASCII</button>
+            </div>
+            
+            <div id="preview-table" class="preview-content"><div id="tablePreviewBox" class="preview-container"></div></div>
+            <div id="preview-image" class="preview-content" style="display:none;"><div id="imagePreviewBox" class="image-preview"><div class="image-preview-placeholder">點擊渲染</div></div></div>
+            <div id="preview-ascii" class="preview-content" style="display:none;"><pre id="asciiPreviewBox" class="code-block" style="color:#90ee90;">點擊渲染產生 ASCII</pre></div>
+            
+            <div style="margin-top:20px;">
+                <h3>對比度檢查</h3>
+                <div class="param-group"><div id="contrastReport" style="font-size:12px;line-height:1.8;"></div></div>
+            </div>
+        </div>
+        
+        <!-- 右側：指令 -->
+        <div class="panel">
+            <div class="panel-header"><h2>輸出結果</h2></div>
+            
+            <div class="param-group">
+                <div class="param-group-title">執行指令</div>
+                <pre id="commandOutput" class="code-block"></pre>
+                <button class="btn-primary" onclick="copyCommand()">複製</button>
+                <button class="btn-success" onclick="executeCommand()">執行</button>
+            </div>
+            
+            <div class="param-group">
+                <div class="param-group-title">執行狀態</div>
+                <div id="execStatus" style="font-size:12px;color:#888;">等待...</div>
+            </div>
+            
+            <div class="param-group">
+                <div class="param-group-title">快速參考</div>
+                <div style="font-size:12px;color:#888;line-height:1.6;">
+                    <code>python3 zeble.py data.json out.png</code><br><br>
+                    主題: --dark --light --glass<br>
+                    分頁: --rows-per-page 15 --page 2
+                </div>
+            </div>
+            
+            <div class="param-group">
+                <div class="param-group-title">主題列表</div>
+                <div id="themeList" style="font-size:12px;color:#888;"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeble 測試網頁</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 { color: #e94560; margin-bottom: 20px; }
+        h2 { 
+            background: linear-gradient(135deg, #e94560, #0f3460); 
+            padding: 10px 15px; border-radius: 8px; margin: 20px 0 10px;
+            display: inline-block; font-size: 18px;
+        }
+        h3 { color: #aaa; margin: 15px 0 10px; font-size: 14px; text-transform: uppercase; }
+        .container { display: grid; grid-template-columns: 300px 1fr; gap: 15px; }
+        .main-col { display: flex; flex-direction: column; gap: 15px; }
+        .side-col { display: flex; flex-direction: column; gap: 15px; }
+        
+        .section { background: #16213e; border-radius: 6px; padding: 12px; margin-bottom: 0; }
+        h2 { font-size: 15px; margin: 0 0 10px 0; padding: 5px 10px; }
+        
+        /* Compact Inputs */
+        input, select, textarea { 
+            padding: 6px; 
+            margin-bottom: 8px; 
+            font-size: 12px; 
+        }
+        label { font-size: 11px; margin-bottom: 2px; }
+        
+        /* Compact Buttons */
+        button { 
+            padding: 8px 16px; 
+            font-size: 13px; 
+            margin-right: 5px; 
+            margin-bottom: 5px; 
+        }
+        
+        /* Theme Grid Compact */
+        .theme-preview {
+            padding: 8px;
+            font-size: 12px;
+            margin: 0 5px 5px 0;
+            width: 100%;
+        }
+        
+        /* Layout Adjustments */
+        .row-compact { display: flex; gap: 10px; align-items: flex-end; }
+        .col-compact { flex: 1; }
+        button:hover { transform: scale(1.05); opacity: 0.9; }
+        button.secondary { background: #4a5568; }
+        button.success { background: #22c55e; }
+        button.danger { background: #ef4444; }
+        .color-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .color-input input[type="color"] {
+            width: 50px;
+            height: 35px;
+            padding: 0;
+            border: none;
+            cursor: pointer;
+        }
+        .color-input span {
+            font-family: monospace;
+            background: #0f3460;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .contrast-badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .contrast-good { background: #22c55e; color: #000; }
+        .contrast-warn { background: #f59e0b; color: #000; }
+        .contrast-bad { background: #ef4444; color: #fff; }
+        .theme-preview {
+            display: inline-block;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .theme-preview:hover { transform: scale(1.05); }
+        .theme-preview.active { border-color: #e94560; transform: scale(1.1); }
+        .preview-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            min-height: 100px;
+        }
+        .preview-box h4 { margin-bottom: 10px; }
+        .preview-box table { width: 100%; border-collapse: collapse; }
+        .preview-box th, .preview-box td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid;
+        }
+        .code-block {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab {
+            background: #0f3460;
+            color: #aaa;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+        }
+        .tab.active { background: #e94560; color: #fff; }
+        .tab:hover:not(.active) { background: #4a5568; }
+        .hidden { display: none; }
+        .status { padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .status.success { background: #22c55e; color: #000; }
+        .status.error { background: #ef4444; color: #fff; }
+        .status.info { background: #4a5568; color: #fff; }
+        .quick-links { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .quick-links a, .quick-links button { 
+            background: #0f3460; color: #fff; padding: 8px 16px; 
+            border-radius: 6px; text-decoration: none; font-size: 14px;
+            border: none; cursor: pointer;
+        }
+        .quick-links a:hover, .quick-links button:hover { background: #e94560; }
+    </style>
+</head>
+<body>
+    <h1>🎨 Zeble 測試面板</h1>
+    
+    <div class="container">
+        <!-- 左側邊欄：控制面板 -->
+        <div class="side-col">
+            <!-- 參數 -->
+            <div class="section">
+                <h2>⚙️ 參數設定</h2>
+                <div class="row-compact">
+                    <div class="col-compact">
+                        <label>標題</label>
+                        <input type="text" id="tableTitle" value="狀態監控">
+                    </div>
+                </div>
+                <div class="row-compact">
+                    <div class="col-compact">
+                        <label>渲染模式</label>
+                        <select id="renderMode">
+                            <option value="css">CSS (Chrome)</option>
+                            <option value="pil">PIL (Python)</option>
+                            <option value="ascii">ASCII</option>
+                        </select>
+                    </div>
+                    <div class="col-compact" style="flex: 0 0 80px;">
+                        <label>分頁</label>
+                        <input type="number" id="pageNum" value="1" min="1">
+                    </div>
+                </div>
+                <button onclick="generate()" style="width: 100%; margin-top: 5px;">🚀 生成指令</button>
+                <button onclick="renderBackend()" style="width: 100%; margin-top: 5px;" class="primary">🖼️ 後端渲染</button>
+            </div>
+
+            <!-- 主題選擇 -->
+            <div class="section">
+                <h2>🎨 主題預覽</h2>
+                <div id="themeGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;"></div>
+                <div id="themePreview" class="preview-box" style="margin-top: 10px; padding: 10px;"></div>
+            </div>
+            
+            <!-- 快速動作 -->
+            <div class="section">
+                <h2>⚡ 快速動作</h2>
+                <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                    <button onclick="loadExample('servers')" class="secondary">📁 伺服器</button>
+                    <button onclick="loadExample('status')" class="secondary">📊 狀態</button>
+                    <button onclick="loadExample('emoji')" class="secondary">😀 Emoji</button>
+                    <button onclick="generateAllThemes()" class="success">🌈 全預覽</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側主區域：編輯與輸出 -->
+        <div class="main-col">
+            <!-- 數據與樣式編輯 (Tab 概念) -->
+            <div class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2>📝 數據與樣式</h2>
+                    <div class="tabs" style="margin: 0;">
+                        <button class="tab active" onclick="switchThemeTab('dark')">dark</button>
+                        <button class="tab" onclick="switchThemeTab('light')">light</button>
+                        <!-- 隱藏其他以免太長，或用 select -->
+                        <select onchange="switchThemeTab(this.value)" style="width: auto; padding: 4px; margin: 0;">
+                            <option value="dark">更多...</option>
+                            <option value="cyberpunk">Cyberpunk</option>
+                            <option value="forest">Forest</option>
+                            <option value="ocean">Ocean</option>
+                            <option value="sunset">Sunset</option>
+                            <option value="rose">Rose</option>
+                            <option value="midnight">Midnight</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>JSON Data</label>
+                        <textarea id="jsonData" style="height: 200px; font-size: 11px;">[
+  {"伺服器": "🇹🇼 台灣", "狀態": "運行中", "延遲": "15ms", "負載": "45%"},
+  {"伺服器": "🇯🇵 日本", "狀態": "運行中", "延遲": "28ms", "負載": "62%"},
+  {"伺服器": "🇺🇸 美國", "狀態": "維護", "延遲": "--", "負載": "0%"}
+]</textarea>
+                    </div>
+                    <div>
+                        <label>Theme JSON</label>
+                        <textarea id="themeJson" style="height: 200px; font-size: 11px;"></textarea>
+                    </div>
+                </div>
+                <div style="text-align: right; margin-top: 5px;">
+                    <button onclick="applyTheme()" class="success">✅ 應用樣式</button>
+                    <button onclick="resetTheme()" class="secondary">🔄 重置</button>
+                </div>
+            </div>
+
+            <!-- 輸出 -->
+            <div class="section" style="flex: 1;">
+                <h2>📤 輸出結果</h2>
+                <div id="output" style="min-height: 100px;">
+                    <div class="status info">點擊左側「生成指令」產生結果</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 對比度說明 -->
+    <div class="section">
+        <h2>🔆 對比度檢查</h2>
+        <div id="contrastReport" class="code-block">
+檢查對比度中...
+        </div>
+        <p style="color: #aaa; margin-top: 10px; font-size: 14px;">
+            WCAG 2.1 標準：<br>
+            ✅ AAA = 7:1 以上 | ✅ AA = 4.5:1 以上 | ⚠️ 大字 = 3:1 | ❌ 不達標
+        </p>
+    </div>
+
+    <!-- 使用說明 -->
+    <div class="section">
+        <h2>📖 使用說明</h2>
+        <div class="code-block">
+# 基本用法
+python3 zeble.py data.json output.png --dark
+
+# 自訂主題
+python3 zeble.py data.json out.png --theme custom.json
+
+# 排序與分頁
+python3 zeble.py data.json out.png --dark --page 2 --sort 延遲 --desc
+        </div>
+    </div>
+
+    <script>
+        // 主題配置
+        const defaultThemes = {
+            dark: {
+                name: "深色",
+                bg_color: "#1a1a2e", text_color: "#ffffff",
+                header_bg: "#0f3460", header_text: "#ffffff",
+                alt_row_color: "#16213e", border_color: "#4a5568",
+                highlight_color: "#e94560"
+            },
+            light: {
+                name: "淺色",
+                bg_color: "#f8f9fa", text_color: "#212529",
+                header_bg: "#e9ecef", header_text: "#495057",
+                alt_row_color: "#ffffff", border_color: "#dee2e6",
+                highlight_color: "#0d6efd"
+            },
+            cyberpunk: {
+                name: "賽博龐克",
+                bg_color: "#0d0221", text_color: "#00ff9f",
+                header_bg: "#ff00ff", header_text: "#000000",
+                alt_row_color: "#1a1a3e", border_color: "#00ff9f",
+                highlight_color: "#ffff00"
+            },
+            forest: {
+                name: "森林",
+                bg_color: "#1a2f1a", text_color: "#90ee90",
+                header_bg: "#2d5a2d", header_text: "#ffffff",
+                alt_row_color: "#243424", border_color: "#4a7a4a",
+                highlight_color: "#7fff00"
+            },
+            ocean: {
+                name: "海洋",
+                bg_color: "#0a1929", text_color: "#64b5f6",
+                header_bg: "#1565c0", header_text: "#ffffff",
+                alt_row_color: "#0d2137", border_color: "#2196f3",
+                highlight_color: "#00bcd4"
+            },
+            sunset: {
+                name: "日落",
+                bg_color: "#2d1f1f", text_color: "#ffcc80",
+                header_bg: "#bf360c", header_text: "#ffffff",
+                alt_row_color: "#3d2f2f", border_color: "#ff7043",
+                highlight_color: "#ffab40"
+            },
+            rose: {
+                name: "玫瑰",
+                bg_color: "#2f1a1a", text_color: "#f8bbd9",
+                header_bg: "#c2185b", header_text: "#ffffff",
+                alt_row_color: "#3f2a2a", border_color: "#ec407a",
+                highlight_color: "#f48fb1"
+            },
+            midnight: {
+                name: "午夜",
+                bg_color: "#0f0f23", text_color: "#b0a0ff",
+                header_bg: "#2a2a4a", header_text: "#e0e0ff",
+                alt_row_color: "#1a1a33", border_color: "#5a5a8a",
+                highlight_color: "#8070ff"
+            }
+        };
+
+        let themes = JSON.parse(JSON.stringify(defaultThemes));
+        let currentTheme = 'dark';
+        let customThemes = {};
+        let loadedThemeIds = [];  // 從 theme_api 載入的主題 id 列表
+
+        // 從 theme_api 載入主題列表（符合 TEST_PAGE.md：調用 skill）
+        async function loadThemesFromApi() {
+            const inDoc = document.location.pathname.indexOf('/doc/') >= 0;
+            const themeApiUrl = (inDoc ? '../theme_api.php' : 'theme_api.php') + '?action=list&mode=pil';
+            try {
+                const r = await fetch(themeApiUrl);
+                const data = await r.json();
+                if (data.success && data.themes && data.themes.length > 0) {
+                    loadedThemeIds = data.themes.map(t => t.id);
+                    for (const t of data.themes) {
+                        if (!themes[t.id]) themes[t.id] = { name: t.name, bg_color: '#1a1a2e', text_color: '#fff', header_bg: '#0f3460', header_text: '#e94560', alt_row_color: '#16213e', border_color: '#4a5568', highlight_color: '#e94560' };
+                        else themes[t.id].name = t.name;
+                    }
+                    renderThemeGrid();
+                    return true;
+                }
+            } catch (e) { console.warn('theme_api list failed:', e); }
+            return false;
+        }
+
+        async function loadThemeTemplateFromApi(themeId) {
+            const inDoc = document.location.pathname.indexOf('/doc/') >= 0;
+            const themeApiUrl = (inDoc ? '../theme_api.php' : 'theme_api.php') + '?action=load&mode=pil&theme=' + encodeURIComponent(themeId);
+            try {
+                const r = await fetch(themeApiUrl);
+                const data = await r.json();
+                if (data.success && data.template && data.template.params) {
+                    const p = data.template.params;
+                    return { name: data.template.name || themeId, bg_color: p.bg_color || '#1a1a2e', text_color: p.text_color || '#fff', header_bg: p.header_bg || '#0f3460', header_text: p.header_text || '#e94560', alt_row_color: p.alt_row_color || '#16213e', border_color: p.border_color || '#4a5568', highlight_color: p.highlight_color || '#e94560' };
+                }
+            } catch (e) { console.warn('theme_api load failed:', e); }
+            return null;
+        }
+
+        // 初始化
+        window.onload = async function() {
+            const fromApi = await loadThemesFromApi();
+            if (!fromApi) loadThemeFromStorage();
+            renderThemeGrid();
+            switchThemeTab(currentTheme);
+            checkContrast();
+        };
+
+        // 對比度計算 (WCAG 2.1)
+        function getLuminance(hex) {
+            const rgb = parseInt(hex.slice(1), 16);
+            const r = ((rgb >> 16) & 0xff) / 255;
+            const g = ((rgb >> 8) & 0xff) / 255;
+            const b = (rgb & 0xff) / 255;
+            const [R, G, B] = [r, g, B].map(c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+            return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+        }
+
+        function getContrastRatio(fg, bg) {
+            const L1 = getLuminance(fg);
+            const L2 = getLuminance(bg);
+            const lighter = Math.max(L1, L2);
+            const darker = Math.min(L1, L2);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        function getContrastBadge(ratio) {
+            if (ratio >= 7) return `<span class="contrast-badge contrast-good">AAA ${ratio.toFixed(2)}:1</span>`;
+            if (ratio >= 4.5) return `<span class="contrast-badge contrast-good">AA ${ratio.toFixed(2)}:1</span>`;
+            if (ratio >= 3) return `<span class="contrast-badge contrast-warn">大字 ${ratio.toFixed(2)}:1</span>`;
+            return `<span class="contrast-badge contrast-bad">❌ ${ratio.toFixed(2)}:1</span>`;
+        }
+
+        function checkContrast() {
+            let report = '<h4>對比度檢查結果</h4>\n\n';
+            
+            for (const [key, theme] of Object.entries(themes)) {
+                report += `[${theme.name || key}]\n`;
+                
+                // 文字 vs 背景
+                const ratio1 = getContrastRatio(theme.text_color, theme.bg_color);
+                report += `  文字 vs 背景: ${getContrastBadge(ratio1)}\n`;
+                
+                // 標題文字 vs 標題背景
+                const ratio2 = getContrastRatio(theme.header_text, theme.header_bg);
+                report += `  標題 vs 背景: ${getContrastBadge(ratio2)}\n`;
+                
+                // 交替列
+                const ratio3 = getContrastRatio(theme.text_color, theme.alt_row_color);
+                report += `  交替列: ${getContrastBadge(ratio3)}\n`;
+                
+                report += '\n';
+            }
+            
+            document.getElementById('contrastReport').innerHTML = report.replace(/\n/g, '<br>').replace(/\[([^\]]+)\]/g, '<strong>$1</strong>');
+        }
+
+        // 主題網格
+        function renderThemeGrid() {
+            const grid = document.getElementById('themeGrid');
+            grid.innerHTML = '';
+            
+            for (const [key, theme] of Object.entries(themes)) {
+                const div = document.createElement('div');
+                div.dataset.theme = key;
+                div.className = 'theme-preview' + (key === currentTheme ? ' active' : '');
+                div.style.background = theme.bg_color;
+                div.style.color = theme.text_color;
+                div.style.borderColor = theme.header_bg;
+                div.innerHTML = `<strong>${theme.name || key}</strong><br>
+                                 <small style="opacity: 0.8">${theme.text_color} vs ${theme.bg_color}</small>`;
+                div.onclick = () => switchThemeTab(key);
+                grid.appendChild(div);
+            }
+        }
+
+        // 切換主題標籤（若該主題來自 API 則可從 API 載入完整 params）
+        async function switchThemeTab(themeName) {
+            currentTheme = themeName;
+            if (loadedThemeIds.indexOf(themeName) !== -1) {
+                const fromApi = await loadThemeTemplateFromApi(themeName);
+                if (fromApi) themes[themeName] = fromApi;
+            }
+            const theme = themes[themeName];
+            if (!theme) return;
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (typeof event !== 'undefined' && event && event.target) event.target.classList.add('active');
+            document.querySelectorAll('#themeGrid .theme-preview').forEach(el => el.classList.toggle('active', el.dataset.theme === themeName));
+            
+            document.getElementById('themeJson').value = JSON.stringify(theme, null, 2);
+            
+            const preview = document.getElementById('themePreview');
+            preview.style.background = theme.bg_color;
+            preview.style.color = theme.text_color;
+            preview.style.borderColor = theme.border_color;
+            preview.innerHTML = `
+                <h4 style="color: ${theme.header_text}; background: ${theme.header_bg}; padding: 8px; border-radius: 4px;">
+                    ${theme.name || themeName}
+                </h4>
+                <table style="margin-top: 10px; border-color: ${theme.border_color}; color: ${theme.text_color};">
+                    <tr style="background: ${theme.alt_row_color};">
+                        <td>測試項目</td><td>✅ 成功</td>
+                    </tr>
+                    <tr>
+                        <td>交替列</td><td style="color: ${theme.highlight_color}">強調</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        // 應用主題
+        function applyTheme() {
+            try {
+                const newTheme = JSON.parse(document.getElementById('themeJson').value);
+                themes[currentTheme] = newTheme;
+                saveThemesToStorage();
+                renderThemeGrid();
+                checkContrast();
+                
+                document.getElementById('themeStatus').innerHTML = `
+                    <div class="status success">✅ 已更新主題「${currentTheme}」</div>
+                `;
+            } catch (e) {
+                document.getElementById('themeStatus').innerHTML = `
+                    <div class="status error">❌ JSON 格式錯誤: ${e.message}</div>
+                `;
+            }
+        }
+
+        // 重置主題
+        function resetTheme() {
+            themes[currentTheme] = JSON.parse(JSON.stringify(defaultThemes[currentTheme]));
+            switchThemeTab(currentTheme);
+            saveThemesToStorage();
+            checkContrast();
+        }
+
+        // 新增自訂主題
+        function addCustomTheme() {
+            const name = prompt('輸入新主題名稱:');
+            if (name && !themes[name]) {
+                themes[name] = JSON.parse(JSON.stringify(defaultThemes.dark));
+                themes[name].name = name;
+                switchThemeTab(name);
+                
+                const tab = document.createElement('button');
+                tab.className = 'tab';
+                tab.textContent = name;
+                tab.onclick = () => switchThemeTab(name);
+                document.querySelector('.tabs').appendChild(tab);
+                
+                saveThemesToStorage();
+                renderThemeGrid();
+            }
+        }
+
+        // 儲存到 localStorage
+        function saveThemesToStorage() {
+            localStorage.setItem('zeble_themes', JSON.stringify(themes));
+        }
+
+        // 從 localStorage 載入
+        function loadThemeFromStorage() {
+            const saved = localStorage.getItem('zeble_themes');
+            if (saved) {
+                try {
+                    themes = JSON.parse(saved);
+                } catch (e) {
+                    console.error('載入主題失敗:', e);
+                }
+            }
+        }
+
+        // 範例數據
+        const examples = {
+            servers: [
+                {"伺服器": "🇹🇼 台灣", "狀態": "運行中", "延遲": "15ms", "負載": "45%"},
+                {"伺服器": "🇯🇵 日本", "狀態": "運行中", "延遲": "28ms", "負載": "62%"},
+                {"伺服器": "🇺🇸 美國", "狀態": "維護", "延遲": "--", "負載": "0%"}
+            ],
+            status: [
+                {"專案": "Alpha", "狀態": "運行中", "進度": "75%"},
+                {"專案": "Beta", "狀態": "維護", "進度": "50%"},
+                {"專案": "Gamma", "狀態": "離線", "進度": "0%"}
+            ],
+            emoji: [
+                {"類別": "狀態", "範例": "✅ ✓ ✗ ✖ ✔ ☑ ☒"},
+                {"類別": "動作", "範例": "🎉 🚀 💡 🔥 ⭐ 💫"},
+                {"類別": "圓形", "範例": "🟢 🟡 🔴 🔵 🟤 🟣 🟠 ⚫ ⚪"},
+                {"類別": "形狀", "範例": "🟧 🟦 🟪 🟫 ⬛ ⬜ ◼ ◻"},
+                {"類別": "國旗", "範例": "🇹🇼 🇯🇵 🇺🇸 🇬🇧 🇩🇪 🇫🇷 🇰🇷 🇨🇳"},
+                {"類別": "天氣", "範例": "☀️ 🌙 ⛅ 🌧️ ❄️ ⚡ 🌈"},
+                {"類別": "愛心", "範例": "❤️ 🧡 💛 💚 💙 💜 🖤 🤍"},
+                {"類別": "動物", "範例": "🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼"},
+                {"類別": "水果", "範例": "🍎 🍊 🍋 🍇 🍉 🍓 🍒"},
+                {"類別": "符號", "範例": "⚠️ ♻️ ✅ ❌ 🔴 🟢 🟡 🟣"}
+            ]
+        };
+
+        function loadExample(name) {
+            document.getElementById('jsonData').value = JSON.stringify(examples[name], null, 2);
+        }
+
+        // 生成指令
+        function generate() {
+            const jsonData = document.getElementById('jsonData').value;
+            const title = document.getElementById('tableTitle').value;
+            const page = document.getElementById('pageNum').value;
+            const mode = document.getElementById('renderMode').value;
+            
+            try {
+                JSON.parse(jsonData);
+            } catch (e) {
+                document.getElementById('output').innerHTML = `<div class="status error">❌ JSON 錯誤</div>`;
+                return;
+            }
+
+            const data = {
+                title: title,
+                theme: currentTheme,
+                rows: JSON.parse(jsonData)
+            };
+
+            // 下載數據
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'zeble_data.json';
+            a.click();
+
+            let cmd = '';
+            let outfile = 'output.png';
+            
+            if (mode === 'css') {
+                cmd = `python3 zeble_render.py zeble_data.json output.png --force-css --theme-name ${currentTheme}`;
+            } else if (mode === 'ascii') {
+                outfile = 'output.txt';
+                cmd = `python3 zeble_render.py zeble_data.json output.txt --force-ascii`;
+            } else { // pil
+                cmd = `python3 zeble.py zeble_data.json output.png --${currentTheme}`;
+            }
+            
+            if (page !== '1') cmd += ` --page ${page}`;
+
+            document.getElementById('output').innerHTML = `
+                <div class="status success">
+                    <h4>✅ 已下載 zeble_data.json</h4>
+                    <div class="code-block">${cmd}</div>
+                </div>
+            `;
+        }
+
+        // 所有主題預覽
+        function generateAllThemes() {
+            let html = '<h4>所有主題預覽</h4><div class="row">';
+            
+            for (const [key, theme] of Object.entries(themes)) {
+                html += `
+                    <div style="flex: 1; min-width: 150px; background: ${theme.bg_color}; 
+                                color: ${theme.text_color}; padding: 15px; border-radius: 8px;
+                                border: 2px solid ${theme.header_bg}; margin-right: 10px;">
+                        <strong>${theme.name || key}</strong>
+                        <div style="margin-top: 10px; font-size: 12px; opacity: 0.8;">
+                            背景: ${theme.bg_color}<br>
+                            文字: ${theme.text_color}
+                        </div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            
+            document.getElementById('output').innerHTML = `<div class="status info">${html}</div>`;
+        }
+
+        // 後端渲染（呼叫 gentable_pil.php，符合 TEST_PAGE.md）
+        async function renderBackend() {
+            const jsonData = document.getElementById('jsonData').value;
+            const title = document.getElementById('tableTitle').value || 'Zeble Table';
+            const mode = document.getElementById('renderMode').value;
+            const page = document.getElementById('pageNum').value || '1';
+            let rows;
+            try {
+                rows = JSON.parse(jsonData);
+            } catch (e) {
+                document.getElementById('output').innerHTML = '<div class="status error">❌ JSON 錯誤</div>';
+                return;
+            }
+            if (!Array.isArray(rows) || rows.length === 0) {
+                document.getElementById('output').innerHTML = '<div class="status error">❌ 請提供陣列資料</div>';
+                return;
+            }
+            const headers = Object.keys(rows[0]);
+            const rowArrays = rows.map(obj => headers.map(h => obj[h] != null ? obj[h] : ''));
+            const dataToSend = { title: title, headers: headers, rows: rowArrays, footer: '' };
+            const inDoc = document.location.pathname.indexOf('/doc/') >= 0;
+            const prefix = inDoc ? '../' : '';
+            const endpoint = prefix + (mode === 'css' ? 'gentable_css.php' : (mode === 'ascii' ? 'gentable_ascii.php' : 'gentable_pil.php'));
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(dataToSend));
+            formData.append('theme', currentTheme);
+            if (page !== '1') formData.append('page', page);
+            document.getElementById('output').innerHTML = '<div class="status info">渲染中...</div>';
+            try {
+                const r = await fetch(endpoint, { method: 'POST', body: formData });
+                const res = await r.json();
+                if (res.success && res.image) {
+                    document.getElementById('output').innerHTML = '<img src="' + prefix + res.image + '?t=' + Date.now() + '" style="max-width:100%; border-radius:8px;">';
+                } else if (res.success && res.text) {
+                    document.getElementById('output').innerHTML = '<pre class="code-block" style="text-align:left;">' + res.text + '</pre>';
+                } else {
+                    document.getElementById('output').innerHTML = '<div class="status error">❌ ' + (res.error || '失敗') + (res.debug ? '<pre>' + res.debug + '</pre>' : '') + '</div>';
+                }
+            } catch (e) {
+                document.getElementById('output').innerHTML = '<div class="status error">❌ 請求失敗: ' + e.message + '</div>';
+            }
+        }
+
+        // 下載數據
+        function downloadData() {
+            const jsonData = document.getElementById('jsonData').value;
+            const title = document.getElementById('tableTitle').value;
+            
+            const data = {
+                title: title,
+                theme: currentTheme,
+                rows: JSON.parse(jsonData)
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'zeble_data.json';
+            a.click();
+        }
+
+        // 下載主題
+        function downloadTheme() {
+            const blob = new Blob([JSON.stringify(themes, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'zeble_themes.json';
+            a.click();
+        }
+    </script>
+</body>
+</html>

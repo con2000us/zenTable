@@ -1,0 +1,8 @@
+[
+  {"Server":"TW-01","Status":"✅ Online","Ping":"15ms","Load":"45%","Region":"Asia"},
+  {"Server":"JP-02","Status":"⚠️ High Load","Ping":"85ms","Load":"92%","Region":"Asia"},
+  {"Server":"US-03","Status":"❌ Offline","Ping":"--","Load":"0%","Region":"America"},
+  {"Server":"EU-04","Status":"✅ Online","Ping":"125ms","Load":"38%","Region":"Europe"},
+  {"Server":"AU-05","Status":"🔄 Restarting","Ping":"200ms","Load":"--","Region":"Oceania"},
+  {"Server":"SG-06","Status":"✅ Online","Ping":"12ms","Load":"52%","Region":"Asia"}
+]

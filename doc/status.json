@@ -1,0 +1,7 @@
+[
+  {"Project":"Alpha","Progress":"75%","Owner":"Alice","Deadline":"2026-03-15","Priority":"🔥 High"},
+  {"Project":"Beta","Progress":"100%","Owner":"Bob","Deadline":"2026-02-20","Priority":"✅ Done"},
+  {"Project":"Gamma","Progress":"30%","Owner":"Charlie","Deadline":"2026-04-01","Priority":"⚠️ Medium"},
+  {"Project":"Delta","Progress":"0%","Owner":"Diana","Deadline":"2026-05-10","Priority":"⏸️ Low"},
+  {"Project":"Epsilon","Progress":"90%","Owner":"Eve","Deadline":"2026-02-25","Priority":"🔥 High"}
+]
