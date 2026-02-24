@@ -909,7 +909,7 @@ def _resolve_text_scale(
     if not width:
         return 1.0
 
-    # 自動模式基準寬度（越小 → 放大越多），與 skills/zebleTable/table_renderer.py 對齊
+    # 自動模式基準寬度（越小 → 放大越多），與 skills/zentable/table_renderer.py 對齊
     mode = (text_scale_mode or "auto").strip().lower()
     mode_to_base = {
         "smallest": 500.0,
