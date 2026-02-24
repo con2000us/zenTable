@@ -120,6 +120,7 @@ def main() -> int:
     ap.add_argument("--auto-height", action="store_true")
     ap.add_argument("--auto-height-max", type=int, default=None)
     ap.add_argument("--auto-width", action="store_true")
+    ap.add_argument("--no-auto-width", action="store_true")
     ap.add_argument("--auto-width-max", type=int, default=None)
     ap.add_argument("--page", type=int, default=1)
     ap.add_argument("--per-page", type=int, default=None)
@@ -158,6 +159,8 @@ def main() -> int:
 
         if args.auto_width:
             cmd += ["--auto-width"]
+        if args.no_auto_width:
+            cmd += ["--no-auto-width"]
         if args.auto_width_max is not None:
             cmd += ["--auto-width-max", str(args.auto_width_max)]
 

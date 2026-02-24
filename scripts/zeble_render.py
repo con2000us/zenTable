@@ -2461,6 +2461,7 @@ def main():
         print('  --auto-height-max H  auto-height 預渲染高度上限（預設 3600）')
         print('  --auto-width   自動寬度（先量測/渲染後，必要時加寬再重渲）')
         print('  --auto-width-max W  auto-width 起始寬度（預設 2400）')
+        print('  --no-auto-width / --no-aw  關閉自動寬度')
         print('  --per-page N   每頁列數（預設 %d）' % ROWS_PER_PAGE)
         print('  --fill-width   background|container|scale|no-shrink（搭配 --width）')
         print('  --theme FILE    主題檔案（直接用於測試，不儲存）')
@@ -2607,6 +2608,9 @@ def main():
                 pass
         elif arg == "--auto-width":
             auto_width = True
+            auto_width_set = True
+        elif arg == "--no-auto-width" or arg == "--no-aw":
+            auto_width = False
             auto_width_set = True
         elif arg == "--auto-width-max" and i + 1 < len(sys.argv):
             try:
