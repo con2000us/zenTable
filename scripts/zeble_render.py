@@ -2925,6 +2925,11 @@ def main():
             try: auto_height = bool(defaults.get('auto_height'))
             except Exception: pass
 
+    # 規則：只要有設定 --width（或由 theme defaults 套入 width），就自動關閉 auto-width。
+    # 避免最終輸出寬度被 auto-width 擴張，導致文字看起來變小。
+    if width_set:
+        auto_width = False
+
         if (not text_scale_set) and ('text_scale' in defaults):
             raw = str(defaults.get('text_scale')).strip()
             raw_lower = raw.lower()
