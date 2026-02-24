@@ -1313,17 +1313,22 @@ def _inject_edge_probe_css(html: str, gap_px: int = 50) -> str:
     This is used ONLY for auto-width edge-probe renders to avoid false positives from
     shadows/borders when themes use width:100% backgrounds.
 
-    Strategy:
+    Strategy (margin-based, to minimize reflow differences):
       - Increase viewport by +gap_px
-      - Apply padding-right:gap_px on body/container so table content stays within the original width
+      - Constrain layout width back to the original by setting width:calc(100%-gap) and margin-right:gap
+
+    Note: table layouts can still differ slightly if themes depend on viewport-based widths,
+    but this avoids the stronger reflow caused by padding-right.
     """
     try:
         gap_px = max(0, int(gap_px))
     except Exception:
         gap_px = 50
-    css = f"\nbody {{ padding-right: {gap_px}px !important; box-sizing: border-box; }}\n.container {{ padding-right: {gap_px}px !important; box-sizing: border-box; }}\n"
+    css = (
+        f"\nhtml, body {{ width: calc(100% - {gap_px}px) !important; margin: 0 {gap_px}px 0 0 !important; box-sizing: border-box; }}"
+        f"\n.container {{ width: calc(100% - {gap_px}px) !important; margin: 0 {gap_px}px 0 0 !important; box-sizing: border-box; }}\n"
+    )
     inject = f"\n<style id=\"zentable-edge-probe\">{css}</style>\n"
-    # Insert before </head> if present; otherwise append.
     if "</head>" in html:
         return html.replace("</head>", inject + "</head>")
     return html + inject
