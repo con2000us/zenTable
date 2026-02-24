@@ -3158,13 +3158,20 @@ def main():
                                 from PIL import Image as _Image
                                 im = _Image.open(output_file)
                                 w, h = im.size
-                                strip_w = min(int(debug_auto_width_strip), w)
-                                strip = im.crop((w - strip_w, 0, w, h))
                                 dbg_dir = output_file + ".debug"
                                 os.makedirs(dbg_dir, exist_ok=True)
+
+                                # full image snapshot for this attempt
+                                full_path = os.path.join(dbg_dir, f"attempt_{attempts:02d}_full.png")
+                                im.save(full_path, "PNG")
+
+                                # right strip snapshot
+                                strip_w = min(int(debug_auto_width_strip), w)
+                                strip = im.crop((w - strip_w, 0, w, h))
                                 right_path = os.path.join(dbg_dir, f"attempt_{attempts:02d}_right{strip_w}.png")
                                 strip.save(right_path, "PNG")
-                                debug_files = {"right_strip": right_path}
+
+                                debug_files = {"full": full_path, "right_strip": right_path}
                             except Exception:
                                 debug_files = None
 
@@ -3214,6 +3221,18 @@ def main():
                         if ok_probe:
                             edge_trigger = _right_edge_has_content(probe_path, transparent=transparent_bg, x_inset=0)
                             probe_info = {"vw": int(probe_vw), "gap": int(gap_px), "probe_ms": int(probe_ms), "edge": bool(edge_trigger)}
+
+                            # save per-attempt probe snapshot when debugging
+                            if debug_auto_width:
+                                try:
+                                    dbg_dir = output_file + ".debug"
+                                    os.makedirs(dbg_dir, exist_ok=True)
+                                    probe_snap = os.path.join(dbg_dir, f"attempt_{attempts:02d}_probe.png")
+                                    import shutil as _shutil
+                                    _shutil.copyfile(probe_path, probe_snap)
+                                    probe_info["probe_file"] = probe_snap
+                                except Exception:
+                                    pass
                     except Exception:
                         probe_info = None
 
