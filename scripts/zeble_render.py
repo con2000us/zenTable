@@ -2614,6 +2614,12 @@ def main():
             except ValueError:
                 pass
     
+    # Default behavior: enable auto-height + auto-width unless the user explicitly set them.
+    if not auto_height_set:
+        auto_height = True
+    if not auto_width_set:
+        auto_width = True
+
     # 背景：--transparent 優先，否則 --bg
     transparent_bg = "--transparent" in sys.argv or bg_mode == "transparent"
     if transparent_bg:
@@ -2878,8 +2884,10 @@ def main():
             # DOM pre-measure (skip when using remote CSS API)
             if auto_width and not os.environ.get("ZENTABLE_CSS_API_URL"):
                 try:
-                    need_w = measure_dom_scroll_width(html, cache_dir, viewport_width=cur_vw, viewport_height=cur_vh)
+                    need_w = measure_dom_scroll_width(html, cache_dir or "/tmp", viewport_width=cur_vw, viewport_height=cur_vh)
                     if need_w and need_w > cur_vw:
+                        # round up a bit to avoid 1-2px clipping
+                        need_w = int(((need_w + 49) // 50) * 50)
                         cur_vw = min(max(cur_vw, need_w), max_hard)
                 except Exception:
                     pass
@@ -2906,7 +2914,9 @@ def main():
                         grew = True
 
                 if auto_width and _right_edge_has_content(output_file, transparent=transparent_bg) and cur_vw < max_hard:
-                    next_vw = min(cur_vw * 2, max_hard)
+                    # grow width gradually (avoid overshooting 2x when only slightly clipped)
+                    next_vw = max(cur_vw + 400, int(cur_vw * 1.25))
+                    next_vw = min(next_vw, max_hard)
                     if next_vw != cur_vw:
                         cur_vw = next_vw
                         grew = True
