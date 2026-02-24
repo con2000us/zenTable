@@ -3091,8 +3091,8 @@ def main():
                 vw, vh = vw, vh
         html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt)
 
-        # Explicit, user-controlled wrap gap.
-        if explicit_width and force_width and wrap_gap:
+        # Explicit, user-controlled wrap gap (only when user passed --width).
+        if width_set and force_width and wrap_gap:
             html = _inject_wrap_gap_css(html, gap_px=wrap_gap)
             # viewport becomes width+gap; layout uses calc(100%-gap)
             vw = int(force_width) + int(wrap_gap)
@@ -3139,6 +3139,7 @@ def main():
                     "bg_mode": bg_mode,
                     "bg_color": bg_color,
                     "explicit_width": bool(explicit_width),
+                    "width_set": bool(width_set) if 'width_set' in locals() else None,
                     "force_width": int(force_width) if force_width else None,
                     "fill_width_method": fill_width_method,
                     "auto_width": bool(auto_width),
