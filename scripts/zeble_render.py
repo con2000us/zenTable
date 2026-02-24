@@ -1023,8 +1023,32 @@ def estimate_css_viewport_width_height(data: dict, theme: dict) -> tuple:
             explicit_width = True
     return (vw, min(vh, MAX_VIEWPORT_DIM), explicit_width)
 
-def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_width_pct: int = None) -> str:
-    """生成 CSS 版本的 HTML。table_width_pct: 若指定（如 96），表格填滿該比例的 viewport 寬度。"""
+def _strip_alpha_from_css(css_text: str) -> str:
+    """Best-effort: strip alpha from rgba()/hsla()/8-digit hex colors.
+
+    Used for non-tt mode to make backgrounds fully opaque.
+    """
+    if not isinstance(css_text, str) or not css_text:
+        return css_text
+
+    # rgba(r,g,b,a) -> rgb(r,g,b)
+    css_text = re.sub(r'rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)', r'rgb(\1,\2,\3)', css_text, flags=re.I)
+    # hsla(h,s,l,a) -> hsl(h,s,l)
+    css_text = re.sub(r'hsla\(([^,]+),([^,]+),([^,]+),([^\)]+)\)', r'hsl(\1,\2,\3)', css_text, flags=re.I)
+
+    # #RRGGBBAA -> #RRGGBB
+    css_text = re.sub(r'#([0-9a-fA-F]{6})([0-9a-fA-F]{2})\b', r'#\1', css_text)
+    return css_text
+
+
+def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_width_pct: int = None, tt: bool = False) -> str:
+    """生成 CSS 版本的 HTML。table_width_pct: 若指定（如 96），表格填滿該比例的 viewport 寬度。
+
+    tt=True:
+      - container/table background forced transparent (but cell backgrounds keep their original alpha)
+    tt=False:
+      - backgrounds are forced opaque by stripping alpha from theme CSS.
+    """
     engine = TemplateEngine()
     
     headers = data.get("headers", [])
@@ -1038,6 +1062,16 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
     headers_html = ''.join(f'<th>{h}</th>' for h in headers)
     
     styles = theme.get("styles", {})
+
+    # Non-tt: force opaque backgrounds by stripping alpha from all style blocks.
+    if not tt and isinstance(styles, dict):
+        styles = {k: _strip_alpha_from_css(v) if isinstance(v, str) else v for k, v in styles.items()}
+
+    # tt: container/table background transparent (keep cell bg alpha as-is)
+    tt_css = ""
+    if tt:
+        tt_css += "\n.container, table { background: transparent !important; background-image: none !important; }"
+
     # 正確對應 HTML：body/table/th/td 為標籤選擇器，其餘為 class；規格中的 .header/.cell-header/.cell 對應到 .title/th/td
     TAG_SELECTORS = {'body', 'table', 'thead', 'tbody', 'tr', 'th', 'td'}
     def css_selector(key):
@@ -1066,6 +1100,7 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
         return '.' + key
     css = '\n'.join(f'{css_selector(k)} {{{v}}}' for k, v in styles.items())
     css += "\ntd { white-space: pre-wrap !important; }"
+    css += tt_css
     # 所有模式都讓 viewport/body 透明，使用 --default-background-color 控制實際輸出
     css += "\nhtml, body { background: transparent !important; background-image: none !important; }"
     if table_width_pct:
@@ -2430,6 +2465,7 @@ def main():
         print('  --fill-width   background|container|scale|no-shrink（搭配 --width）')
         print('  --theme FILE    主題檔案（直接用於測試，不儲存）')
         print('  --theme-name    themes/ 目錄中的主題名稱')
+        print('  --tt           透明模式：保留 theme 內 rgba/#RRGGBBAA 的 alpha（非 tt 會強制去除 alpha 變不透明）')
         print('  --page N        第 N 頁（每頁 %d 列）' % ROWS_PER_PAGE)
         print('  --transpose     轉置表格（header 變第一欄；適合手機閱讀）')
         print('  --cc            --transpose 的別名')
@@ -2465,6 +2501,8 @@ def main():
     per_page = ROWS_PER_PAGE
     fill_width_method = "container"  # background | container | scale | no-shrink
 
+    tt = False
+
     auto_height = False
     auto_height_max = 3600
     auto_width = False
@@ -2482,6 +2520,8 @@ def main():
             theme_file = sys.argv[i + 1]
         elif arg == "--theme-name" and i + 1 < len(sys.argv):
             theme_name = sys.argv[i + 1]
+        elif arg == "--tt":
+            tt = True
         elif arg == "--params" and i + 1 < len(sys.argv):
             try:
                 custom_params = json.loads(sys.argv[i + 1])
@@ -2747,7 +2787,7 @@ def main():
                 use_scale_post = True
                 scale_no_shrink = True
                 vw, vh = vw, vh
-        html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct)
+        html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt)
         if scale_factor != 1.0:
             vw = max(1, int(vw * scale_factor))
             vh = max(1, int(vh * scale_factor))
