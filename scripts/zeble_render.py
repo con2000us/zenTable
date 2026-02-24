@@ -1307,6 +1307,28 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
     return html
 
 
+def _inject_edge_probe_css(html: str, gap_px: int = 50) -> str:
+    """Inject a right-side gap so the extreme right edge is guaranteed empty.
+
+    This is used ONLY for auto-width edge-probe renders to avoid false positives from
+    shadows/borders when themes use width:100% backgrounds.
+
+    Strategy:
+      - Increase viewport by +gap_px
+      - Apply padding-right:gap_px on body/container so table content stays within the original width
+    """
+    try:
+        gap_px = max(0, int(gap_px))
+    except Exception:
+        gap_px = 50
+    css = f"\nbody {{ padding-right: {gap_px}px !important; box-sizing: border-box; }}\n.container {{ padding-right: {gap_px}px !important; box-sizing: border-box; }}\n"
+    inject = f"\n<style id=\"zentable-edge-probe\">{css}</style>\n"
+    # Insert before </head> if present; otherwise append.
+    if "</head>" in html:
+        return html.replace("</head>", inject + "</head>")
+    return html + inject
+
+
 # =============================================================================
 # PIL RENDERER (FALLBACK)
 # =============================================================================
@@ -3169,15 +3191,45 @@ def main():
                         cur_vh = next_vh
                         grew = True
 
-                # Edge check: use an inset line to avoid counting table/background shadows at the extreme edge.
-                # (User requested: remove DOM gating; use x_inset-only decision.)
-                edge_inset = 50
-                if auto_width and _right_edge_has_content(output_file, transparent=transparent_bg, x_inset=edge_inset) and cur_vw < max_hard:
+                # Edge check (buffer-probe): render with vw+gap and add right padding gap, then check the true edge.
+                gap_px = 50
+                edge_trigger = False
+                probe_info = None
+                if auto_width and cur_vw < max_hard:
+                    try:
+                        probe_vw = min(int(cur_vw) + int(gap_px), max_hard)
+                        probe_html = _inject_edge_probe_css(html, gap_px=gap_px)
+                        probe_path = output_file + ".edgeprobe.png"
+                        t_probe0 = time.time()
+                        ok_probe = render_css(
+                            probe_html, probe_path,
+                            transparent=transparent_bg,
+                            html_dir=cache_dir,
+                            viewport_width=probe_vw,
+                            viewport_height=cur_vh,
+                            bg_color=bg_color,
+                            skip_crop=True,
+                        )
+                        probe_ms = int((time.time() - t_probe0) * 1000)
+                        if ok_probe:
+                            edge_trigger = _right_edge_has_content(probe_path, transparent=transparent_bg, x_inset=0)
+                            probe_info = {"vw": int(probe_vw), "gap": int(gap_px), "probe_ms": int(probe_ms), "edge": bool(edge_trigger)}
+                    except Exception:
+                        probe_info = None
+
+                # attach probe info to the last render_attempt if available
+                try:
+                    if render_attempts and isinstance(render_attempts[-1], dict):
+                        render_attempts[-1]["edge_probe"] = probe_info
+                except Exception:
+                    pass
+
+                if auto_width and edge_trigger and cur_vw < max_hard:
                     # grow width gradually (avoid overshooting 2x when only slightly clipped)
                     next_vw = max(cur_vw + 400, int(cur_vw * 1.25))
                     next_vw = min(next_vw, max_hard)
                     if next_vw != cur_vw:
-                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "x_inset": int(edge_inset)})
+                        width_steps.append({"reason": "edge_probe", "from": int(cur_vw), "to": int(next_vw), "gap": int(gap_px)})
                         cur_vw = next_vw
                         grew = True
 
