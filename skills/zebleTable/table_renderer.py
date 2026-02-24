@@ -36,7 +36,8 @@ import tempfile
 from pathlib import Path
 
 ZEN_ROOT = Path("/var/www/html/zenTable")
-ZEBLE_RENDER = ZEN_ROOT / "zenble-renderer.py"
+# Use a single stable entrypoint under the skill folder for dev/testing/distribution.
+ZEBLE_RENDER = ZEN_ROOT / "skills" / "zebleTable" / "zeble_renderer.py"
 THEMES_CSS = ZEN_ROOT / "themes" / "css"
 THEMES_PIL_ZIP = ZEN_ROOT / "themes" / "pil"
 
