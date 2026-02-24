@@ -273,6 +273,13 @@ class OCRBase64Body(BaseModel):
     image_base64: str
 
 
+class OCRDetResponse(BaseModel):
+    success: bool
+    boxes: List[Dict[str, Any]]
+    elapsed_ms: Optional[int] = None
+    error: Optional[str] = None
+
+
 class CSSRenderBody(BaseModel):
     html: str
     viewport_width: int = 1200
@@ -314,6 +321,70 @@ async def ocr(image: UploadFile = File(...)):
         return OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms)
     except Exception as e:
         return OCRResponse(success=False, rows=[], error=str(e))
+
+
+@app.post("/ocr/det", response_model=OCRDetResponse)
+async def ocr_det(image: UploadFile = File(...)):
+    """Detection-only: return text region boxes (no recognition).
+
+    Designed for quick complexity estimation.
+    """
+    if _ocr_engine is None:
+        return OCRDetResponse(success=False, boxes=[], error="OCR engine not loaded (missing deps?)")
+    if not image.content_type or not image.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="image/* required")
+
+    raw = await image.read()
+    try:
+        import numpy as np
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(raw))
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        img_np = np.array(img)
+
+        # PaddleOCR v3 (PaddleX pipeline): use the internal text_det_model
+        pipe = getattr(_get_ocr_engine(), "paddlex_pipeline", None)
+        det_model = None
+        if pipe is not None:
+            inner = getattr(pipe, "_pipeline", None)
+            det_model = getattr(inner, "text_det_model", None) if inner is not None else None
+
+        if det_model is None or not hasattr(det_model, "predict"):
+            return OCRDetResponse(success=False, boxes=[], error="det-only not supported by current OCR engine")
+
+        t0 = time.time()
+        det_res = list(det_model.predict(img_np))
+        elapsed_ms = int((time.time() - t0) * 1000)
+
+        boxes: List[Dict[str, Any]] = []
+        if det_res:
+            r0 = det_res[0]
+            polys = None
+            # TextDetResult behaves like dict
+            try:
+                polys = r0.get("dt_polys")
+            except Exception:
+                polys = getattr(r0, "dt_polys", None)
+            if polys is not None:
+                for poly in polys:
+                    try:
+                        xs = [float(p[0]) for p in poly]
+                        ys = [float(p[1]) for p in poly]
+                        l = int(min(xs)); t = int(min(ys)); r = int(max(xs)); b = int(max(ys))
+                        boxes.append({
+                            "left": l,
+                            "top": t,
+                            "width": max(0, r - l),
+                            "height": max(0, b - t),
+                        })
+                    except Exception:
+                        continue
+
+        return OCRDetResponse(success=True, boxes=boxes, elapsed_ms=elapsed_ms)
+    except Exception as e:
+        return OCRDetResponse(success=False, boxes=[], error=str(e))
 
 
 @app.post("/ocr/base64", response_model=OCRResponse)
