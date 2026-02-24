@@ -2985,6 +2985,27 @@ def main():
             except Exception as e:
                 print(f"⚠️  後製縮放失敗: {e}", file=sys.stderr)
         if success:
+            # Write a small sidecar JSON for downstream callers (e.g., zx stats)
+            try:
+                from PIL import Image as _Image
+                out_im = _Image.open(output_file)
+                out_w, out_h = out_im.size
+                meta = {
+                    "render_mode": "CSS",
+                    "theme_name": theme_name,
+                    "tt": bool(tt),
+                    "text_scale_mode": text_scale_mode,
+                    "text_scale": float(resolved_text_scale) if resolved_text_scale is not None else None,
+                    "viewport": {"w": int(LAST_CSS_VIEWPORT[0]), "h": int(LAST_CSS_VIEWPORT[1])} if LAST_CSS_VIEWPORT else None,
+                    "output": {"w": int(out_w), "h": int(out_h)},
+                    "css_render_ms": int(LAST_CSS_RENDER_MS) if LAST_CSS_RENDER_MS is not None else None,
+                }
+                import json as _json
+                with open(output_file + ".meta.json", "w", encoding="utf-8") as f:
+                    f.write(_json.dumps(meta, ensure_ascii=False, indent=2))
+            except Exception:
+                pass
+
             print(f"✅ 已保存: {output_file}")
         else:
             print("❌ CSS 渲染失敗")
