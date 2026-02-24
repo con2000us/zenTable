@@ -35,37 +35,63 @@ def _get_ocr_engine():
     return _ocr_engine
 
 
-def _paddle_result_to_rows(result: Optional[List]) -> List[Dict[str, Any]]:
-    """
-    將 PaddleOCR 回傳格式轉成與 run_ocr_full 相容的 list[dict]：
-    每筆含 text, left, top, width, height。
-    PaddleOCR 格式：單圖為 [ [box, (text, score)], ... ]，box 為四點座標。
+def _paddle_result_to_rows(result: Any) -> List[Dict[str, Any]]:
+    """Normalize PaddleOCR outputs across major versions.
+
+    - PaddleOCR v2 commonly returns: [ [poly, (text, score)], ... ]
+    - PaddleOCR v3 (PaddleX pipeline) can return: [ { rec_texts, rec_boxes, ... } ]
+
+    Output rows: {text,left,top,width,height}
     """
     rows: List[Dict[str, Any]] = []
     if not result:
         return rows
-    for line in result:
-        if line is None or not isinstance(line, (list, tuple)) or len(line) < 2:
-            continue
-        box = line[0]  # [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
-        text_info = line[1]  # (text, confidence)
-        text = text_info[0] if isinstance(text_info, (list, tuple)) else str(text_info)
-        if isinstance(box, (list, tuple)) and len(box) >= 4:
-            xs = [p[0] for p in box]
-            ys = [p[1] for p in box]
-            left = int(min(xs))
-            top = int(min(ys))
-            width = int(max(xs) - left)
-            height = int(max(ys) - top)
-        else:
-            left, top, width, height = 0, 0, 0, 0
-        rows.append({
-            "text": text or "",
-            "left": left,
-            "top": top,
-            "width": width,
-            "height": height,
-        })
+
+    # v3: list with a dict payload
+    if isinstance(result, list) and result and isinstance(result[0], dict):
+        payload = result[0]
+        texts = payload.get("rec_texts") or []
+        boxes = payload.get("rec_boxes") or []
+        try:
+            n = min(len(texts), len(boxes))
+            for i in range(n):
+                b = boxes[i]
+                if b is None or len(b) < 4:
+                    continue
+                l, t, r, btm = map(int, b[:4])
+                rows.append({
+                    "text": str(texts[i]) if texts[i] is not None else "",
+                    "left": l,
+                    "top": t,
+                    "width": max(0, r - l),
+                    "height": max(0, btm - t),
+                })
+            return rows
+        except Exception:
+            pass
+
+    # v2: list of [poly, (text, score)]
+    if isinstance(result, list):
+        for line in result:
+            if line is None or not isinstance(line, (list, tuple)) or len(line) < 2:
+                continue
+            box = line[0]
+            text_info = line[1]
+            text = text_info[0] if isinstance(text_info, (list, tuple)) else str(text_info)
+
+            if isinstance(box, (list, tuple)) and len(box) >= 4 and isinstance(box[0], (list, tuple)):
+                xs = [p[0] for p in box]
+                ys = [p[1] for p in box]
+                left = int(min(xs))
+                top = int(min(ys))
+                width = int(max(xs) - left)
+                height = int(max(ys) - top)
+            else:
+                left, top, width, height = 0, 0, 0, 0
+
+            rows.append({"text": text or "", "left": left, "top": top, "width": width, "height": height})
+        return rows
+
     return rows
 
 
