@@ -324,10 +324,14 @@ async def ocr(image: UploadFile = File(...)):
 
 
 @app.post("/ocr/det", response_model=OCRDetResponse)
-async def ocr_det(image: UploadFile = File(...)):
+async def ocr_det(image: UploadFile = File(...), timeout_ms: int = 15000):
     """Detection-only: return text region boxes (no recognition).
 
     Designed for quick complexity estimation.
+
+    timeout_ms:
+      - If >0, hard-timeout the det job by running it in a forked subprocess and terminating it.
+      - Default 15000ms.
     """
     if _ocr_engine is None:
         return OCRDetResponse(success=False, boxes=[], error="OCR engine not loaded (missing deps?)")
@@ -354,35 +358,73 @@ async def ocr_det(image: UploadFile = File(...)):
         if det_model is None or not hasattr(det_model, "predict"):
             return OCRDetResponse(success=False, boxes=[], error="det-only not supported by current OCR engine")
 
-        t0 = time.time()
-        det_res = list(det_model.predict(img_np))
-        elapsed_ms = int((time.time() - t0) * 1000)
+        def run_det_job() -> OCRDetResponse:
+            t0 = time.time()
+            det_res = list(det_model.predict(img_np))
+            elapsed_ms = int((time.time() - t0) * 1000)
 
-        boxes: List[Dict[str, Any]] = []
-        if det_res:
-            r0 = det_res[0]
-            polys = None
-            # TextDetResult behaves like dict
-            try:
-                polys = r0.get("dt_polys")
-            except Exception:
-                polys = getattr(r0, "dt_polys", None)
-            if polys is not None:
-                for poly in polys:
-                    try:
-                        xs = [float(p[0]) for p in poly]
-                        ys = [float(p[1]) for p in poly]
-                        l = int(min(xs)); t = int(min(ys)); r = int(max(xs)); b = int(max(ys))
-                        boxes.append({
-                            "left": l,
-                            "top": t,
-                            "width": max(0, r - l),
-                            "height": max(0, b - t),
-                        })
-                    except Exception:
-                        continue
+            boxes: List[Dict[str, Any]] = []
+            if det_res:
+                r0 = det_res[0]
+                polys = None
+                try:
+                    polys = r0.get("dt_polys")
+                except Exception:
+                    polys = getattr(r0, "dt_polys", None)
+                if polys is not None:
+                    for poly in polys:
+                        try:
+                            xs = [float(p[0]) for p in poly]
+                            ys = [float(p[1]) for p in poly]
+                            l = int(min(xs)); t = int(min(ys)); r = int(max(xs)); b = int(max(ys))
+                            boxes.append({"left": l, "top": t, "width": max(0, r - l), "height": max(0, b - t)})
+                        except Exception:
+                            continue
 
-        return OCRDetResponse(success=True, boxes=boxes, elapsed_ms=elapsed_ms)
+            return OCRDetResponse(success=True, boxes=boxes, elapsed_ms=elapsed_ms)
+
+        # Hard timeout via forked subprocess (Linux). This avoids leaving a long-running det job.
+        try:
+            import multiprocessing as mp
+            if timeout_ms is None:
+                timeout_ms = 0
+            timeout_s = max(0.0, float(timeout_ms) / 1000.0)
+
+            if timeout_s <= 0:
+                return run_det_job()
+
+            ctx = mp.get_context("fork")
+            q = ctx.Queue(maxsize=1)
+
+            def _worker():
+                try:
+                    r = run_det_job().model_dump()
+                    q.put({"ok": True, "data": r})
+                except Exception as e:
+                    q.put({"ok": False, "error": str(e)})
+
+            p = ctx.Process(target=_worker)
+            p.daemon = True
+            p.start()
+            p.join(timeout_s)
+
+            if p.is_alive():
+                p.terminate()
+                p.join(1)
+                return OCRDetResponse(success=False, boxes=[], elapsed_ms=int(timeout_ms), error=f"det timeout > {int(timeout_ms)}ms")
+
+            if not q.empty():
+                msg = q.get_nowait()
+                if msg.get("ok"):
+                    d = msg.get("data") or {}
+                    return OCRDetResponse(**d)
+                return OCRDetResponse(success=False, boxes=[], error=msg.get("error") or "det failed")
+
+            return OCRDetResponse(success=False, boxes=[], error="det failed (no result)")
+        except Exception:
+            # Fallback: no hard-timeout available
+            return run_det_job()
+
     except Exception as e:
         return OCRDetResponse(success=False, boxes=[], error=str(e))
 
