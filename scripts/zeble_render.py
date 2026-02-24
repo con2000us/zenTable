@@ -3085,8 +3085,13 @@ def main():
             try:
                 wrap_css = """
 <style id="zentable-fixedwidth-wrap">
-  table { width: 100% !important; }
-  th, td { min-width: 0 !important; }
+  /* Fixed width mode: prevent content-driven table expansion */
+  table { width: 100% !important; table-layout: fixed !important; }
+  th, td {
+    min-width: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+  }
 </style>
 """
                 if "</head>" in html:
