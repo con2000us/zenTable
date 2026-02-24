@@ -2990,6 +2990,7 @@ def main():
             cur_vh = min(vh, max_hard)
 
             width_steps = []
+            render_attempts = []  # [{attempt, vw, vh, css_render_ms}]
 
             # DOM pre-measure (skip when using remote CSS API)
             # Prefer overflow-based measurement over raw scrollWidth to avoid background/border false positives.
@@ -3035,7 +3036,17 @@ def main():
                     bg_color=bg_color,
                     skip_crop=True,  # 先不裁，才能檢查邊界是否被截
                 )
-                if not success:
+                if success:
+                    try:
+                        render_attempts.append({
+                            "attempt": int(attempts),
+                            "vw": int(cur_vw),
+                            "vh": int(cur_vh),
+                            "css_render_ms": int(LAST_CSS_RENDER_MS) if LAST_CSS_RENDER_MS is not None else None,
+                        })
+                    except Exception:
+                        pass
+                else:
                     break
 
                 grew = False
@@ -3103,6 +3114,7 @@ def main():
                     "output": {"w": int(out_w), "h": int(out_h)},
                     "css_render_ms": int(LAST_CSS_RENDER_MS) if LAST_CSS_RENDER_MS is not None else None,
                     "auto_width_steps": width_steps if 'width_steps' in locals() else None,
+                    "render_attempts": render_attempts if 'render_attempts' in locals() else None,
                 }
                 import json as _json
                 with open(output_file + ".meta.json", "w", encoding="utf-8") as f:
