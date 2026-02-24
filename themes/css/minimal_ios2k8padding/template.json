@@ -16,7 +16,7 @@
     ".title": "color: #000000; padding: 2px 2px; font-size: 20px; font-weight: 700; text-align: left; letter-spacing: -0.5px; border-bottom: 0.5px solid #e5e5ea;",
     "table": "width: 100%; border-collapse: separate; border-spacing: 0; background-color: #ffffff;",
     "thead": "background-color: #ffffff;",
-    "th": "padding: 1px 2px; text-align: left; font-size: 13px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 0.5px solid #e5e5ea;",
+    "th": "padding: 2px 2px; text-align: left; font-size: 13px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 0.5px solid #e5e5ea;",
     "tbody": "background-color: #ffffff;",
     "tbody tr": "transition: background-color 0.15s ease;",
     "tr_even": "background-color: #fafafa;",
