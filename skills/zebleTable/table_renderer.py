@@ -41,8 +41,28 @@ ZEBLE_RENDER = ZEN_ROOT / "skills" / "zebleTable" / "zeble_renderer.py"
 THEMES_CSS = ZEN_ROOT / "themes" / "css"
 THEMES_PIL_ZIP = ZEN_ROOT / "themes" / "pil"
 
-CSS_THEMES = {"mobile_chat", "minimal_ios", "bubble_card", "modern_line", "compact_clean"}
-PIL_THEMES = {"default_light", "default_dark"}
+def _discover_css_themes() -> set[str]:
+    themes: set[str] = set()
+    if THEMES_CSS.exists():
+        for p in THEMES_CSS.iterdir():
+            if p.is_dir() and (p / "template.json").exists():
+                themes.add(p.name)
+            elif p.is_file() and p.suffix == ".zip":
+                themes.add(p.stem)
+    return themes
+
+
+def _discover_pil_themes() -> set[str]:
+    themes: set[str] = set()
+    if THEMES_PIL_ZIP.exists():
+        for p in THEMES_PIL_ZIP.iterdir():
+            if p.is_file() and p.suffix == ".zip":
+                themes.add(p.stem)
+    return themes
+
+
+CSS_THEMES = _discover_css_themes()
+PIL_THEMES = _discover_pil_themes()
 
 
 def _read_json_input(input_path: str) -> str:
