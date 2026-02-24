@@ -635,10 +635,15 @@ def _bottom_edge_has_content(png_path: str, transparent: bool = False, tolerance
         return False
 
 
-def _right_edge_has_content(png_path: str, transparent: bool = False, tolerance: int = 20, alpha_threshold: int = 1) -> bool:
-    """檢查 PNG 最右邊（x=w-1）是否有內容。
+def _right_edge_has_content(png_path: str, transparent: bool = False, tolerance: int = 20, alpha_threshold: int = 1,
+                            min_run: int = 12, min_ratio: float = 0.03) -> bool:
+    """檢查 PNG 最右邊（x=w-1）是否有內容（更嚴格）。
 
-    用於 auto-width：若最右邊仍有非透明/非背景像素，通常代表內容被截斷，需加寬 viewport 再渲染。
+    用於 auto-width：避免 1px 抗鋸齒/陰影造成誤判。
+
+    判定規則（任一成立即 True）：
+    - 右邊界非空像素數量比例 >= min_ratio
+    - 或存在連續 min_run 個非空像素（垂直方向）
     """
     try:
         from PIL import Image
@@ -651,23 +656,39 @@ def _right_edge_has_content(png_path: str, transparent: bool = False, tolerance:
         if x < 0:
             return False
 
-        if transparent:
-            alpha = img.split()[3]
-            col = alpha.crop((x, 0, x + 1, h))
-            return col.getextrema()[1] >= alpha_threshold
+        def is_nonempty_rgba(px, bg_rgb=None):
+            if transparent:
+                return px[3] >= alpha_threshold
+            rgb = px[:3]
+            return max(abs(rgb[0] - bg_rgb[0]), abs(rgb[1] - bg_rgb[1]), abs(rgb[2] - bg_rgb[2])) > tolerance
 
-        corners = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
-        refs = [img.getpixel(c) for c in corners if 0 <= c[0] < w and 0 <= c[1] < h]
-        if not refs:
-            return False
-        bg = tuple(sum(r[i] for r in refs) // len(refs) for i in range(3))
+        bg = (0, 0, 0)
+        if not transparent:
+            corners = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+            refs = [img.getpixel(c) for c in corners if 0 <= c[0] < w and 0 <= c[1] < h]
+            if not refs:
+                return False
+            bg = tuple(sum(r[i] for r in refs) // len(refs) for i in range(3))
 
         col = img.crop((x, 0, x + 1, h))
         data = list(col.getdata())
+
+        nonempty = 0
+        run = 0
+        best_run = 0
         for p in data:
-            rgb = p[:3]
-            if max(abs(rgb[0] - bg[0]), abs(rgb[1] - bg[1]), abs(rgb[2] - bg[2])) > tolerance:
-                return True
+            if is_nonempty_rgba(p, bg):
+                nonempty += 1
+                run += 1
+                if run > best_run:
+                    best_run = run
+            else:
+                run = 0
+
+        if h > 0 and (nonempty / float(h)) >= float(min_ratio):
+            return True
+        if best_run >= int(min_run):
+            return True
         return False
     except Exception:
         return False
