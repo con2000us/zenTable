@@ -635,6 +635,44 @@ def _bottom_edge_has_content(png_path: str, transparent: bool = False, tolerance
         return False
 
 
+def _right_edge_has_content(png_path: str, transparent: bool = False, tolerance: int = 20, alpha_threshold: int = 1) -> bool:
+    """檢查 PNG 最右邊（x=w-1）是否有內容。
+
+    用於 auto-width：若最右邊仍有非透明/非背景像素，通常代表內容被截斷，需加寬 viewport 再渲染。
+    """
+    try:
+        from PIL import Image
+        img = Image.open(png_path)
+        w, h = img.size
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+
+        x = w - 1
+        if x < 0:
+            return False
+
+        if transparent:
+            alpha = img.split()[3]
+            col = alpha.crop((x, 0, x + 1, h))
+            return col.getextrema()[1] >= alpha_threshold
+
+        corners = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+        refs = [img.getpixel(c) for c in corners if 0 <= c[0] < w and 0 <= c[1] < h]
+        if not refs:
+            return False
+        bg = tuple(sum(r[i] for r in refs) // len(refs) for i in range(3))
+
+        col = img.crop((x, 0, x + 1, h))
+        data = list(col.getdata())
+        for p in data:
+            rgb = p[:3]
+            if max(abs(rgb[0] - bg[0]), abs(rgb[1] - bg[1]), abs(rgb[2] - bg[2])) > tolerance:
+                return True
+        return False
+    except Exception:
+        return False
+
+
 def crop_to_content_height(png_path: str, transparent: bool = False, tolerance: int = 20) -> bool:
     """只裁切高度（保留完整寬度），避免 explicit width 時因 skip_crop 而留下超高空白。
 
@@ -763,6 +801,64 @@ def render_css(html: str, output_path: str, transparent: bool = False, html_dir:
     if not skip_crop:
         crop_to_content_bounds(output_path, padding=2, transparent=transparent)
     return True
+
+def measure_dom_scroll_width(html: str, html_dir: str, viewport_width: int, viewport_height: int) -> Optional[int]:
+    """Measure content scrollWidth from DOM using headless Chrome + --dump-dom.
+
+    Returns the needed width (scrollWidth) if measurable, else None.
+    Only works for local Chrome spawning (not remote CSS API).
+    """
+    try:
+        ts = str(int(time.time() * 1000))
+        html_file = os.path.join(html_dir, f"measure_{ts}.html")
+
+        inject = """
+<script>
+(function(){
+  function pick(){
+    return document.querySelector('table') || document.querySelector('.table') || document.body;
+  }
+  function measure(){
+    var el = pick();
+    var w = 0;
+    try { w = Math.max(el.scrollWidth||0, el.getBoundingClientRect().width||0); } catch(e) {}
+    document.title = 'ZENTABLE_SCROLLWIDTH=' + Math.ceil(w);
+  }
+  window.addEventListener('load', function(){ setTimeout(measure, 50); });
+  setTimeout(measure, 200);
+})();
+</script>
+"""
+
+        with open(html_file, 'w', encoding='utf-8') as f:
+            f.write(html + inject)
+
+        parts = [
+            "xvfb-run", "-a", "google-chrome", "--headless",
+            "--disable-gpu",
+            "--virtual-time-budget=1000",
+            f"--window-size={int(viewport_width)},{int(viewport_height)}",
+            f"--default-background-color={TRANSPARENT_BG_HEX}",
+            "--dump-dom",
+            f"file://{html_file}",
+        ]
+        import subprocess
+        p = subprocess.run(parts, capture_output=True, text=True, timeout=30)
+        out = (p.stdout or "")
+        m = re.search(r"ZENTABLE_SCROLLWIDTH=(\d+)", out)
+        if m:
+            return int(m.group(1))
+        return None
+    except Exception:
+        return None
+    finally:
+        try:
+            if 'html_file' in locals() and os.path.exists(html_file):
+                os.remove(html_file)
+        except Exception:
+            pass
+
+
 
 def _parse_font_size_px(style_str: str, default: int = 14) -> int:
     """從 CSS 字串解析 font-size（px），例：font-size: 14px;"""
@@ -2328,6 +2424,8 @@ def main():
         print('  --scale N      輸出尺寸倍數')
         print('  --auto-height  自動高度（用較高 viewport 渲染後，依像素內容裁切高度）')
         print('  --auto-height-max H  auto-height 預渲染高度上限（預設 3600）')
+        print('  --auto-width   自動寬度（先量測/渲染後，必要時加寬再重渲）')
+        print('  --auto-width-max W  auto-width 起始寬度（預設 2400）')
         print('  --per-page N   每頁列數（預設 %d）' % ROWS_PER_PAGE)
         print('  --fill-width   background|container|scale|no-shrink（搭配 --width）')
         print('  --theme FILE    主題檔案（直接用於測試，不儲存）')
@@ -2369,6 +2467,8 @@ def main():
 
     auto_height = False
     auto_height_max = 3600
+    auto_width = False
+    auto_width_max = 2400
     
     for i in range(3, len(sys.argv)):
         arg = sys.argv[i]
@@ -2450,6 +2550,13 @@ def main():
         elif arg == "--auto-height-max" and i + 1 < len(sys.argv):
             try:
                 auto_height_max = max(200, int(sys.argv[i + 1]))
+            except ValueError:
+                pass
+        elif arg == "--auto-width":
+            auto_width = True
+        elif arg == "--auto-width-max" and i + 1 < len(sys.argv):
+            try:
+                auto_width_max = max(200, int(sys.argv[i + 1]))
             except ValueError:
                 pass
     
@@ -2618,6 +2725,9 @@ def main():
         # auto-height: 先用足夠高的 viewport 渲染，避免內容因換行而被截斷。
         if auto_height:
             vh = max(vh, auto_height_max)
+        # auto-width: 先用較寬 viewport（或後面量測後再調整）
+        if auto_width and not explicit_width:
+            vw = max(vw, auto_width_max)
         table_width_pct = None
         use_scale_post = False
         scale_no_shrink = False
@@ -2647,36 +2757,56 @@ def main():
                 cache_dir = ensure_theme_cache(theme_name, theme_mode)
             except ValueError:
                 pass
-        # auto-height: 先用較高 viewport 渲染；如果最底邊仍有內容，代表被截斷，則加倍高度重渲染。
-        # 注意：要做這個檢查，第一次渲染必須先不要裁切。
-        if auto_height:
+        # auto-height/auto-width: 先用較大 viewport 渲染；若邊界仍有內容，代表可能被截斷，則加倍再重渲。
+        # Strategy C: DOM pre-measure (local Chrome only) + pixel edge check.
+        if auto_height or auto_width:
             max_hard = MAX_VIEWPORT_DIM
             attempts = 0
+            cur_vw = min(vw, max_hard)
             cur_vh = min(vh, max_hard)
+
+            # DOM pre-measure (skip when using remote CSS API)
+            if auto_width and not os.environ.get("ZENTABLE_CSS_API_URL"):
+                try:
+                    need_w = measure_dom_scroll_width(html, cache_dir, viewport_width=cur_vw, viewport_height=cur_vh)
+                    if need_w and need_w > cur_vw:
+                        cur_vw = min(max(cur_vw, need_w), max_hard)
+                except Exception:
+                    pass
+
             while True:
                 attempts += 1
                 success = render_css(
                     html, output_file,
                     transparent=transparent_bg,
                     html_dir=cache_dir,
-                    viewport_width=vw,
+                    viewport_width=cur_vw,
                     viewport_height=cur_vh,
                     bg_color=bg_color,
-                    skip_crop=True,  # 先不裁，才能檢查底邊是否被截
+                    skip_crop=True,  # 先不裁，才能檢查邊界是否被截
                 )
                 if not success:
                     break
 
-                # 但書：若最底邊 alpha/內容已非 0，代表內容碰到底（可能被截斷），加倍高度再試
-                if _bottom_edge_has_content(output_file, transparent=transparent_bg) and cur_vh < max_hard:
+                grew = False
+                if auto_height and _bottom_edge_has_content(output_file, transparent=transparent_bg) and cur_vh < max_hard:
                     next_vh = min(cur_vh * 2, max_hard)
-                    if next_vh == cur_vh or attempts >= 6:
-                        break
-                    cur_vh = next_vh
-                    continue
-                break
+                    if next_vh != cur_vh:
+                        cur_vh = next_vh
+                        grew = True
 
-            # 最終：裁切高度（不留 padding）；若不是 explicit width，仍可用原本裁切法把左右空白也裁掉
+                if auto_width and _right_edge_has_content(output_file, transparent=transparent_bg) and cur_vw < max_hard:
+                    next_vw = min(cur_vw * 2, max_hard)
+                    if next_vw != cur_vw:
+                        cur_vw = next_vw
+                        grew = True
+
+                if not grew or attempts >= 6:
+                    break
+
+            # 最終：
+            # - explicit width：不裁左右，只裁高度（避免 width 被改）
+            # - 非 explicit：照原本裁切（含左右空白）
             if success:
                 if explicit_width:
                     crop_to_content_height(output_file, transparent=transparent_bg)

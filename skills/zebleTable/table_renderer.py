@@ -107,6 +107,8 @@ def main() -> int:
     ap.add_argument("--text-scale-max", type=float, default=None)
     ap.add_argument("--auto-height", action="store_true")
     ap.add_argument("--auto-height-max", type=int, default=None)
+    ap.add_argument("--auto-width", action="store_true")
+    ap.add_argument("--auto-width-max", type=int, default=None)
     ap.add_argument("--page", type=int, default=1)
     ap.add_argument("--per-page", type=int, default=None)
     ap.add_argument("--css-api-url", default=None)
@@ -140,6 +142,11 @@ def main() -> int:
             cmd += ["--auto-height"]
         if args.auto_height_max is not None:
             cmd += ["--auto-height-max", str(args.auto_height_max)]
+
+        if args.auto_width:
+            cmd += ["--auto-width"]
+        if args.auto_width_max is not None:
+            cmd += ["--auto-width-max", str(args.auto_width_max)]
 
         if args.page is not None:
             cmd += ["--page", str(max(1, int(args.page)))]
