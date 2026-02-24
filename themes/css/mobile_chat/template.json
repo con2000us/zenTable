@@ -1,0 +1,41 @@
+{
+  "type": "css",
+  "name": "mobile_chat",
+  "version": "1.0.0",
+  "description": "對話泡泡風格，適合手機通訊軟體展示。圓角柔和、色彩溫暖、易於閱讀。",
+  "tags": ["mobile", "chat", "bubble", "light"],
+  "styles": {
+    "body": "margin: 0; padding: 2px; background-color: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;",
+    ".container": "max-width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden;",
+    
+    ".title": "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 2px 2px; font-size: 18px; font-weight: 600; text-align: center; letter-spacing: 0.5px;",
+    
+    "table": "width: 100%; border-collapse: separate; border-spacing: 0; background-color: #ffffff;",
+    
+    "thead": "background-color: #f8f9fa;",
+    
+    "th": "padding: 1px 2px; text-align: center; font-size: 14px; font-weight: 600; color: #495057; border-bottom: 2px solid #e9ecef; letter-spacing: 0.3px;",
+    
+    "tbody": "background-color: #ffffff;",
+    
+    "tbody tr": "transition: background-color 0.2s ease;",
+    
+    "tr_even": "background-color: #f8f9fa;",
+    
+    "tr_odd": "background-color: #ffffff;",
+    
+    "td": "padding: 1px 2px; font-size: 14px; color: #212529; border-bottom: 1px solid #e9ecef; text-align: center; line-height: 1.5;",
+    
+    ".footer": "background-color: #f8f9fa; color: #6c757d; padding: 1px 2px; font-size: 12px; text-align: center; border-top: 1px solid #e9ecef;",
+    
+    "tr:hover": "background-color: #e9ecef;",
+    
+    "th:first-child": "border-top-left-radius: 12px;",
+    
+    "th:last-child": "border-top-right-radius: 12px;",
+    
+    "tbody tr:last-child td:first-child": "border-bottom-left-radius: 12px;",
+    
+    "tbody tr:last-child td:last-child": "border-bottom-right-radius: 12px;"
+  }
+}
