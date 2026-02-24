@@ -3169,31 +3169,17 @@ def main():
                         cur_vh = next_vh
                         grew = True
 
-                # If DOM says no horizontal overflow, do NOT allow pixel-edge check to trigger growth.
-                dom_overflow_ok = None
-                try:
-                    if attempt_dom and isinstance(attempt_dom, dict):
-                        src = attempt_dom.get('body') or attempt_dom.get('table') or None
-                        if isinstance(src, dict) and src.get("scrollWidth") is not None and src.get("clientWidth") is not None:
-                            sw = int(src.get("scrollWidth") or 0)
-                            cw = int(src.get("clientWidth") or 0)
-                            dom_overflow_ok = (sw <= (cw + 2))
-                except Exception:
-                    dom_overflow_ok = None
-
                 # Edge check: use an inset line to avoid counting table/background shadows at the extreme edge.
+                # (User requested: remove DOM gating; use x_inset-only decision.)
                 edge_inset = 50
-                if auto_width and (dom_overflow_ok is not True) and _right_edge_has_content(output_file, transparent=transparent_bg, x_inset=edge_inset) and cur_vw < max_hard:
+                if auto_width and _right_edge_has_content(output_file, transparent=transparent_bg, x_inset=edge_inset) and cur_vw < max_hard:
                     # grow width gradually (avoid overshooting 2x when only slightly clipped)
                     next_vw = max(cur_vw + 400, int(cur_vw * 1.25))
                     next_vw = min(next_vw, max_hard)
                     if next_vw != cur_vw:
-                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "dom_ok": dom_overflow_ok, "x_inset": int(edge_inset)})
+                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "x_inset": int(edge_inset)})
                         cur_vw = next_vw
                         grew = True
-                elif auto_width and dom_overflow_ok is True:
-                    # record that edge check was ignored due to DOM saying no overflow
-                    width_steps.append({"reason": "edge_ignored_dom_ok", "vw": int(cur_vw)})
 
                 if not grew or attempts >= 6:
                     break
