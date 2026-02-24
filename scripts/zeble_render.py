@@ -730,6 +730,10 @@ def _hex_to_chrome_bg(hex_color: str) -> str:
         return h
     return '000000FF'
 
+LAST_CSS_RENDER_MS = None
+LAST_CSS_VIEWPORT = None
+
+
 def render_css(html: str, output_path: str, transparent: bool = False, html_dir: str = None,
                viewport_width: int = None, viewport_height: int = None, bg_color: str = None,
                skip_crop: bool = False) -> bool:
@@ -742,6 +746,8 @@ def render_css(html: str, output_path: str, transparent: bool = False, html_dir:
     html_dir: 若指定，HTML 寫入此目錄（使相對路徑資源可正確解析）；否則與 output 同目錄。
     viewport_width, viewport_height: 若提供則設定 Chrome 視窗尺寸，使截圖依內容大小。
     bg_color: 若指定（#RRGGBB），覆蓋背景色；transparent 優先於 bg_color。"""
+    global LAST_CSS_RENDER_MS, LAST_CSS_VIEWPORT
+
     # If a remote CSS render API is configured, use it.
     css_api = os.environ.get("ZENTABLE_CSS_API_URL")
     if css_api:
@@ -749,15 +755,28 @@ def render_css(html: str, output_path: str, transparent: bool = False, html_dir:
             import json as _json
             import urllib.request as _url
 
+            vw = int(viewport_width or 1200)
+            vh = int(viewport_height or 800)
             payload = _json.dumps({
                 "html": html,
-                "viewport_width": int(viewport_width or 1200),
-                "viewport_height": int(viewport_height or 800),
+                "viewport_width": vw,
+                "viewport_height": vh,
                 "transparent": bool(transparent),
                 "timeout_ms": 3000,
             }).encode("utf-8")
             req = _url.Request(css_api.rstrip("/") + "/render/css", data=payload, headers={"Content-Type": "application/json"})
-            png = _url.urlopen(req, timeout=60).read()
+            t0 = time.time()
+            resp = _url.urlopen(req, timeout=60)
+            png = resp.read()
+            LAST_CSS_RENDER_MS = int((time.time() - t0) * 1000)
+            # Prefer server-provided header if present
+            try:
+                h = resp.headers
+                if h.get('X-Render-Ms'):
+                    LAST_CSS_RENDER_MS = int(h.get('X-Render-Ms'))
+            except Exception:
+                pass
+            LAST_CSS_VIEWPORT = (vw, vh)
             with open(output_path, "wb") as f:
                 f.write(png)
         except Exception as e:
@@ -789,8 +808,15 @@ def render_css(html: str, output_path: str, transparent: bool = False, html_dir:
     parts.append(f"--default-background-color={TRANSPARENT_BG_HEX}")
     parts.append(f"file://{html_file}")
     cmd = " ".join(parts)
-    
+
+    t0 = time.time()
     result = os.system(cmd)
+    LAST_CSS_RENDER_MS = int((time.time() - t0) * 1000)
+    if viewport_width and viewport_height:
+        try:
+            LAST_CSS_VIEWPORT = (int(viewport_width), int(viewport_height))
+        except Exception:
+            pass
     
     if os.path.exists(html_file):
         os.remove(html_file)

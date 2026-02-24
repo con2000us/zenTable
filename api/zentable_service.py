@@ -461,6 +461,7 @@ async def render_css(body: CSSRenderBody):
     if not _check_chrome_available():
         return JSONResponse(status_code=503, content={"success": False, "error": "chrome missing"})
 
+    t0 = time.time()
     try:
         png = _render_html_to_png(
             html=body.html,
@@ -469,9 +470,16 @@ async def render_css(body: CSSRenderBody):
             transparent=body.transparent,
             timeout_ms=body.timeout_ms,
         )
-        return Response(content=png, media_type="image/png")
+        elapsed_ms = int((time.time() - t0) * 1000)
+        headers = {
+            "X-Render-Ms": str(elapsed_ms),
+            "X-Viewport-W": str(int(body.viewport_width)),
+            "X-Viewport-H": str(int(body.viewport_height)),
+        }
+        return Response(content=png, media_type="image/png", headers=headers)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+        elapsed_ms = int((time.time() - t0) * 1000)
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e), "elapsed_ms": elapsed_ms})
 
 
 def run():
