@@ -3078,6 +3078,23 @@ def main():
                 scale_no_shrink = True
                 vw, vh = vw, vh
         html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt)
+
+        # Fixed-width wrapping helpers:
+        # When user forces width, ensure table is constrained to viewport and cells can shrink for wrapping.
+        if explicit_width and force_width and force_width > 0:
+            try:
+                wrap_css = """
+<style id="zentable-fixedwidth-wrap">
+  table { width: 100% !important; }
+  th, td { min-width: 0 !important; }
+</style>
+"""
+                if "</head>" in html:
+                    html = html.replace("</head>", wrap_css + "</head>")
+                else:
+                    html = wrap_css + html
+            except Exception:
+                pass
         if scale_factor != 1.0:
             vw = max(1, int(vw * scale_factor))
             vh = max(1, int(vh * scale_factor))
