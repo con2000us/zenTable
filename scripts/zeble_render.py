@@ -2925,6 +2925,11 @@ def main():
             try: auto_height = bool(defaults.get('auto_height'))
             except Exception: pass
 
+    # 規則：只要使用者有設定 --width，就固定輸出寬度。
+    # auto-width 會在邊界檢測時擴張 viewport，導致最終寬度不固定，這裡直接關閉。
+    if width_set:
+        auto_width = False
+
         if (not text_scale_set) and ('text_scale' in defaults):
             raw = str(defaults.get('text_scale')).strip()
             raw_lower = raw.lower()
