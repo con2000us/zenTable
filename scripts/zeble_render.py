@@ -2502,11 +2502,19 @@ def main():
     fill_width_method = "container"  # background | container | scale | no-shrink
 
     tt = False
+    tt_set = False
 
     auto_height = False
+    auto_height_set = False
     auto_height_max = 3600
+
     auto_width = False
+    auto_width_set = False
     auto_width_max = 2400
+
+    width_set = False
+    text_scale_set = False
+    text_scale_max_set = False
     
     for i in range(3, len(sys.argv)):
         arg = sys.argv[i]
@@ -2522,6 +2530,7 @@ def main():
             theme_name = sys.argv[i + 1]
         elif arg == "--tt":
             tt = True
+            tt_set = True
         elif arg == "--params" and i + 1 < len(sys.argv):
             try:
                 custom_params = json.loads(sys.argv[i + 1])
@@ -2546,11 +2555,13 @@ def main():
         elif arg == "--width" and i + 1 < len(sys.argv):
             try:
                 force_width = max(1, int(sys.argv[i + 1]))
+                width_set = True
             except ValueError:
                 pass
         elif arg == "--text-scale" and i + 1 < len(sys.argv):
             raw = sys.argv[i + 1].strip()
             raw_lower = raw.lower()
+            text_scale_set = True
             if raw_lower in ("smallest", "small", "auto", "large", "largest"):
                 text_scale = None
                 text_scale_mode = raw_lower
@@ -2564,6 +2575,7 @@ def main():
         elif arg == "--text-scale-max" and i + 1 < len(sys.argv):
             try:
                 text_scale_max = float(sys.argv[i + 1])
+                text_scale_max_set = True
             except ValueError:
                 pass
         elif arg == "--scale" and i + 1 < len(sys.argv):
@@ -2587,6 +2599,7 @@ def main():
                 fill_width_method = m
         elif arg == "--auto-height":
             auto_height = True
+            auto_height_set = True
         elif arg == "--auto-height-max" and i + 1 < len(sys.argv):
             try:
                 auto_height_max = max(200, int(sys.argv[i + 1]))
@@ -2594,6 +2607,7 @@ def main():
                 pass
         elif arg == "--auto-width":
             auto_width = True
+            auto_width_set = True
         elif arg == "--auto-width-max" and i + 1 < len(sys.argv):
             try:
                 auto_width_max = max(200, int(sys.argv[i + 1]))
@@ -2615,7 +2629,7 @@ def main():
     if isinstance(data, dict):
         data_params = data.pop('_params', {})
         custom_params = {**custom_params, **data_params}
-    
+
     # 統一輸入格式（陣列 of 物件 或 headers+rows）
     data = normalise_data(data)
     if transpose:
@@ -2648,6 +2662,62 @@ def main():
         print(f"🎨 使用主題檔案: {theme_file}", file=sys.stderr)
     else:
         theme = get_theme(theme_name, theme_mode)
+
+    # Apply theme defaults (template.json -> meta.defaults) when CLI did not explicitly set options
+    def _get_theme_defaults(th: dict) -> dict:
+        if not isinstance(th, dict):
+            return {}
+        meta = th.get('meta', {}) if isinstance(th.get('meta', {}), dict) else {}
+        d = meta.get('defaults', {}) if isinstance(meta.get('defaults', {}), dict) else {}
+        if not d and isinstance(th.get('defaults', {}), dict):
+            d = th.get('defaults', {})
+        return d if isinstance(d, dict) else {}
+
+    defaults = _get_theme_defaults(theme)
+    if defaults:
+        if (not tt_set) and ('tt' in defaults):
+            try: tt = bool(defaults.get('tt'))
+            except Exception: pass
+
+        if (not width_set) and ('width' in defaults):
+            try:
+                force_width = max(1, int(defaults.get('width')))
+                width_set = True
+            except Exception: pass
+
+        if (not auto_width_set) and ('auto_width' in defaults):
+            try: auto_width = bool(defaults.get('auto_width'))
+            except Exception: pass
+
+        if (not auto_height_set) and ('auto_height' in defaults):
+            try: auto_height = bool(defaults.get('auto_height'))
+            except Exception: pass
+
+        if (not text_scale_set) and ('text_scale' in defaults):
+            raw = str(defaults.get('text_scale')).strip()
+            raw_lower = raw.lower()
+            if raw_lower in ("smallest", "small", "auto", "large", "largest"):
+                text_scale = None
+                text_scale_mode = raw_lower
+            else:
+                try:
+                    text_scale = float(raw)
+                    text_scale_mode = "auto"
+                except Exception: pass
+
+        if (not text_scale_max_set) and ('text_scale_max' in defaults):
+            try:
+                text_scale_max = float(defaults.get('text_scale_max'))
+                text_scale_max_set = True
+            except Exception: pass
+
+        if ('auto_width_max' in defaults) and (not width_set):
+            try: auto_width_max = max(200, int(defaults.get('auto_width_max')))
+            except Exception: pass
+
+        if ('auto_height_max' in defaults):
+            try: auto_height_max = max(200, int(defaults.get('auto_height_max')))
+            except Exception: pass
     
     # ASCII 模式
     if mode == "ASCII":
