@@ -2,6 +2,26 @@
 
 This document lists the runtime requirements for ZenTable.
 
+## 0) Integrated API (optional)
+
+If you run the integrated FastAPI service (OCR + CSS render), this repo provides a simple non-systemd controller script:
+
+- `scripts/zentable_api_ctl.sh`
+
+Examples:
+
+```bash
+# start detached (non-blocking)
+./scripts/zentable_api_ctl.sh start
+
+# status / health
+./scripts/zentable_api_ctl.sh status
+./scripts/zentable_api_ctl.sh health
+
+# stop
+./scripts/zentable_api_ctl.sh stop
+```
+
 ## 1) Headless CSS renderer (Chrome)
 
 Used for CSS-mode table rendering (HTML/CSS → PNG screenshot).
