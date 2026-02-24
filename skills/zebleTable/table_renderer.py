@@ -72,6 +72,17 @@ def _theme_to_args(theme: str, tmpdir: Path) -> list[str]:
             raise SystemExit(f"Theme not found: {theme_file}")
         return ["--force-css", "--theme", str(theme_file)]
 
+    # CSS theme distributed as zip under themes/css/*.zip
+    zip_path = THEMES_CSS / f"{theme}.zip"
+    if zip_path.exists():
+        extract_dir = tmpdir / f"theme_css_{theme}"
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        shutil.unpack_archive(str(zip_path), str(extract_dir))
+        theme_file = extract_dir / "template.json"
+        if not theme_file.exists():
+            raise SystemExit(f"CSS theme template.json missing after unzip: {theme_file}")
+        return ["--force-css", "--theme", str(theme_file)]
+
     if theme in PIL_THEMES:
         zip_path = THEMES_PIL_ZIP / f"{theme}.zip"
         if not zip_path.exists():
