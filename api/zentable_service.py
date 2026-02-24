@@ -154,8 +154,12 @@ async def lifespan(app: FastAPI):
         from paddleocr import PaddleOCR
 
         # Workarounds for some PaddlePaddle runtime issues on certain CPU builds.
+        # Must be set BEFORE importing paddle/paddleocr.
         os.environ.setdefault("FLAGS_enable_pir_api", "0")
+        os.environ.setdefault("FLAGS_enable_new_executor", "0")
         os.environ.setdefault("FLAGS_use_mkldnn", "0")
+        os.environ.setdefault("FLAGS_use_onednn", "0")
+        os.environ.setdefault("FLAGS_enable_onednn", "0")
 
         lang = os.environ.get("OCR_LANG", "ch")
         # PaddleOCR v3 uses `use_textline_orientation` (angle classifier).

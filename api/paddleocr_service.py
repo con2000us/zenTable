@@ -73,6 +73,16 @@ def _paddle_result_to_rows(result: Optional[List]) -> List[Dict[str, Any]]:
 async def lifespan(app: FastAPI):
     """啟動時載入 PaddleOCR 一次，關閉時不特別釋放（process 結束即釋放）。"""
     global _ocr_engine
+
+    # Workarounds for some PaddlePaddle runtime issues on certain CPU builds.
+    # MUST be set BEFORE importing paddle/paddleocr.
+    os.environ.setdefault("FLAGS_enable_pir_api", "0")
+    os.environ.setdefault("FLAGS_enable_new_executor", "0")
+    # oneDNN / MKLDNN flags (names vary by Paddle version; safe as no-ops if unknown)
+    os.environ.setdefault("FLAGS_use_mkldnn", "0")
+    os.environ.setdefault("FLAGS_use_onednn", "0")
+    os.environ.setdefault("FLAGS_enable_onednn", "0")
+
     try:
         from paddleocr import PaddleOCR
     except ImportError as e:
@@ -80,10 +90,9 @@ async def lifespan(app: FastAPI):
             "請先安裝 PaddleOCR：pip install \"paddleocr>=2.0.1\" \"paddlepaddle\""
         ) from e
 
-    # Workarounds for some PaddlePaddle runtime issues on certain CPU builds.
-    # These are safe no-ops if the flags are unknown.
-    os.environ.setdefault("FLAGS_enable_pir_api", "0")
-    os.environ.setdefault("FLAGS_use_mkldnn", "0")
+    lang = os.environ.get("OCR_LANG", "ch")
+    # PaddleOCR v3 uses `use_textline_orientation` (angle classifier).
+    use_textline_orientation = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
 
     lang = os.environ.get("OCR_LANG", "ch")
     # PaddleOCR v3 uses `use_textline_orientation` (angle classifier).
