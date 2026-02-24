@@ -86,10 +86,9 @@ def _write_temp_json(data_str: str, tmpdir: Path) -> Path:
 def _theme_to_args(theme: str, tmpdir: Path) -> list[str]:
     theme = theme.strip()
 
-    if theme in CSS_THEMES:
-        theme_file = THEMES_CSS / theme / "template.json"
-        if not theme_file.exists():
-            raise SystemExit(f"Theme not found: {theme_file}")
+    # CSS theme as folder: themes/css/<theme>/template.json
+    theme_file = THEMES_CSS / theme / "template.json"
+    if theme_file.exists():
         return ["--force-css", "--theme", str(theme_file)]
 
     # CSS theme distributed as zip under themes/css/*.zip
