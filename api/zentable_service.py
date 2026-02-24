@@ -265,6 +265,7 @@ async def usage_middleware(request, call_next):
 class OCRResponse(BaseModel):
     success: bool
     rows: List[Dict[str, Any]]
+    elapsed_ms: Optional[int] = None
     error: Optional[str] = None
 
 

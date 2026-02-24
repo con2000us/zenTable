@@ -147,6 +147,7 @@ class OCRResponse(BaseModel):
     """OCR 回傳格式，與 calibrate_analyze run_ocr_full 相容。"""
     success: bool
     rows: List[Dict[str, Any]]
+    elapsed_ms: Optional[int] = None
     error: Optional[str] = None
 
 
