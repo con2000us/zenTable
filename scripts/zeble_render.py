@@ -596,6 +596,45 @@ def crop_to_content_bounds(png_path: str, padding: int = 2, transparent: bool = 
         return False
 
 
+def _bottom_edge_has_content(png_path: str, transparent: bool = False, tolerance: int = 20, alpha_threshold: int = 1) -> bool:
+    """檢查 PNG 最底邊（y=h-1）是否有內容。
+
+    用於 auto-height：若最底邊仍有非透明/非背景像素，通常代表內容被截斷，需加高 viewport 再渲染。
+    """
+    try:
+        from PIL import Image
+        img = Image.open(png_path)
+        w, h = img.size
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+
+        y = h - 1
+        if y < 0:
+            return False
+
+        if transparent:
+            alpha = img.split()[3]
+            row = alpha.crop((0, y, w, y + 1))
+            return row.getextrema()[1] >= alpha_threshold
+
+        # 不透明：以四角採樣作背景參考
+        corners = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+        refs = [img.getpixel(c) for c in corners if 0 <= c[0] < w and 0 <= c[1] < h]
+        if not refs:
+            return False
+        bg = tuple(sum(r[i] for r in refs) // len(refs) for i in range(3))
+
+        row = img.crop((0, y, w, y + 1))
+        data = list(row.getdata())
+        for p in data:
+            rgb = p[:3]
+            if max(abs(rgb[0] - bg[0]), abs(rgb[1] - bg[1]), abs(rgb[2] - bg[2])) > tolerance:
+                return True
+        return False
+    except Exception:
+        return False
+
+
 def crop_to_content_height(png_path: str, transparent: bool = False, tolerance: int = 20) -> bool:
     """只裁切高度（保留完整寬度），避免 explicit width 時因 skip_crop 而留下超高空白。
 
@@ -2500,7 +2539,7 @@ def main():
         theme = _scale_css_styles_px(theme, resolved_text_scale)
 
         vw, vh, explicit_width = estimate_css_viewport_width_height(data, theme)
-        # auto-height: 先用足夠高的 viewport 渲染，避免內容因換行而被截斷；再裁切到實際內容高度。
+        # auto-height: 先用足夠高的 viewport 渲染，避免內容因換行而被截斷。
         if auto_height:
             vh = max(vh, auto_height_max)
         table_width_pct = None
@@ -2532,13 +2571,45 @@ def main():
                 cache_dir = ensure_theme_cache(theme_name, theme_mode)
             except ValueError:
                 pass
-        success = render_css(html, output_file, transparent=transparent_bg, html_dir=cache_dir,
-                            viewport_width=vw, viewport_height=vh, bg_color=bg_color,
-                            skip_crop=explicit_width)
+        # auto-height: 先用較高 viewport 渲染；如果最底邊仍有內容，代表被截斷，則加倍高度重渲染。
+        # 注意：要做這個檢查，第一次渲染必須先不要裁切。
+        if auto_height:
+            max_hard = MAX_VIEWPORT_DIM
+            attempts = 0
+            cur_vh = min(vh, max_hard)
+            while True:
+                attempts += 1
+                success = render_css(
+                    html, output_file,
+                    transparent=transparent_bg,
+                    html_dir=cache_dir,
+                    viewport_width=vw,
+                    viewport_height=cur_vh,
+                    bg_color=bg_color,
+                    skip_crop=True,  # 先不裁，才能檢查底邊是否被截
+                )
+                if not success:
+                    break
 
-        # auto-height: 即使 explicit width 導致 skip_crop=True，也要裁切高度
-        if success and auto_height:
-            crop_to_content_height(output_file, transparent=transparent_bg)
+                # 但書：若最底邊 alpha/內容已非 0，代表內容碰到底（可能被截斷），加倍高度再試
+                if _bottom_edge_has_content(output_file, transparent=transparent_bg) and cur_vh < max_hard:
+                    next_vh = min(cur_vh * 2, max_hard)
+                    if next_vh == cur_vh or attempts >= 6:
+                        break
+                    cur_vh = next_vh
+                    continue
+                break
+
+            # 最終：裁切高度（不留 padding）；若不是 explicit width，仍可用原本裁切法把左右空白也裁掉
+            if success:
+                if explicit_width:
+                    crop_to_content_height(output_file, transparent=transparent_bg)
+                else:
+                    crop_to_content_bounds(output_file, padding=2, transparent=transparent_bg)
+        else:
+            success = render_css(html, output_file, transparent=transparent_bg, html_dir=cache_dir,
+                                viewport_width=vw, viewport_height=vh, bg_color=bg_color,
+                                skip_crop=explicit_width)
 
         if success and use_scale_post and force_width:
             try:
