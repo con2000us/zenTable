@@ -153,9 +153,12 @@ async def lifespan(app: FastAPI):
     try:
         from paddleocr import PaddleOCR
 
+        # Workarounds for some PaddlePaddle runtime issues on certain CPU builds.
+        os.environ.setdefault("FLAGS_enable_pir_api", "0")
+        os.environ.setdefault("FLAGS_use_mkldnn", "0")
+
         lang = os.environ.get("OCR_LANG", "ch")
-        # PaddleOCR v3 uses `use_textline_orientation` (angle classifier) and no longer
-        # accepts `use_gpu` in the constructor signature.
+        # PaddleOCR v3 uses `use_textline_orientation` (angle classifier).
         use_textline_orientation = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
 
         # PaddleX model source check can block startup in some environments.

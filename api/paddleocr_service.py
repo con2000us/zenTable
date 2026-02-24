@@ -80,9 +80,13 @@ async def lifespan(app: FastAPI):
             "請先安裝 PaddleOCR：pip install \"paddleocr>=2.0.1\" \"paddlepaddle\""
         ) from e
 
+    # Workarounds for some PaddlePaddle runtime issues on certain CPU builds.
+    # These are safe no-ops if the flags are unknown.
+    os.environ.setdefault("FLAGS_enable_pir_api", "0")
+    os.environ.setdefault("FLAGS_use_mkldnn", "0")
+
     lang = os.environ.get("OCR_LANG", "ch")
-    # PaddleOCR v3 uses `use_textline_orientation` (angle classifier) and no longer
-    # accepts `use_gpu` in the constructor signature.
+    # PaddleOCR v3 uses `use_textline_orientation` (angle classifier).
     use_textline_orientation = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
 
     _ocr_engine = PaddleOCR(
