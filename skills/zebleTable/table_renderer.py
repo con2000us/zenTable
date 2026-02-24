@@ -148,8 +148,12 @@ def main() -> int:
             print("Running:", " ".join(cmd), file=sys.stderr)
 
         env = os.environ.copy()
+        # Default: prefer CSS render FastAPI (if running). Renderer will fallback to local Chrome on errors.
+        # Can be overridden via --css-api-url.
         if args.css_api_url:
             env["ZENTABLE_CSS_API_URL"] = str(args.css_api_url)
+        else:
+            env.setdefault("ZENTABLE_CSS_API_URL", "http://127.0.0.1:8001")
 
         proc = subprocess.run(cmd, cwd=str(ZEN_ROOT), env=env)
         return proc.returncode
