@@ -81,13 +81,13 @@ async def lifespan(app: FastAPI):
         ) from e
 
     lang = os.environ.get("OCR_LANG", "ch")
-    use_gpu = os.environ.get("USE_GPU", "false").lower() in ("1", "true", "yes")
-    use_angle_cls = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
+    # PaddleOCR v3 uses `use_textline_orientation` (angle classifier) and no longer
+    # accepts `use_gpu` in the constructor signature.
+    use_textline_orientation = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
 
     _ocr_engine = PaddleOCR(
-        use_angle_cls=use_angle_cls,
+        use_textline_orientation=use_textline_orientation,
         lang=lang,
-        use_gpu=use_gpu,
     )
     yield
     _ocr_engine = None

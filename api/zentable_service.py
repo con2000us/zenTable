@@ -154,15 +154,16 @@ async def lifespan(app: FastAPI):
         from paddleocr import PaddleOCR
 
         lang = os.environ.get("OCR_LANG", "ch")
-        use_gpu = os.environ.get("USE_GPU", "false").lower() in ("1", "true", "yes")
-        use_angle_cls = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
+        # PaddleOCR v3 uses `use_textline_orientation` (angle classifier) and no longer
+        # accepts `use_gpu` in the constructor signature.
+        use_textline_orientation = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
 
         # PaddleX model source check can block startup in some environments.
         # Allow disabling via env (recommended for offline / restricted envs).
         if os.environ.get("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK") is None:
             os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
-        _ocr_engine = PaddleOCR(use_angle_cls=use_angle_cls, lang=lang, use_gpu=use_gpu)
+        _ocr_engine = PaddleOCR(use_textline_orientation=use_textline_orientation, lang=lang)
         print("[zentable_service] OCR engine loaded")
     except Exception as e:
         # Keep service up even without OCR deps
