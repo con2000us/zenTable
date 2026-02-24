@@ -2252,6 +2252,44 @@ def normalise_data(data):
         return {"headers": data.get("headers", []), "rows": data.get("rows", []), "title": data.get("title", ""), "footer": data.get("footer", "")}
     return {"headers": [], "rows": [], "title": "", "footer": ""}
 
+def transpose_table(data):
+    """Transpose a {headers, rows} table so that the header becomes the first column.
+
+    Typical use: wide tables on mobile → transpose to a key/value style table.
+
+    Output headers:
+      ["Field", <row0_key>, <row1_key>, ...]
+    where row keys are taken from the first cell of each original row (if present).
+
+    Output rows:
+      Each original column becomes a row:
+        [<original header>, <cell(row0,col)>, <cell(row1,col)>, ...]
+
+    This is intentionally simple and robust (pads missing cells with "").
+    """
+    headers = list(data.get("headers", []) or [])
+    rows = [list(r) for r in (data.get("rows", []) or [])]
+
+    if not headers:
+        return {"headers": [], "rows": [], "title": data.get("title", ""), "footer": data.get("footer", "")}
+
+    # Column headers after transpose come from the first cell of each row (if available)
+    row_keys = []
+    for r in rows:
+        row_keys.append(cell_text(r[0]) if len(r) > 0 else "")
+
+    out_headers = ["Field"] + row_keys
+
+    out_rows = []
+    for j, h in enumerate(headers):
+        new_row = ["" if h is None else str(h)]
+        for i, r in enumerate(rows):
+            new_row.append(cell_text(r[j]) if j < len(r) else "")
+        out_rows.append(new_row)
+
+    return {"headers": out_headers, "rows": out_rows, "title": data.get("title", ""), "footer": data.get("footer", "")}
+
+
 def apply_sort_and_page(data, sort_by=None, sort_asc=True, page=1, per_page=ROWS_PER_PAGE):
     """依 sort_by 排序 rows，再取第 page 頁。"""
     headers = data.get("headers", [])
@@ -2295,6 +2333,8 @@ def main():
         print('  --theme FILE    主題檔案（直接用於測試，不儲存）')
         print('  --theme-name    themes/ 目錄中的主題名稱')
         print('  --page N        第 N 頁（每頁 %d 列）' % ROWS_PER_PAGE)
+        print('  --transpose     轉置表格（header 變第一欄；適合手機閱讀）')
+        print('  --cc            --transpose 的別名')
         print('  --sort <欄位>   依欄位排序')
         print('  --asc           升序（預設）')
         print('  --desc          降序')
@@ -2317,6 +2357,7 @@ def main():
     page = 1
     sort_by = None
     sort_asc = True
+    transpose = False
     bg_mode = "theme"  # transparent | theme | #RRGGBB
     force_width = None
     text_scale = None
@@ -2358,6 +2399,8 @@ def main():
             sort_asc = True
         elif arg == "--desc":
             sort_asc = False
+        elif arg == "--transpose" or arg == "--cc":
+            transpose = True
         elif arg == "--bg" and i + 1 < len(sys.argv):
             bg_mode = sys.argv[i + 1].strip().lower()
         elif arg == "--width" and i + 1 < len(sys.argv):
@@ -2426,8 +2469,11 @@ def main():
         data_params = data.pop('_params', {})
         custom_params = {**custom_params, **data_params}
     
-    # 統一輸入格式（陣列 of 物件 或 headers+rows），再套用排序與分頁
+    # 統一輸入格式（陣列 of 物件 或 headers+rows）
     data = normalise_data(data)
+    if transpose:
+        data = transpose_table(data)
+    # 再套用排序與分頁
     data = apply_sort_and_page(data, sort_by=sort_by, sort_asc=sort_asc, page=page, per_page=per_page)
     
     # 決定渲染方式

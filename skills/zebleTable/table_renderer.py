@@ -110,6 +110,8 @@ def main() -> int:
     ap.add_argument("--page", type=int, default=1)
     ap.add_argument("--per-page", type=int, default=None)
     ap.add_argument("--css-api-url", default=None)
+    ap.add_argument("--transpose", action="store_true")
+    ap.add_argument("--cc", action="store_true")
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -143,6 +145,9 @@ def main() -> int:
             cmd += ["--page", str(max(1, int(args.page)))]
         if args.per_page is not None:
             cmd += ["--per-page", str(max(1, int(args.per_page)))]
+
+        if args.transpose or args.cc:
+            cmd += ["--transpose"]
 
         if args.verbose:
             print("Running:", " ".join(cmd), file=sys.stderr)
