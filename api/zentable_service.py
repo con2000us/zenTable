@@ -228,6 +228,39 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# --- lightweight usage tracking (for heartbeat monitoring) ---
+USAGE_PATH = os.environ.get("ZENTABLE_USAGE_PATH", "/home/minecraft/.openclaw/zentable_api_usage.json")
+
+
+def _usage_touch(request_path: str, method: str) -> None:
+    try:
+        now = int(time.time())
+        os.makedirs(os.path.dirname(USAGE_PATH), exist_ok=True)
+        data = {}
+        if os.path.exists(USAGE_PATH):
+            try:
+                import json as _json
+                data = _json.loads(open(USAGE_PATH, "r", encoding="utf-8").read() or "{}")
+            except Exception:
+                data = {}
+        last = data.get("last_used_unix")
+        data["last_used_unix"] = now
+        data.setdefault("counts", {})
+        key = f"{method.upper()} {request_path}"
+        data["counts"][key] = int(data["counts"].get(key, 0)) + 1
+        if last is None:
+            data["first_seen_unix"] = now
+        import json as _json
+        open(USAGE_PATH, "w", encoding="utf-8").write(_json.dumps(data, ensure_ascii=False, indent=2))
+    except Exception:
+        pass
+
+
+@app.middleware("http")
+async def usage_middleware(request, call_next):
+    _usage_touch(request.url.path, request.method)
+    return await call_next(request)
+
 
 class OCRResponse(BaseModel):
     success: bool
