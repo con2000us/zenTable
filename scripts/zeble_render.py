@@ -1307,28 +1307,32 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
     return html
 
 
-def _inject_edge_probe_css(html: str, gap_px: int = 50) -> str:
-    """Inject a right-side gap so the extreme right edge is guaranteed empty.
+def _inject_wrap_gap_css(html: str, gap_px: int) -> str:
+    """Inject wrap-gap CSS.
 
-    This is used ONLY for auto-width edge-probe renders to avoid false positives from
-    shadows/borders when themes use width:100% backgrounds.
+    Purpose: when rendering with a fixed width (e.g. mobile w450), force the layout engine
+    to wrap earlier so text doesn't spill past the right edge.
 
-    Strategy (margin-based, to minimize reflow differences):
-      - Increase viewport by +gap_px
-      - Constrain layout width back to the original by setting width:calc(100%-gap) and margin-right:gap
+    This is an explicit user-controlled behavior via --wrap-gap.
 
-    Note: table layouts can still differ slightly if themes depend on viewport-based widths,
-    but this avoids the stronger reflow caused by padding-right.
+    Implementation:
+      - viewport width = (forced_width + gap)
+      - effective layout width = calc(100% - gap)
+      - keep a right margin gap for safety
+      - force table to 100% so columns are constrained by the layout width
     """
     try:
         gap_px = max(0, int(gap_px))
     except Exception:
-        gap_px = 50
+        gap_px = 0
+    if gap_px <= 0:
+        return html
     css = (
         f"\nhtml, body {{ width: calc(100% - {gap_px}px) !important; margin: 0 {gap_px}px 0 0 !important; box-sizing: border-box; }}"
-        f"\n.container {{ width: calc(100% - {gap_px}px) !important; margin: 0 {gap_px}px 0 0 !important; box-sizing: border-box; }}\n"
+        f"\ntable {{ width: 100% !important; }}\n"
+        f"\nhtml {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}\n"
     )
-    inject = f"\n<style id=\"zentable-edge-probe\">{css}</style>\n"
+    inject = f"\n<style id=\"zentable-wrap-gap\">{css}</style>\n"
     if "</head>" in html:
         return html.replace("</head>", inject + "</head>")
     return html + inject
@@ -2669,6 +2673,7 @@ def main():
         print('  --cc            --transpose 的別名')
         print('  --debug-auto-width  儲存每次 auto-width 嘗試的右側邊界裁切圖（用於診斷）')
         print('  --debug-auto-width-strip N  右側裁切寬度（預設 40px）')
+        print('  --wrap-gap N   固定寬度模式用：viewport 變成 (width+N)，但排版寬度縮成 calc(100%-N) 以強制更早換行（避免右側溢出）')
         print('  --sort <欄位>   依欄位排序')
         print('  --asc           升序（預設）')
         print('  --desc          降序')
@@ -2718,6 +2723,8 @@ def main():
 
     debug_auto_width = False
     debug_auto_width_strip = 40
+
+    wrap_gap = 0  # explicit: shrink effective layout width by gap; viewport becomes (width+gap)
     
     for i in range(3, len(sys.argv)):
         arg = sys.argv[i]
@@ -2759,6 +2766,11 @@ def main():
             try:
                 debug_auto_width_strip = max(10, int(sys.argv[i + 1]))
                 debug_auto_width = True
+            except ValueError:
+                pass
+        elif arg == "--wrap-gap" and i + 1 < len(sys.argv):
+            try:
+                wrap_gap = max(0, int(sys.argv[i + 1]))
             except ValueError:
                 pass
         elif arg == "--bg" and i + 1 < len(sys.argv):
@@ -3079,6 +3091,12 @@ def main():
                 vw, vh = vw, vh
         html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt)
 
+        # Explicit, user-controlled wrap gap.
+        if explicit_width and force_width and wrap_gap:
+            html = _inject_wrap_gap_css(html, gap_px=wrap_gap)
+            # viewport becomes width+gap; layout uses calc(100%-gap)
+            vw = int(force_width) + int(wrap_gap)
+
         # Fixed-width wrapping helpers:
         # When user forces width, ensure table is constrained to viewport and cells can shrink for wrapping.
         if explicit_width and force_width and force_width > 0:
@@ -3130,6 +3148,7 @@ def main():
                     "text_scale_mode": text_scale_mode,
                     "text_scale": float(resolved_text_scale) if resolved_text_scale is not None else None,
                     "scale_factor": float(scale_factor),
+                    "wrap_gap": int(wrap_gap) if 'wrap_gap' in locals() else 0,
                 }
                 import json as _json
                 with open(dump_base + ".input.json", "w", encoding="utf-8") as f:
@@ -3261,57 +3280,14 @@ def main():
                         cur_vh = next_vh
                         grew = True
 
-                # Edge check (buffer-probe): render with vw+gap and add right padding gap, then check the true edge.
-                gap_px = 50
-                edge_trigger = False
-                probe_info = None
-                if auto_width and cur_vw < max_hard:
-                    try:
-                        probe_vw = min(int(cur_vw) + int(gap_px), max_hard)
-                        probe_html = _inject_edge_probe_css(html, gap_px=gap_px)
-                        probe_path = output_file + ".edgeprobe.png"
-                        t_probe0 = time.time()
-                        ok_probe = render_css(
-                            probe_html, probe_path,
-                            transparent=transparent_bg,
-                            html_dir=cache_dir,
-                            viewport_width=probe_vw,
-                            viewport_height=cur_vh,
-                            bg_color=bg_color,
-                            skip_crop=True,
-                        )
-                        probe_ms = int((time.time() - t_probe0) * 1000)
-                        if ok_probe:
-                            edge_trigger = _right_edge_has_content(probe_path, transparent=transparent_bg, x_inset=0)
-                            probe_info = {"vw": int(probe_vw), "gap": int(gap_px), "probe_ms": int(probe_ms), "edge": bool(edge_trigger)}
-
-                            # save per-attempt probe snapshot when debugging
-                            if debug_auto_width:
-                                try:
-                                    dbg_dir = output_file + ".debug"
-                                    os.makedirs(dbg_dir, exist_ok=True)
-                                    probe_snap = os.path.join(dbg_dir, f"attempt_{attempts:02d}_probe.png")
-                                    import shutil as _shutil
-                                    _shutil.copyfile(probe_path, probe_snap)
-                                    probe_info["probe_file"] = probe_snap
-                                except Exception:
-                                    pass
-                    except Exception:
-                        probe_info = None
-
-                # attach probe info to the last render_attempt if available
-                try:
-                    if render_attempts and isinstance(render_attempts[-1], dict):
-                        render_attempts[-1]["edge_probe"] = probe_info
-                except Exception:
-                    pass
-
-                if auto_width and edge_trigger and cur_vw < max_hard:
-                    # grow width gradually (avoid overshooting 2x when only slightly clipped)
+                # Auto-width edge check (no layout-modifying probe by default):
+                # We only look at an inset line to reduce false positives from outer shadows.
+                edge_inset = 50
+                if auto_width and _right_edge_has_content(output_file, transparent=transparent_bg, x_inset=edge_inset) and cur_vw < max_hard:
                     next_vw = max(cur_vw + 400, int(cur_vw * 1.25))
                     next_vw = min(next_vw, max_hard)
                     if next_vw != cur_vw:
-                        width_steps.append({"reason": "edge_probe", "from": int(cur_vw), "to": int(next_vw), "gap": int(gap_px)})
+                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "x_inset": int(edge_inset)})
                         cur_vw = next_vw
                         grew = True
 
