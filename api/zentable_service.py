@@ -307,9 +307,11 @@ async def ocr(image: UploadFile = File(...)):
             img = img.convert("RGB")
         img_np = np.array(img)
         # PaddleOCR v3: `cls` kwarg is not supported; orientation is configured by pipeline.
+        t0 = time.time()
         result = _get_ocr_engine().ocr(img_np)
+        elapsed_ms = int((time.time() - t0) * 1000)
         rows = _paddle_result_to_rows(result)
-        return OCRResponse(success=True, rows=rows)
+        return OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms)
     except Exception as e:
         return OCRResponse(success=False, rows=[], error=str(e))
 
@@ -332,9 +334,11 @@ async def ocr_base64(body: OCRBase64Body):
             img = img.convert("RGB")
         img_np = np.array(img)
         # PaddleOCR v3: `cls` kwarg is not supported; orientation is configured by pipeline.
+        t0 = time.time()
         result = _get_ocr_engine().ocr(img_np)
+        elapsed_ms = int((time.time() - t0) * 1000)
         rows = _paddle_result_to_rows(result)
-        return OCRResponse(success=True, rows=rows)
+        return OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms)
     except Exception as e:
         return OCRResponse(success=False, rows=[], error=str(e))
 
