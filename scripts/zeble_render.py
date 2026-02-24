@@ -635,6 +635,58 @@ def _bottom_edge_has_content(png_path: str, transparent: bool = False, tolerance
         return False
 
 
+def _right_edge_metrics(png_path: str, transparent: bool = False, tolerance: int = 20, alpha_threshold: int = 1,
+                        x_inset: int = 0) -> Optional[dict]:
+    """Return metrics for a vertical edge line.
+
+    Returns:
+      {x, h, nonempty, ratio, best_run}
+    """
+    try:
+        from PIL import Image
+        img = Image.open(png_path)
+        w, h = img.size
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+
+        x = max(0, min(w - 1, (w - 1) - int(x_inset)))
+        if w <= 0 or h <= 0:
+            return None
+
+        bg = (0, 0, 0)
+        if not transparent:
+            corners = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+            refs = [img.getpixel(c) for c in corners if 0 <= c[0] < w and 0 <= c[1] < h]
+            if not refs:
+                return None
+            bg = tuple(sum(r[i] for r in refs) // len(refs) for i in range(3))
+
+        def is_nonempty(px):
+            if transparent:
+                return px[3] >= alpha_threshold
+            rgb = px[:3]
+            return max(abs(rgb[0] - bg[0]), abs(rgb[1] - bg[1]), abs(rgb[2] - bg[2])) > tolerance
+
+        col = img.crop((x, 0, x + 1, h))
+        data = list(col.getdata())
+        nonempty = 0
+        run = 0
+        best_run = 0
+        for p in data:
+            if is_nonempty(p):
+                nonempty += 1
+                run += 1
+                if run > best_run:
+                    best_run = run
+            else:
+                run = 0
+
+        ratio = (nonempty / float(h)) if h else 0.0
+        return {"x": int(x), "h": int(h), "nonempty": int(nonempty), "ratio": float(ratio), "best_run": int(best_run)}
+    except Exception:
+        return None
+
+
 def _right_edge_has_content(png_path: str, transparent: bool = False, tolerance: int = 20, alpha_threshold: int = 1,
                             min_run: int = 12, min_ratio: float = 0.03) -> bool:
     """檢查 PNG 最右邊（x=w-1）是否有內容（更嚴格）。
@@ -3027,6 +3079,15 @@ def main():
 
             while True:
                 attempts += 1
+
+                # DOM overflow metrics at this viewport (debug/stats)
+                attempt_dom = None
+                if auto_width and not os.environ.get("ZENTABLE_CSS_API_URL"):
+                    try:
+                        attempt_dom = measure_dom_overflow(html, cache_dir or "/tmp", viewport_width=cur_vw, viewport_height=cur_vh)
+                    except Exception:
+                        attempt_dom = None
+
                 success = render_css(
                     html, output_file,
                     transparent=transparent_bg,
@@ -3038,11 +3099,16 @@ def main():
                 )
                 if success:
                     try:
+                        edge_metrics = _right_edge_metrics(output_file, transparent=transparent_bg, x_inset=0)
+                        edge_metrics_inset = _right_edge_metrics(output_file, transparent=transparent_bg, x_inset=5)
                         render_attempts.append({
                             "attempt": int(attempts),
                             "vw": int(cur_vw),
                             "vh": int(cur_vh),
                             "css_render_ms": int(LAST_CSS_RENDER_MS) if LAST_CSS_RENDER_MS is not None else None,
+                            "dom": attempt_dom,
+                            "edge": edge_metrics,
+                            "edge_inset5": edge_metrics_inset,
                         })
                     except Exception:
                         pass
