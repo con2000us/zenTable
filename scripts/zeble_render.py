@@ -855,6 +855,62 @@ def measure_dom_scroll_width(html: str, html_dir: str, viewport_width: int, view
     Returns the needed width (scrollWidth) if measurable, else None.
     Only works for local Chrome spawning (not remote CSS API).
     """
+
+
+def measure_dom_overflow(html: str, html_dir: str, viewport_width: int, viewport_height: int) -> Optional[dict]:
+    """Measure DOM overflow for the table element.
+
+    Returns dict: {scrollWidth, clientWidth, rectWidth}
+    """
+    try:
+        ts = str(int(time.time() * 1000))
+        html_file = os.path.join(html_dir, f"overflow_{ts}.html")
+
+        inject = """
+<script>
+(function(){
+  function pick(){ return document.querySelector('table') || document.querySelector('.table') || null; }
+  function measure(){
+    var el = pick();
+    if(!el){ document.title = 'ZENTABLE_OVERFLOW=0,0,0'; return; }
+    var sw = 0, cw = 0, rw = 0;
+    try { sw = el.scrollWidth||0; cw = el.clientWidth||0; rw = el.getBoundingClientRect().width||0; } catch(e) {}
+    document.title = 'ZENTABLE_OVERFLOW=' + Math.ceil(sw) + ',' + Math.ceil(cw) + ',' + Math.ceil(rw);
+  }
+  window.addEventListener('load', function(){ setTimeout(measure, 50); });
+  setTimeout(measure, 200);
+})();
+</script>
+"""
+
+        with open(html_file, 'w', encoding='utf-8') as f:
+            f.write(html + inject)
+
+        parts = [
+            "xvfb-run", "-a", "google-chrome", "--headless",
+            "--disable-gpu",
+            "--virtual-time-budget=1000",
+            f"--window-size={int(viewport_width)},{int(viewport_height)}",
+            f"--default-background-color={TRANSPARENT_BG_HEX}",
+            "--dump-dom",
+            f"file://{html_file}",
+        ]
+        import subprocess
+        p = subprocess.run(parts, capture_output=True, text=True, timeout=30)
+        out = (p.stdout or "")
+        m = re.search(r"ZENTABLE_OVERFLOW=(\d+),(\d+),(\d+)", out)
+        if m:
+            return {"scrollWidth": int(m.group(1)), "clientWidth": int(m.group(2)), "rectWidth": int(m.group(3))}
+        return None
+    except Exception:
+        return None
+    finally:
+        try:
+            if 'html_file' in locals() and os.path.exists(html_file):
+                os.remove(html_file)
+        except Exception:
+            pass
+
     try:
         ts = str(int(time.time() * 1000))
         html_file = os.path.join(html_dir, f"measure_{ts}.html")
@@ -2936,20 +2992,35 @@ def main():
             width_steps = []
 
             # DOM pre-measure (skip when using remote CSS API)
+            # Prefer overflow-based measurement over raw scrollWidth to avoid background/border false positives.
             if auto_width and not os.environ.get("ZENTABLE_CSS_API_URL"):
                 try:
-                    need_w = measure_dom_scroll_width(html, cache_dir or "/tmp", viewport_width=cur_vw, viewport_height=cur_vh)
-                    if need_w and need_w > cur_vw:
-                        # Cap DOM suggestion to avoid runaway widths (e.g., measuring the wrong element)
-                        base_w = int(force_width) if force_width else int(cur_vw)
-                        dom_cap = min(max_hard, max(base_w * 2, base_w + 400))
-                        need_w = min(int(need_w), int(dom_cap))
-                        # round up a bit to avoid 1-2px clipping
-                        need_w = int(((need_w + 49) // 50) * 50)
-                        need_w = min(need_w, max_hard)
-                        if need_w > cur_vw:
-                            width_steps.append({"reason": "dom", "from": int(cur_vw), "to": int(need_w)})
-                            cur_vw = need_w
+                    ov = measure_dom_overflow(html, cache_dir or "/tmp", viewport_width=cur_vw, viewport_height=cur_vh)
+                    if ov and ov.get('scrollWidth', 0) > 0:
+                        width_steps.append({"reason": "dom_overflow", "vw": int(cur_vw), **ov})
+                        sw = int(ov.get('scrollWidth') or 0)
+                        cw = int(ov.get('clientWidth') or 0)
+                        # Only grow if real overflow exists
+                        if sw > (cw + 2) and sw > cur_vw:
+                            base_w = int(force_width) if force_width else int(cur_vw)
+                            dom_cap = min(max_hard, max(base_w * 2, base_w + 400))
+                            need_w = min(int(sw), int(dom_cap))
+                            need_w = int(((need_w + 49) // 50) * 50)
+                            need_w = min(need_w, max_hard)
+                            if need_w > cur_vw:
+                                width_steps.append({"reason": "dom", "from": int(cur_vw), "to": int(need_w)})
+                                cur_vw = need_w
+                    else:
+                        need_w = measure_dom_scroll_width(html, cache_dir or "/tmp", viewport_width=cur_vw, viewport_height=cur_vh)
+                        if need_w and need_w > cur_vw:
+                            base_w = int(force_width) if force_width else int(cur_vw)
+                            dom_cap = min(max_hard, max(base_w * 2, base_w + 400))
+                            need_w = min(int(need_w), int(dom_cap))
+                            need_w = int(((need_w + 49) // 50) * 50)
+                            need_w = min(need_w, max_hard)
+                            if need_w > cur_vw:
+                                width_steps.append({"reason": "dom", "from": int(cur_vw), "to": int(need_w)})
+                                cur_vw = need_w
                 except Exception:
                     pass
 
