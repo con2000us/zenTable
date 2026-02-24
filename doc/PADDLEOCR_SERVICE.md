@@ -90,6 +90,21 @@ uvicorn api.paddleocr_service:app --host 0.0.0.0 --port 8000
 - 本服務**只依賴**：FastAPI、PaddleOCR、PaddlePaddle、Pillow、numpy。
 - 呼叫端（LangFlow 節點、n8n、自訂 skill）只需依賴 **HTTP 客戶端**（如 `requests`），依賴清單短、易於封裝成 skill。
 
-## PaddleOCR-VL（可選）
+## Performance notes (CPU vs GPU)
 
-若需文件解析、表格結構等進階能力，可改用 PaddleOCR-VL（需 GPU、安裝 `paddleocr[doc-parser]`）。目前本服務使用標準 PaddleOCR；若要改為 VL 版，需替換 lifespan 內的模型載入與 `ocr()` 呼叫邏輯，並依 [PaddleOCR-VL 文件](https://paddlepaddle.github.io/PaddleOCR/latest/en/version3.x/pipeline_usage/PaddleOCR-VL.html) 調整回傳格式對應。
+OCR latency varies a lot across machines.
+
+- **Full OCR** (det + rec + optional orientation) can take **tens of seconds** on slower CPUs.
+- Even **det-only** can take multiple seconds on some hosts.
+
+If OCR feels slow or inaccurate, ask the user to:
+
+- Crop to only the relevant region (remove margins / footnotes)
+- Split the screenshot into smaller parts (e.g., left `Name` column vs right numeric columns)
+- Keep the FastAPI service running (warm models) instead of starting it for every request
+
+## PaddleOCR-VL (optional)
+
+If you need document parsing / table structure, consider PaddleOCR-VL (GPU recommended; install `paddleocr[doc-parser]`).
+This service currently uses standard PaddleOCR. To switch to VL, replace the model initialization and OCR call logic in the lifespan and adjust the response mapping per the official docs:
+https://paddlepaddle.github.io/PaddleOCR/latest/en/version3.x/pipeline_usage/PaddleOCR-VL.html
