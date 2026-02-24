@@ -163,6 +163,7 @@ async def lifespan(app: FastAPI):
             os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
         _ocr_engine = PaddleOCR(use_angle_cls=use_angle_cls, lang=lang, use_gpu=use_gpu)
+        print("[zentable_service] OCR engine loaded")
     except Exception as e:
         # Keep service up even without OCR deps
         _ocr_engine = None
