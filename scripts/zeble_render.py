@@ -2626,6 +2626,8 @@ def main():
         print('  --page N        第 N 頁（每頁 %d 列）' % ROWS_PER_PAGE)
         print('  --transpose     轉置表格（header 變第一欄；適合手機閱讀）')
         print('  --cc            --transpose 的別名')
+        print('  --debug-auto-width  儲存每次 auto-width 嘗試的右側邊界裁切圖（用於診斷）')
+        print('  --debug-auto-width-strip N  右側裁切寬度（預設 40px）')
         print('  --sort <欄位>   依欄位排序')
         print('  --asc           升序（預設）')
         print('  --desc          降序')
@@ -2672,6 +2674,9 @@ def main():
     width_set = False
     text_scale_set = False
     text_scale_max_set = False
+
+    debug_auto_width = False
+    debug_auto_width_strip = 40
     
     for i in range(3, len(sys.argv)):
         arg = sys.argv[i]
@@ -2707,6 +2712,14 @@ def main():
             sort_asc = False
         elif arg == "--transpose" or arg == "--cc":
             transpose = True
+        elif arg == "--debug-auto-width":
+            debug_auto_width = True
+        elif arg == "--debug-auto-width-strip" and i + 1 < len(sys.argv):
+            try:
+                debug_auto_width_strip = max(10, int(sys.argv[i + 1]))
+                debug_auto_width = True
+            except ValueError:
+                pass
         elif arg == "--bg" and i + 1 < len(sys.argv):
             bg_mode = sys.argv[i + 1].strip().lower()
         elif arg == "--width" and i + 1 < len(sys.argv):
@@ -3101,6 +3114,22 @@ def main():
                     try:
                         edge_metrics = _right_edge_metrics(output_file, transparent=transparent_bg, x_inset=0)
                         edge_metrics_inset = _right_edge_metrics(output_file, transparent=transparent_bg, x_inset=5)
+                        debug_files = None
+                        if debug_auto_width:
+                            try:
+                                from PIL import Image as _Image
+                                im = _Image.open(output_file)
+                                w, h = im.size
+                                strip_w = min(int(debug_auto_width_strip), w)
+                                strip = im.crop((w - strip_w, 0, w, h))
+                                dbg_dir = output_file + ".debug"
+                                os.makedirs(dbg_dir, exist_ok=True)
+                                right_path = os.path.join(dbg_dir, f"attempt_{attempts:02d}_right{strip_w}.png")
+                                strip.save(right_path, "PNG")
+                                debug_files = {"right_strip": right_path}
+                            except Exception:
+                                debug_files = None
+
                         render_attempts.append({
                             "attempt": int(attempts),
                             "vw": int(cur_vw),
@@ -3109,6 +3138,7 @@ def main():
                             "dom": attempt_dom,
                             "edge": edge_metrics,
                             "edge_inset5": edge_metrics_inset,
+                            "debug": debug_files,
                         })
                     except Exception:
                         pass
