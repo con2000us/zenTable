@@ -688,7 +688,7 @@ def _right_edge_metrics(png_path: str, transparent: bool = False, tolerance: int
 
 
 def _right_edge_has_content(png_path: str, transparent: bool = False, tolerance: int = 20, alpha_threshold: int = 1,
-                            min_run: int = 12, min_ratio: float = 0.03) -> bool:
+                            min_run: int = 12, min_ratio: float = 0.03, x_inset: int = 0) -> bool:
     """檢查 PNG 最右邊（x=w-1）是否有內容（更嚴格）。
 
     用於 auto-width：避免 1px 抗鋸齒/陰影造成誤判。
@@ -704,7 +704,7 @@ def _right_edge_has_content(png_path: str, transparent: bool = False, tolerance:
         if img.mode != "RGBA":
             img = img.convert("RGBA")
 
-        x = w - 1
+        x = max(0, (w - 1) - int(x_inset))
         if x < 0:
             return False
 
@@ -3181,12 +3181,14 @@ def main():
                 except Exception:
                     dom_overflow_ok = None
 
-                if auto_width and (dom_overflow_ok is not True) and _right_edge_has_content(output_file, transparent=transparent_bg) and cur_vw < max_hard:
+                # Edge check: use an inset line to avoid counting table/background shadows at the extreme edge.
+                edge_inset = 50
+                if auto_width and (dom_overflow_ok is not True) and _right_edge_has_content(output_file, transparent=transparent_bg, x_inset=edge_inset) and cur_vw < max_hard:
                     # grow width gradually (avoid overshooting 2x when only slightly clipped)
                     next_vw = max(cur_vw + 400, int(cur_vw * 1.25))
                     next_vw = min(next_vw, max_hard)
                     if next_vw != cur_vw:
-                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "dom_ok": dom_overflow_ok})
+                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "dom_ok": dom_overflow_ok, "x_inset": int(edge_inset)})
                         cur_vw = next_vw
                         grew = True
                 elif auto_width and dom_overflow_ok is True:
