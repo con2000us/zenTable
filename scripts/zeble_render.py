@@ -924,10 +924,17 @@ def measure_dom_overflow(html: str, html_dir: str, viewport_width: int, viewport
   function pick(){ return document.querySelector('table') || document.querySelector('.table') || null; }
   function measure(){
     var el = pick();
-    if(!el){ document.title = 'ZENTABLE_OVERFLOW=0,0,0'; return; }
     var sw = 0, cw = 0, rw = 0;
-    try { sw = el.scrollWidth||0; cw = el.clientWidth||0; rw = el.getBoundingClientRect().width||0; } catch(e) {}
-    document.title = 'ZENTABLE_OVERFLOW=' + Math.ceil(sw) + ',' + Math.ceil(cw) + ',' + Math.ceil(rw);
+    if(el){
+      try { sw = el.scrollWidth||0; cw = el.clientWidth||0; rw = el.getBoundingClientRect().width||0; } catch(e) {}
+    }
+    var bsw = 0, bcw = 0, brw = 0;
+    try {
+      var b = document.body;
+      if(b){ bsw = b.scrollWidth||0; bcw = b.clientWidth||0; brw = b.getBoundingClientRect().width||0; }
+    } catch(e) {}
+    document.title = 'ZENTABLE_OVERFLOW=' + Math.ceil(sw) + ',' + Math.ceil(cw) + ',' + Math.ceil(rw)
+      + '|BODY=' + Math.ceil(bsw) + ',' + Math.ceil(bcw) + ',' + Math.ceil(brw);
   }
   window.addEventListener('load', function(){ setTimeout(measure, 50); });
   setTimeout(measure, 200);
@@ -950,9 +957,16 @@ def measure_dom_overflow(html: str, html_dir: str, viewport_width: int, viewport
         import subprocess
         p = subprocess.run(parts, capture_output=True, text=True, timeout=30)
         out = (p.stdout or "")
-        m = re.search(r"ZENTABLE_OVERFLOW=(\d+),(\d+),(\d+)", out)
+        m = re.search(r"ZENTABLE_OVERFLOW=(\d+),(\d+),(\d+)\|BODY=(\d+),(\d+),(\d+)", out)
         if m:
-            return {"scrollWidth": int(m.group(1)), "clientWidth": int(m.group(2)), "rectWidth": int(m.group(3))}
+            return {
+                "table": {"scrollWidth": int(m.group(1)), "clientWidth": int(m.group(2)), "rectWidth": int(m.group(3))},
+                "body": {"scrollWidth": int(m.group(4)), "clientWidth": int(m.group(5)), "rectWidth": int(m.group(6))},
+            }
+        # backward compat
+        m2 = re.search(r"ZENTABLE_OVERFLOW=(\d+),(\d+),(\d+)", out)
+        if m2:
+            return {"table": {"scrollWidth": int(m2.group(1)), "clientWidth": int(m2.group(2)), "rectWidth": int(m2.group(3))}}
         return None
     except Exception:
         return None
@@ -3062,10 +3076,12 @@ def main():
             if auto_width and not os.environ.get("ZENTABLE_CSS_API_URL"):
                 try:
                     ov = measure_dom_overflow(html, cache_dir or "/tmp", viewport_width=cur_vw, viewport_height=cur_vh)
-                    if ov and ov.get('scrollWidth', 0) > 0:
+                    if ov and (ov.get('body') or ov.get('table')):
                         width_steps.append({"reason": "dom_overflow", "vw": int(cur_vw), **ov})
-                        sw = int(ov.get('scrollWidth') or 0)
-                        cw = int(ov.get('clientWidth') or 0)
+                        # Prefer BODY overflow for decision (catches elements that spill outside table)
+                        src = ov.get('body') or ov.get('table') or {}
+                        sw = int(src.get('scrollWidth') or 0)
+                        cw = int(src.get('clientWidth') or 0)
                         # Only grow if real overflow exists
                         if sw > (cw + 2) and sw > cur_vw:
                             base_w = int(force_width) if force_width else int(cur_vw)
@@ -3136,6 +3152,7 @@ def main():
                             "vh": int(cur_vh),
                             "css_render_ms": int(LAST_CSS_RENDER_MS) if LAST_CSS_RENDER_MS is not None else None,
                             "dom": attempt_dom,
+                            "dom_source": "body" if (attempt_dom and isinstance(attempt_dom, dict) and attempt_dom.get('body')) else "table",
                             "edge": edge_metrics,
                             "edge_inset5": edge_metrics_inset,
                             "debug": debug_files,
@@ -3155,10 +3172,12 @@ def main():
                 # If DOM says no horizontal overflow, do NOT allow pixel-edge check to trigger growth.
                 dom_overflow_ok = None
                 try:
-                    if attempt_dom and isinstance(attempt_dom, dict) and attempt_dom.get("scrollWidth") is not None and attempt_dom.get("clientWidth") is not None:
-                        sw = int(attempt_dom.get("scrollWidth") or 0)
-                        cw = int(attempt_dom.get("clientWidth") or 0)
-                        dom_overflow_ok = (sw <= (cw + 2))
+                    if attempt_dom and isinstance(attempt_dom, dict):
+                        src = attempt_dom.get('body') or attempt_dom.get('table') or None
+                        if isinstance(src, dict) and src.get("scrollWidth") is not None and src.get("clientWidth") is not None:
+                            sw = int(src.get("scrollWidth") or 0)
+                            cw = int(src.get("clientWidth") or 0)
+                            dom_overflow_ok = (sw <= (cw + 2))
                 except Exception:
                     dom_overflow_ok = None
 
