@@ -6,7 +6,7 @@ The OpenClaw skill docs expect a lightweight renderer at:
   ~/.openclaw/custom-skills/zenbleTable/table_renderer.py
 
 In this deployment, ~/.openclaw/custom-skills/zenbleTable is a symlink to:
-  /var/www/html/zenTable/skills/zebleTable
+  /var/www/html/zenTable/skills/zentable
 
 So we provide this shim here.
 
@@ -37,7 +37,7 @@ from pathlib import Path
 
 ZEN_ROOT = Path("/var/www/html/zenTable")
 # Use a single stable entrypoint under the skill folder for dev/testing/distribution.
-ZEBLE_RENDER = ZEN_ROOT / "skills" / "zebleTable" / "zeble_renderer.py"
+ZEBLE_RENDER = ZEN_ROOT / "skills" / "zentable" / "zentable_renderer.py"
 THEMES_CSS = ZEN_ROOT / "themes" / "css"
 THEMES_PIL_ZIP = ZEN_ROOT / "themes" / "pil"
 
