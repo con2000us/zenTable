@@ -3299,14 +3299,14 @@ def main():
             # - explicit width：不裁左右，只裁高度（避免 width 被改）
             # - 非 explicit：照原本裁切（含左右空白）
             if success:
-                if explicit_width:
+                if width_set:
                     crop_to_content_height(output_file, transparent=transparent_bg)
                 else:
                     crop_to_content_bounds(output_file, padding=2, transparent=transparent_bg)
         else:
             success = render_css(html, output_file, transparent=transparent_bg, html_dir=cache_dir,
                                 viewport_width=vw, viewport_height=vh, bg_color=bg_color,
-                                skip_crop=explicit_width)
+                                skip_crop=width_set)
 
         if success and use_scale_post and force_width:
             try:
