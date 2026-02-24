@@ -1099,7 +1099,7 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
             return f'th:nth-child({n}), td:nth-child({n})'
         return '.' + key
     css = '\n'.join(f'{css_selector(k)} {{{v}}}' for k, v in styles.items())
-    css += "\ntd { white-space: pre-wrap !important; }"
+    css += "\ntd { white-space: pre-wrap !important; overflow-wrap: anywhere !important; word-break: break-word !important; }"
     css += tt_css
     # 所有模式都讓 viewport/body 透明，使用 --default-background-color 控制實際輸出
     css += "\nhtml, body { background: transparent !important; background-image: none !important; }"
