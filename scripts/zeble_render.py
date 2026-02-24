@@ -842,11 +842,12 @@ def measure_dom_scroll_width(html: str, html_dir: str, viewport_width: int, view
 <script>
 (function(){
   function pick(){
-    return document.querySelector('table') || document.querySelector('.table') || document.body;
+    return document.querySelector('table') || document.querySelector('.table') || null;
   }
   function measure(){
     var el = pick();
     var w = 0;
+    if(!el){ document.title = 'ZENTABLE_SCROLLWIDTH=0'; return; }
     try { w = Math.max(el.scrollWidth||0, el.getBoundingClientRect().width||0); } catch(e) {}
     document.title = 'ZENTABLE_SCROLLWIDTH=' + Math.ceil(w);
   }
@@ -2911,14 +2912,23 @@ def main():
             cur_vw = min(vw, max_hard)
             cur_vh = min(vh, max_hard)
 
+            width_steps = []
+
             # DOM pre-measure (skip when using remote CSS API)
             if auto_width and not os.environ.get("ZENTABLE_CSS_API_URL"):
                 try:
                     need_w = measure_dom_scroll_width(html, cache_dir or "/tmp", viewport_width=cur_vw, viewport_height=cur_vh)
                     if need_w and need_w > cur_vw:
+                        # Cap DOM suggestion to avoid runaway widths (e.g., measuring the wrong element)
+                        base_w = int(force_width) if force_width else int(cur_vw)
+                        dom_cap = min(max_hard, max(base_w * 2, base_w + 400))
+                        need_w = min(int(need_w), int(dom_cap))
                         # round up a bit to avoid 1-2px clipping
                         need_w = int(((need_w + 49) // 50) * 50)
-                        cur_vw = min(max(cur_vw, need_w), max_hard)
+                        need_w = min(need_w, max_hard)
+                        if need_w > cur_vw:
+                            width_steps.append({"reason": "dom", "from": int(cur_vw), "to": int(need_w)})
+                            cur_vw = need_w
                 except Exception:
                     pass
 
@@ -2948,6 +2958,7 @@ def main():
                     next_vw = max(cur_vw + 400, int(cur_vw * 1.25))
                     next_vw = min(next_vw, max_hard)
                     if next_vw != cur_vw:
+                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw)})
                         cur_vw = next_vw
                         grew = True
 
@@ -2999,6 +3010,7 @@ def main():
                     "viewport": {"w": int(LAST_CSS_VIEWPORT[0]), "h": int(LAST_CSS_VIEWPORT[1])} if LAST_CSS_VIEWPORT else None,
                     "output": {"w": int(out_w), "h": int(out_h)},
                     "css_render_ms": int(LAST_CSS_RENDER_MS) if LAST_CSS_RENDER_MS is not None else None,
+                    "auto_width_steps": width_steps if 'width_steps' in locals() else None,
                 }
                 import json as _json
                 with open(output_file + ".meta.json", "w", encoding="utf-8") as f:
