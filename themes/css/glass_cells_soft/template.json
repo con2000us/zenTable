@@ -1,0 +1,14 @@
+{
+  "meta": {"defaults": {"tt": true, "auto_width": true, "auto_height": true, "text_scale": "auto"}},
+  "styles": {
+    "body": "font-family: 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0b1020, #101a36, #1b2a5a); padding: 26px; display: flex; justify-content: center; min-height: 300px; align-items: center;",
+    "container": "background: rgba(255,255,255,0.10); backdrop-filter: blur(10px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 10px 36px rgba(0,0,0,0.35); width: auto; min-width: 450px; overflow: hidden;",
+    "table": "width: 100%; border-collapse: separate; border-spacing: 0;",
+    "th": "background: rgba(233,69,96,0.22); color: #ff6b8e; padding: 14px 14px; font-weight: 700; font-size: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.12);",
+    "td": "background: rgba(255,255,255,0.06); padding: 12px 14px; font-size: 14px; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08);",
+    "tr_even": "background: rgba(255,255,255,0.04);",
+    "tr_odd": "background: rgba(255,255,255,0.02);",
+    "title": "padding: 18px; font-size: 20px; font-weight: 800; color: #ff6b8e; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.10);",
+    "footer": "padding: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.60);"
+  }
+}

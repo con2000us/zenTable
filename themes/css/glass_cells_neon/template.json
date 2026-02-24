@@ -1,0 +1,14 @@
+{
+  "meta": {"defaults": {"tt": true, "auto_width": true, "auto_height": true, "text_scale": "auto"}},
+  "styles": {
+    "body": "font-family: 'Segoe UI', Roboto, sans-serif; background: radial-gradient(circle at 20% 20%, #00ffd533 0%, #0b1020 55%, #050812 100%); padding: 26px; display: flex; justify-content: center; min-height: 300px; align-items: center;",
+    "container": "background: rgba(255,255,255,0.08); backdrop-filter: blur(14px); border-radius: 18px; border: 1px solid rgba(0,255,213,0.22); box-shadow: 0 12px 46px rgba(0,0,0,0.40); width: auto; min-width: 450px; overflow: hidden;",
+    "table": "width: 100%; border-collapse: separate; border-spacing: 0;",
+    "th": "background: rgba(0,255,213,0.12); color: #00ffd5; padding: 14px 14px; font-weight: 800; font-size: 15px; text-align: left; border-bottom: 1px solid rgba(0,255,213,0.18); text-shadow: 0 0 10px rgba(0,255,213,0.25);",
+    "td": "background: rgba(255,255,255,0.04); padding: 12px 14px; font-size: 14px; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.06);",
+    "tr_even": "background: rgba(0,255,213,0.04);",
+    "tr_odd": "background: rgba(0,255,213,0.02);",
+    "title": "padding: 18px; font-size: 20px; font-weight: 900; color: #00ffd5; text-align: center; border-bottom: 1px solid rgba(0,255,213,0.16); text-shadow: 0 0 12px rgba(0,255,213,0.22);",
+    "footer": "padding: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.60);"
+  }
+}
