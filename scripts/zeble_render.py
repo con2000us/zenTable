@@ -3204,7 +3204,7 @@ def main():
                         grew = True
 
                 # Edge check (buffer-probe): render with vw+gap and add right padding gap, then check the true edge.
-                gap_px = 120
+                gap_px = 50
                 edge_trigger = False
                 probe_info = None
                 if auto_width and cur_vw < max_hard:
