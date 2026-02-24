@@ -695,10 +695,40 @@ def _hex_to_chrome_bg(hex_color: str) -> str:
 def render_css(html: str, output_path: str, transparent: bool = False, html_dir: str = None,
                viewport_width: int = None, viewport_height: int = None, bg_color: str = None,
                skip_crop: bool = False) -> bool:
-    """使用 Chrome headless 渲染。transparent=True 時以 --default-background-color=00000000 直接產出透明 PNG。
+    """使用 Chrome headless 渲染。
+
+    New: if env var `ZENTABLE_CSS_API_URL` is set, POST to that service instead of
+    spawning Chrome locally. This is useful for a warm headless renderer process.
+
+    transparent=True 時以 --default-background-color=00000000 直接產出透明 PNG。
     html_dir: 若指定，HTML 寫入此目錄（使相對路徑資源可正確解析）；否則與 output 同目錄。
     viewport_width, viewport_height: 若提供則設定 Chrome 視窗尺寸，使截圖依內容大小。
     bg_color: 若指定（#RRGGBB），覆蓋背景色；transparent 優先於 bg_color。"""
+    # If a remote CSS render API is configured, use it.
+    css_api = os.environ.get("ZENTABLE_CSS_API_URL")
+    if css_api:
+        try:
+            import json as _json
+            import urllib.request as _url
+
+            payload = _json.dumps({
+                "html": html,
+                "viewport_width": int(viewport_width or 1200),
+                "viewport_height": int(viewport_height or 800),
+                "transparent": bool(transparent),
+                "timeout_ms": 3000,
+            }).encode("utf-8")
+            req = _url.Request(css_api.rstrip("/") + "/render/css", data=payload, headers={"Content-Type": "application/json"})
+            png = _url.urlopen(req, timeout=60).read()
+            with open(output_path, "wb") as f:
+                f.write(png)
+        except Exception as e:
+            print(f"⚠️  CSS API 渲染失敗，改用本機 Chrome: {e}", file=sys.stderr)
+        else:
+            if not skip_crop:
+                crop_to_content_bounds(output_path, padding=2, transparent=transparent)
+            return True
+
     if html_dir:
         ts = str(int(time.time() * 1000))
         html_file = os.path.join(html_dir, f"render_{ts}.html")

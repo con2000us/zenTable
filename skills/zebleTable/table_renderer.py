@@ -109,6 +109,7 @@ def main() -> int:
     ap.add_argument("--auto-height-max", type=int, default=None)
     ap.add_argument("--page", type=int, default=1)
     ap.add_argument("--per-page", type=int, default=None)
+    ap.add_argument("--css-api-url", default=None)
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -146,7 +147,11 @@ def main() -> int:
         if args.verbose:
             print("Running:", " ".join(cmd), file=sys.stderr)
 
-        proc = subprocess.run(cmd, cwd=str(ZEN_ROOT))
+        env = os.environ.copy()
+        if args.css_api_url:
+            env["ZENTABLE_CSS_API_URL"] = str(args.css_api_url)
+
+        proc = subprocess.run(cmd, cwd=str(ZEN_ROOT), env=env)
         return proc.returncode
 
 
