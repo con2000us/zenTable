@@ -61,7 +61,7 @@ def _paddle_result_to_rows(result: Any) -> List[Dict[str, Any]]:
     We normalize to rows: {text,left,top,width,height}
     """
     rows: List[Dict[str, Any]] = []
-    if not result:
+    if result is None:
         return rows
 
     # v3: list with a dict payload
