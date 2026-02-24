@@ -67,8 +67,12 @@ def _paddle_result_to_rows(result: Any) -> List[Dict[str, Any]]:
     # v3: list with a dict payload
     if isinstance(result, list) and result and isinstance(result[0], dict):
         payload = result[0]
-        texts = payload.get("rec_texts") or []
-        boxes = payload.get("rec_boxes") or []
+        texts = payload.get("rec_texts")
+        boxes = payload.get("rec_boxes")
+        if texts is None:
+            texts = []
+        if boxes is None:
+            boxes = []
         # rec_boxes is usually Nx4: [l,t,r,b]
         try:
             n = min(len(texts), len(boxes))
