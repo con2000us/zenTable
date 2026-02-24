@@ -16,8 +16,14 @@ pip install -r requirements-ocr.txt
 pip install fastapi uvicorn "paddleocr>=2.0.1" "paddlepaddle" python-multipart
 ```
 
+建議（CPU）：**固定 PaddlePaddle 版本**以避免 PIR/oneDNN runtime 相容性問題（某些 3.3.x CPU build 會在推論階段報錯）：
+
+```bash
+pip install "paddlepaddle==3.2.2"
+```
+
 - **CPU**：上述即可。
-- **GPU**：請依 [PaddlePaddle 官方](https://www.paddlepaddle.org.cn/install/quick) 安裝對應 CUDA 版 `paddlepaddle-gpu`，並設 `USE_GPU=true`。
+- **GPU**：請依 [PaddlePaddle 官方](https://www.paddlepaddle.org.cn/install/quick) 安裝對應 CUDA 版 `paddlepaddle-gpu`。
 
 ## 啟動
 
@@ -63,6 +69,8 @@ uvicorn api.paddleocr_service:app --host 0.0.0.0 --port 8000
 - **Content-Type**：`multipart/form-data`，欄位：`image`（檔案）
 - **回傳**：`{ "success": true, "rows": [ { "text", "left", "top", "width", "height" }, ... ] }`  
   格式與 `calibrate_analyze.run_ocr_full()` 相容，可供 `find_block_bounds`、校準流程使用。
+
+> 註：本專案已在 API 層做過 **PaddleOCR v3** 輸出格式相容（PaddleX pipeline 會回傳 `rec_texts` / `rec_boxes`）。
 
 ### POST /ocr/base64
 
