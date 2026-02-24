@@ -3100,6 +3100,42 @@ def main():
                     html = wrap_css + html
             except Exception:
                 pass
+
+        # Optional debug dump: save full HTML/CSS + resolved render inputs for diffing.
+        if os.environ.get("ZENTABLE_DUMP_RENDER_INPUT") == "1":
+            try:
+                dump_base = output_file
+                with open(dump_base + ".input.html", "w", encoding="utf-8") as f:
+                    f.write(html)
+                # extract combined CSS blocks for convenience
+                import re as _re
+                css_blocks = _re.findall(r"<style[^>]*>(.*?)</style>", html, flags=_re.S | _re.I)
+                with open(dump_base + ".input.css", "w", encoding="utf-8") as f:
+                    f.write("\n\n/* ---- style block ---- */\n\n".join([c.strip() for c in css_blocks]))
+                input_meta = {
+                    "theme_name": theme_name,
+                    "theme_mode": theme_mode,
+                    "theme_file": theme_file,
+                    "transparent": bool(transparent_bg),
+                    "tt": bool(tt),
+                    "bg_mode": bg_mode,
+                    "bg_color": bg_color,
+                    "explicit_width": bool(explicit_width),
+                    "force_width": int(force_width) if force_width else None,
+                    "fill_width_method": fill_width_method,
+                    "auto_width": bool(auto_width),
+                    "auto_height": bool(auto_height),
+                    "auto_width_max": int(auto_width_max) if auto_width_max else None,
+                    "auto_height_max": int(auto_height_max) if auto_height_max else None,
+                    "text_scale_mode": text_scale_mode,
+                    "text_scale": float(resolved_text_scale) if resolved_text_scale is not None else None,
+                    "scale_factor": float(scale_factor),
+                }
+                import json as _json
+                with open(dump_base + ".input.json", "w", encoding="utf-8") as f:
+                    f.write(_json.dumps(input_meta, ensure_ascii=False, indent=2))
+            except Exception:
+                pass
         if scale_factor != 1.0:
             vw = max(1, int(vw * scale_factor))
             vh = max(1, int(vh * scale_factor))
