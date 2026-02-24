@@ -88,7 +88,6 @@ async def lifespan(app: FastAPI):
         use_angle_cls=use_angle_cls,
         lang=lang,
         use_gpu=use_gpu,
-        show_log=False,
     )
     yield
     _ocr_engine = None

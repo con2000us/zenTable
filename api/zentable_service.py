@@ -162,7 +162,7 @@ async def lifespan(app: FastAPI):
         if os.environ.get("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK") is None:
             os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
-        _ocr_engine = PaddleOCR(use_angle_cls=use_angle_cls, lang=lang, use_gpu=use_gpu, show_log=False)
+        _ocr_engine = PaddleOCR(use_angle_cls=use_angle_cls, lang=lang, use_gpu=use_gpu)
     except Exception as e:
         # Keep service up even without OCR deps
         _ocr_engine = None
