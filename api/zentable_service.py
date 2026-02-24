@@ -224,8 +224,8 @@ async def ocr(image: UploadFile = File(...)):
         if img.mode != "RGB":
             img = img.convert("RGB")
         img_np = np.array(img)
-        use_angle = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
-        result = _get_ocr_engine().ocr(img_np, cls=use_angle)
+        # PaddleOCR v3: `cls` kwarg is not supported; orientation is configured by pipeline.
+        result = _get_ocr_engine().ocr(img_np)
         rows = _paddle_result_to_rows(result)
         return OCRResponse(success=True, rows=rows)
     except Exception as e:
@@ -249,8 +249,8 @@ async def ocr_base64(body: OCRBase64Body):
         if img.mode != "RGB":
             img = img.convert("RGB")
         img_np = np.array(img)
-        use_angle = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
-        result = _get_ocr_engine().ocr(img_np, cls=use_angle)
+        # PaddleOCR v3: `cls` kwarg is not supported; orientation is configured by pipeline.
+        result = _get_ocr_engine().ocr(img_np)
         rows = _paddle_result_to_rows(result)
         return OCRResponse(success=True, rows=rows)
     except Exception as e:
