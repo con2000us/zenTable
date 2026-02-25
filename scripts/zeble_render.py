@@ -1261,8 +1261,9 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
             return 'tr.tr_even'
         if key == 'tr_odd':
             return 'tr.tr_odd'
-        # 用於指定欄位：th:nth-child(N), td:nth-child(N) 或 col_N（N 為 1-based 欄位編號）
-        if ':nth-child' in key or (',' in key and ':' in key):
+        # 進階選擇器：包含 pseudo-class/複合選擇器時直接視為原生 selector
+        # 例如：th:first-child、td:last-child、tbody tr:last-child td、th:nth-child(2)
+        if ':' in key or ' ' in key or '>' in key or '+' in key or '~' in key or '[' in key:
             return key
         if key.startswith('col_') and key[4:].isdigit():
             n = key[4:]
