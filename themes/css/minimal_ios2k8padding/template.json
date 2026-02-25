@@ -24,9 +24,9 @@
     "td": "padding: 2px 2px; font-size: 17px; color: #000000; border-bottom: 0.5px solid #e5e5ea; text-align: left; line-height: 1.4; font-weight: 400;",
     ".footer": "background-color: #f9f9fb; color: #8e8e93; padding: 5px 2px; font-size: 13px; text-align: center; border-top: 0.5px solid #e5e5ea;",
     "tr:hover": "background-color: #f2f2f7;",
-    "th:first-child": "padding-left: 24px;",
+    "th:first-child": "padding-left: 26px;",
     "th:last-child": "padding-right: 24px;",
-    "td:first-child": "padding-left: 24px; font-weight: 500;",
+    "td:first-child": "padding-left: 26px; font-weight: 500;",
     "td:last-child": "padding-right: 24px;",
     "tbody tr:last-child td": "border-bottom: none;"
   }
