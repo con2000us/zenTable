@@ -29,8 +29,12 @@ input_*.json
 
 # Generated table outputs (keep themes/, ignore rendered artifacts)
 table_*.png
+table_*.png.meta.json
 table_ascii_*.txt
 table_ascii_debug_*.json
+
+# Debug snapshots from ASCII/stage1 experiments
+tmp_*_debug_stage1.png
 
 # Root-level ad-hoc test images (generated during development)
 output_test*.png
