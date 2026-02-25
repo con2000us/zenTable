@@ -143,6 +143,9 @@ def main() -> int:
     ap.add_argument("--auto-width-max", type=int, default=None)
     ap.add_argument("--page", type=int, default=1)
     ap.add_argument("--per-page", type=int, default=None)
+    ap.add_argument("--smart-wrap", action="store_true")
+    ap.add_argument("--no-smart-wrap", action="store_true")
+    ap.add_argument("--nosw", action="store_true")
     ap.add_argument("--css-api-url", default=None)
     ap.add_argument("--tt", action="store_true")
     ap.add_argument("--transpose", action="store_true")
@@ -193,6 +196,12 @@ def main() -> int:
 
         if args.transpose or args.cc:
             cmd += ["--transpose"]
+
+        # Smart-wrap: default is ON in renderer; allow explicit on/off passthrough
+        if args.smart_wrap:
+            cmd += ["--smart-wrap"]
+        if args.no_smart_wrap or args.nosw:
+            cmd += ["--no-smart-wrap"]
 
         if args.verbose:
             print("Running:", " ".join(cmd), file=sys.stderr)

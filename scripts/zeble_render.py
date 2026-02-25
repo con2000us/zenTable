@@ -33,7 +33,7 @@ import subprocess
 import zipfile
 import time
 import unicodedata
-from typing import Dict, Any, List, Callable, Optional
+from typing import Dict, Any, List, Callable, Optional, Tuple
 from dataclasses import dataclass
 
 # =============================================================================
@@ -2641,6 +2641,80 @@ def apply_sort_and_page(data, sort_by=None, sort_asc=True, page=1, per_page=ROWS
     rows = rows[start:end]
     return {"headers": headers, "rows": rows, "title": data.get("title", ""), "footer": data.get("footer", "")}
 
+
+def _smart_wrap_text(text: str, limit: int) -> str:
+    """簡易智慧換行：優先在語意斷點切，否則固定長度切。"""
+    s = "" if text is None else str(text)
+    if "\n" in s or len(s) <= limit:
+        return s
+
+    # URL 友善斷點
+    s = s.replace("/", "/\n").replace("?", "?\n").replace("&", "&\n").replace("=", "=\n")
+    if "\n" in s:
+        parts = []
+        for seg in s.split("\n"):
+            parts.append(_smart_wrap_text(seg, limit))
+        return "\n".join(p for p in parts if p != "")
+
+    punct = set("，。；：、,.;: ")
+    out, cur = [], ""
+    soft_cut = max(1, int(limit * 0.6))
+    for ch in s:
+        cur += ch
+        if ch in punct and len(cur) >= soft_cut:
+            out.append(cur.rstrip())
+            cur = ""
+        elif len(cur) >= limit:
+            out.append(cur)
+            cur = ""
+    if cur:
+        out.append(cur)
+    return "\n".join(p for p in out if p)
+
+
+def apply_smart_wrap(data: dict, width: Optional[int] = None) -> Tuple[dict, dict]:
+    """依寬度/欄數預估每欄可容字數，對過長文字插入軟換行。"""
+    headers = list(data.get("headers", []) or [])
+    rows = [list(r) for r in (data.get("rows", []) or [])]
+    if not headers or not rows:
+        return data, {"applied": False, "reason": "no-data"}
+
+    col_count = max(1, len(headers))
+    base_width = int(width) if width else 600
+    total_chars = max(24, int(base_width / 13))
+    per_col = max(8, total_chars // col_count)
+
+    changed_cells = 0
+    new_rows = []
+    for r in rows:
+        rr = []
+        for i, c in enumerate(r):
+            limit = max(6, per_col - 2) if i == 0 else per_col
+            if isinstance(c, dict):
+                old_t = c.get("text", "")
+                new_t = _smart_wrap_text(old_t, limit)
+                if new_t != ("" if old_t is None else str(old_t)):
+                    changed_cells += 1
+                cc = dict(c)
+                cc["text"] = new_t
+                rr.append(cc)
+            else:
+                old_t = "" if c is None else str(c)
+                new_t = _smart_wrap_text(old_t, limit)
+                if new_t != old_t:
+                    changed_cells += 1
+                rr.append(new_t)
+        new_rows.append(rr)
+
+    out = {"headers": headers, "rows": new_rows, "title": data.get("title", ""), "footer": data.get("footer", "")}
+    return out, {
+        "applied": changed_cells > 0,
+        "changed_cells": changed_cells,
+        "per_col_limit": per_col,
+        "col_count": col_count,
+        "base_width": base_width,
+    }
+
 # =============================================================================
 # MAIN
 # =============================================================================
@@ -2674,6 +2748,8 @@ def main():
         print('  --debug-auto-width  儲存每次 auto-width 嘗試的右側邊界裁切圖（用於診斷）')
         print('  --debug-auto-width-strip N  右側裁切寬度（預設 40px）')
         print('  --wrap-gap N   固定寬度模式用：viewport 變成 (width+N)，但排版寬度縮成 calc(100%-N) 以強制更早換行（避免右側溢出）')
+        print('  --smart-wrap    啟用智慧換行（預設開）')
+        print('  --no-smart-wrap / --nosw / nosw  關閉智慧換行，保留原始文字斷行')
         print('  --sort <欄位>   依欄位排序')
         print('  --asc           升序（預設）')
         print('  --desc          降序')
@@ -2724,6 +2800,9 @@ def main():
     debug_auto_width = False
     debug_auto_width_strip = 40
 
+    # 預設啟用智慧換行；可用 --no-smart-wrap/--nosw 關閉
+    smart_wrap = True
+
     wrap_gap = 0  # explicit: shrink effective layout width by gap; viewport becomes (width+gap)
     
     for i in range(3, len(sys.argv)):
@@ -2773,6 +2852,10 @@ def main():
                 wrap_gap = max(0, int(sys.argv[i + 1]))
             except ValueError:
                 pass
+        elif arg == "--smart-wrap":
+            smart_wrap = True
+        elif arg == "--no-smart-wrap" or arg == "--nosw" or arg == "nosw":
+            smart_wrap = False
         elif arg == "--bg" and i + 1 < len(sys.argv):
             bg_mode = sys.argv[i + 1].strip().lower()
         elif arg == "--width" and i + 1 < len(sys.argv):
@@ -2868,6 +2951,17 @@ def main():
         data = transpose_table(data)
     # 再套用排序與分頁
     data = apply_sort_and_page(data, sort_by=sort_by, sort_asc=sort_asc, page=page, per_page=per_page)
+
+    # 預設智慧換行：渲染前先在語意斷點插入換行，減少窄寬表格斷句破壞
+    smart_wrap_stats = {"applied": False}
+    if smart_wrap:
+        data, smart_wrap_stats = apply_smart_wrap(data, width=force_width)
+        if smart_wrap_stats.get("applied"):
+            print(
+                f"🧠 smart-wrap 已介入：changed_cells={smart_wrap_stats.get('changed_cells')}, "
+                f"per_col_limit≈{smart_wrap_stats.get('per_col_limit')}",
+                file=sys.stderr,
+            )
     
     # 決定渲染方式
     chrome_available = check_chrome_available()
@@ -3340,6 +3434,8 @@ def main():
                     "render_mode": "CSS",
                     "theme_name": theme_name,
                     "tt": bool(tt),
+                    "smart_wrap": bool(smart_wrap),
+                    "smart_wrap_stats": smart_wrap_stats if 'smart_wrap_stats' in locals() else None,
                     "text_scale_mode": text_scale_mode,
                     "text_scale": float(resolved_text_scale) if resolved_text_scale is not None else None,
                     "viewport": {"w": int(LAST_CSS_VIEWPORT[0]), "h": int(LAST_CSS_VIEWPORT[1])} if LAST_CSS_VIEWPORT else None,

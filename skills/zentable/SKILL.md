@@ -35,6 +35,8 @@ allowed-tools: ["exec", "read", "write"]
 ### Shorthand（本專案約定）
 
 - 使用者輸入 `Zx` 時，預設視為「使用 zenTable 輸出表格圖片（而非純文字精簡回覆）」。
+- 渲染預設啟用 smart-wrap（代理可在渲染前對長字串做語意斷行）。
+- 若要保留原始文字斷句，可加 `--no-smart-wrap`（或 `--nosw`）。
 - 若上下文已有表格主題（例如 skills 清單、參數清單、比較表），直接進行渲染並回傳圖片。
 
 
@@ -51,6 +53,7 @@ echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.
 | `--theme` | 視覺主題 | `default_light`, `default_dark`, `mobile_chat`, `minimal_ios`, `bubble_card`, `modern_line`, `compact_clean` |
 | `--transparent` | 透明背景 | 加上此參數 |
 | `--width` | 固定寬度 | 例如 `--width 800` |
+| `--no-smart-wrap` / `--nosw` | 關閉智慧換行（保留原始文字斷句） | 二選一即可 |
 
 ### JSON 資料格式
 
