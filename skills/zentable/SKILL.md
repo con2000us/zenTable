@@ -1,7 +1,7 @@
 ---
 name: zenbleTable
 description: "Render structured table data as high-quality PNG images using Headless Chrome. Use when: need to visualize tabular data for chat interfaces, reports, or social media. NOT for: simple text tables that don't need visualization."
-homepage: ~/.openclaw/custom-skills/zenbleTable/SKILL.md
+homepage: ~/.openclaw/custom-skills/zentable/SKILL.md
 metadata: 
   openclaw: 
     emoji: "📊"
@@ -41,7 +41,7 @@ allowed-tools: ["exec", "read", "write"]
 ### 基礎呼叫
 
 ```bash
-echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zenbleTable/table_renderer.py - 輸出路徑.png --theme 主題名稱
+echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - 輸出路徑.png --theme 主題名稱
 ```
 
 ### 參數說明
@@ -92,7 +92,7 @@ echo '{
     ["AirPods Pro", 200, 7990, 1598000]
   ],
   "footer": "2024年1月統計"
-}' | python3 ~/.openclaw/custom-skills/zenbleTable/table_renderer.py - /tmp/sales.png --theme mobile_chat
+}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/sales.png --theme mobile_chat
 ```
 
 ### 範例 2：透明背景（適合疊加）
@@ -102,7 +102,7 @@ echo '{
   "title": "即時數據",
   "headers": ["指標", "數值"],
   "rows": [["溫度", "25°C"], ["濕度", "60%"]]
-}' | python3 ~/.openclaw/custom-skills/zenbleTable/table_renderer.py - /tmp/overlay.png --theme minimal_ios --transparent
+}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/overlay.png --theme minimal_ios --transparent
 ```
 
 ### 範例 3：固定寬度
@@ -112,7 +112,7 @@ echo '{
   "title": "寬幅表格",
   "headers": ["A", "B", "C", "D", "E"],
   "rows": [[1,2,3,4,5], [6,7,8,9,10]]
-}' | python3 ~/.openclaw/custom-skills/zenbleTable/table_renderer.py - /tmp/wide.png --theme compact_clean --width 1000
+}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/wide.png --theme compact_clean --width 1000
 ```
 
 ## Agent 使用流程
@@ -132,7 +132,7 @@ Agent 思考：這需要 zenbleTable skill 來渲染表格
 
 Agent 行動：
 ```bash
-echo '{"title":"期末成績","headers":["姓名","國文","數學","英文"],"rows":[["小明",85,92,78],["小華",90,88,95]]}' | python3 ~/.openclaw/custom-skills/zenbleTable/table_renderer.py - /tmp/grades.png --theme mobile_chat
+echo '{"title":"期末成績","headers":["姓名","國文","數學","英文"],"rows":[["小明",85,92,78],["小華",90,88,95]]}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/grades.png --theme mobile_chat
 ```
 
 然後發送圖片給用戶。

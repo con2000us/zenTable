@@ -7,6 +7,50 @@ ZenTable 表格渲染腳本，支援 CSS、PIL、ASCII 三種輸出模式。
 
 ---
 
+## 補充：OpenClaw Custom Skill（CSS/Chrome）`table_renderer.py`
+
+若你是在 OpenClaw / 個別 skill 內直接用 headless Chrome 產 PNG（不走 `scripts/zeble_render.py`），會用到另一支較輕量的 renderer：
+
+- **檔案**：`~/.openclaw/custom-skills/zentable/table_renderer.py`
+- **定位**：純 CSS + Chrome headless 截圖（單張表格），參數與 `zeble_render.py` **不同**
+
+### 基本用法
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py <data.json> <output.png> [options]
+```
+
+### 選項參數（table_renderer.py）
+
+| 參數 | 格式 | 說明 |
+|------|------|------|
+| `--theme` | 主題名稱 | 如 `mobile_chat`、`minimal_ios`（預設 `default`） |
+| `--transparent` | 旗標 | 透空背景 |
+| `--width` | 正整數 | 強制輸出/viewport 寬度（px） |
+| `--text-scale` | `smallest` \| `small` \| `auto` \| `large` \| `largest` \| 浮點數 | 文字與間距縮放倍率；預設 `auto`（依 `--width` 自動放大，避免寬圖字太小） |
+| `--text-scale-max` | 浮點數 | 自動縮放最大倍率（僅 auto 模式生效；預設 `2.5`） |
+
+### 使用範例
+
+```bash
+# 寬圖：文字自動放大（不需要手動指定 text-scale）
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py data.json out.png --theme mobile_chat --width 900
+
+# 寬圖：較保守的自動放大（字會比 auto 小）
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py data.json out.png --theme mobile_chat --width 900 --text-scale small
+
+# 寬圖：較積極的自動放大（字會比 auto 大，常搭配提高 max）
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py data.json out.png --theme mobile_chat --width 900 --text-scale large --text-scale-max 2.5
+
+# 想更大：調高 auto 上限
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py data.json out.png --theme mobile_chat --width 900 --text-scale-max 2.0
+
+# 手動指定：直接覆寫倍率（不走 auto）
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py data.json out.png --theme mobile_chat --width 900 --text-scale 1.4
+```
+
+---
+
 ## 基本用法
 
 ```bash
@@ -42,6 +86,8 @@ python3 scripts/zeble_render.py <data.json> <output> [options]
 | 參數 | 格式 | 說明 |
 |------|------|------|
 | `--width` | 正整數 | 強制 viewport 寬度（CSS）或輸出寬度（PIL） |
+| `--text-scale` | `smallest` \| `small` \| `auto` \| `large` \| `largest` \| 浮點數 | （僅 CSS）文字/間距縮放倍率；預設 `auto`（依 `--width` 自動放大） |
+| `--text-scale-max` | 浮點數 | （僅 CSS, auto）自動縮放上限；預設 `2.5` |
 | `--scale` | 浮點數 0.1～5.0 | 輸出尺寸倍數，預設 1.0 |
 | `--fill-width` | `background` \| `container` \| `scale` \| `no-shrink` | 搭配 `--width` 使用，控制超出寬度的處理方式 |
 
@@ -56,7 +102,13 @@ python3 scripts/zeble_render.py <data.json> <output> [options]
 
 | 參數 | 格式 | 說明 |
 |------|------|------|
-| `--params` | JSON 字串 | 自訂參數，覆蓋主題設定（PIL 用） |
+| `--params` | JSON 字串 | 自訂參數，覆蓋主題設定（PIL / ASCII 用） |
+
+### ASCII 校準
+
+| 參數 | 格式 | 說明 |
+|------|------|------|
+| `--calibration` | JSON 字串 | ASCII 字元寬度校準資料（支援 `ascii/cjk/box/half_space/full_space/emoji/custom`） |
 
 ### 分頁與排序
 
@@ -73,6 +125,29 @@ python3 scripts/zeble_render.py <data.json> <output> [options]
 | 參數 | 格式 | 說明 |
 |------|------|------|
 | `--output-ascii` | 檔案路徑 | ASCII 模式輸出路徑 |
+
+---
+
+## ASCII Debug：版面格式化（計算各 cell 寬高）
+
+測試頁「Render Backend」在 ASCII 模式會啟用 debug，目的是讓你能看到：
+
+- **stage1（blueprint）**：在「不套用校準」的前提下（預設半形=1.0、全形=2.0）先算出表格每一欄/每列的 **寬高與座標藍圖**（支援多行內容的高度計算），用來當作後續套用字元寬度校準時的對應基準。
+- **stage3（calibrated）**：套用校準後的輸出與細節，並可和 blueprint 對照，定位「哪個字元寬度/哪個框線字元」導致偏移。
+
+### 如何啟用
+
+- **測試頁**：ASCII 模式下會送出 `--params {"ascii_debug": true, ...}`。
+- **CLI**：自行加上 `--params '{"ascii_debug": true}'` 並搭配 `--output-ascii`。
+
+### debug 檔案內容（JSON）
+
+當 `ascii_debug=true` 且有 `--output-ascii` 時，輸出檔內容會是 JSON，主要欄位：
+
+- **text**：校準輸出（最終表格）
+- **stage1**：版面格式化摘要（blueprint，不套用校準；包含欄寬/列高、每欄框線字元重複次數等）
+- **stage2**：ASCII 參考結果（不套用校準的渲染結果）
+- **stage3_details**：結構化細節（`blueprint` 與 `calibrated` 兩份對照資料；包含 `raw_widths`、`col_h_counts`、`col_targets`、`row_heights`、`space_width`、`h_char_width`…）
 
 ---
 

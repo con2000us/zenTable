@@ -3,9 +3,9 @@
 
 This repository contains the full ZenTable project under /var/www/html/zenTable.
 The OpenClaw skill docs expect a lightweight renderer at:
-  ~/.openclaw/custom-skills/zenbleTable/table_renderer.py
+  ~/.openclaw/custom-skills/zentable/table_renderer.py
 
-In this deployment, ~/.openclaw/custom-skills/zenbleTable is a symlink to:
+In this deployment, ~/.openclaw/custom-skills/zentable is a symlink to:
   /var/www/html/zenTable/skills/zentable
 
 So we provide this shim here.
