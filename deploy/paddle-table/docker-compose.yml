@@ -1,0 +1,21 @@
+name: paddle-table
+
+services:
+  zentable-paddle-table:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zentable-paddle-table
+    ports:
+      - "8012:8010"
+    environment:
+      OCR_HOST: "0.0.0.0"
+      OCR_PORT: "8010"
+      OCR_LANG: "ch"
+      # Reduce risky CPU optimization paths on some environments
+      FLAGS_enable_pir_api: "0"
+      FLAGS_enable_new_executor: "0"
+      FLAGS_use_mkldnn: "0"
+      FLAGS_use_onednn: "0"
+      FLAGS_enable_onednn: "0"
+    restart: unless-stopped
