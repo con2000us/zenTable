@@ -14,6 +14,12 @@ allowed-tools: ["exec", "read", "write"]
 
 將結構化表格資料渲染為高品質 PNG 圖片。
 
+> 命名規範（Phase 1）
+> - Canonical code 名稱：`zentable`（全小寫）
+> - UI/品牌顯示：`ZenTable`
+> - `zeble*` / `zenble*` 為歷史相容別名，暫時保留
+> - 詳見：`/var/www/html/zenTable/NAMING_MIGRATION.md`
+
 ## 何時使用
 
 ✅ **USE this skill when:**
@@ -68,6 +74,8 @@ echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.
   "footer": "頁尾說明（可選）"
 }
 ```
+
+**Highlight（可選）**：格／列／欄可套用 theme 語意樣式；另可依欄位值用 `highlight_rules` 自動上色。格式與 op 見專案 **[doc/HIGHLIGHT_AND_RULES.md](../../doc/HIGHLIGHT_AND_RULES.md)**，完整規格見 [doc/HIGHLIGHT_STYLE_PLAN.md](../../doc/HIGHLIGHT_STYLE_PLAN.md)。
 
 ## 主題選擇指南
 
@@ -151,3 +159,14 @@ echo '{"title":"期末成績","headers":["姓名","國文","數學","英文"],"r
 - 輸出路徑建議使用 `/tmp/` 避免權限問題
 - 大表格（>20 行）建議用 `compact_clean` 主題
 - 單張圖片建議不要超過 50 行資料
+
+## 進一步說明（文件）
+
+細節與規格拆出至專案 `doc/`，SKILL 僅保留要點；需要時可查：
+
+| 主題 | 文件 |
+|------|------|
+| Highlight 與規則（cell/row/col、highlight_rules、op） | [doc/HIGHLIGHT_AND_RULES.md](../../doc/HIGHLIGHT_AND_RULES.md) |
+| Highlight 完整規格（op 清單、衝突、sub-cell） | [doc/HIGHLIGHT_STYLE_PLAN.md](../../doc/HIGHLIGHT_STYLE_PLAN.md) |
+| Render 參數完整對照（CLI、theme 參數） | [doc/RENDER_PARAMS_REFERENCE.md](../../doc/RENDER_PARAMS_REFERENCE.md) |
+| 渲染器用法（zeble_render、table_renderer） | [doc/RENDERER_USAGE.md](../../doc/RENDERER_USAGE.md) |
