@@ -12,6 +12,12 @@ services:
       USE_ANGLE_CLS: ${USE_ANGLE_CLS:-true}
       OCR_HOST: 0.0.0.0
       OCR_PORT: 8000
+      # Workaround: avoid Paddle oneDNN/PIR runtime crash on some hosts
+      FLAGS_enable_pir_api: "0"
+      FLAGS_enable_new_executor: "0"
+      FLAGS_use_mkldnn: "0"
+      FLAGS_use_onednn: "0"
+      FLAGS_enable_onednn: "0"
     # iGPU 測試時可保留；若主機沒有 /dev/dri 可先註解
     devices:
       - /dev/dri:/dev/dri
