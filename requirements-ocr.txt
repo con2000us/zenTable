@@ -11,3 +11,7 @@ paddlepaddle==2.6.2
 Pillow>=9.0.0
 # Keep NumPy 1.x for OpenCV/PaddleOCR ABI compatibility in this stack
 numpy<2
+
+# Unified backend options (auto/openvino/onnx)
+rapidocr_onnxruntime>=1.4.4
+onnxruntime-openvino>=1.23.0

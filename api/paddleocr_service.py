@@ -1,88 +1,110 @@
 """
-PaddleOCR FastAPI 服務：單例載入、常駐記憶體，對外提供 /ocr 與 /health。
+Unified OCR FastAPI service with pluggable backend.
 
-啟動方式（專案根目錄）：
-  pip install fastapi uvicorn "paddleocr>=2.0.1" "paddlepaddle"
-  python -m api.paddleocr_service
-  或：uvicorn api.paddleocr_service:app --host 0.0.0.0 --port 8000
+Backends:
+- paddle      (PaddleOCR)
+- openvino    (rapidocr_onnxruntime + OpenVINOExecutionProvider)
+- onnx        (rapidocr_onnxruntime + CPUExecutionProvider)
+- auto        (default): openvino -> onnx -> paddle
 
-環境變數：
-  OCR_LANG: 語言，預設 ch（中文），可選 en 等
-  USE_GPU: 是否使用 GPU，預設 false
-  USE_ANGLE_CLS: 是否啟用方向分類，預設 true
+Environment variables:
+- OCR_BACKEND=auto|openvino|onnx|paddle
+- OCR_LANG=ch
+- USE_ANGLE_CLS=true|false
+- OCR_HOST=0.0.0.0
+- OCR_PORT=8000
+
+Direct-override parameters (preserved):
+- OCR_CPU_THREADS=4
+- OCR_ENABLE_MKLDNN=false
+- OCR_IR_OPTIM=false
 """
 
-import io
 import base64
+import io
 import os
+import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-
-# 全域單例，在 lifespan 內建立一次
-_ocr_engine: Any = None
-
-
-def _get_ocr_engine():
-    """取得已載入的 PaddleOCR 單例。"""
-    global _ocr_engine
-    if _ocr_engine is None:
-        raise RuntimeError("OCR 引擎尚未初始化")
-    return _ocr_engine
+_engine: Any = None
+_backend: Optional[str] = None
+_engine_error: Optional[str] = None
 
 
-def _paddle_result_to_rows(result: Any) -> List[Dict[str, Any]]:
-    """Normalize PaddleOCR outputs across major versions.
+def _as_bool(v: str, default: bool = False) -> bool:
+    if v is None:
+        return default
+    return str(v).lower() in ("1", "true", "yes", "on")
 
-    - PaddleOCR v2 commonly returns: [ [poly, (text, score)], ... ]
-    - PaddleOCR v3 (PaddleX pipeline) can return: [ { rec_texts, rec_boxes, ... } ]
 
-    Output rows: {text,left,top,width,height}
-    """
+def _normalize_rows(result: Any) -> List[Dict[str, Any]]:
+    """Normalize outputs across backends to {text,left,top,width,height}."""
     rows: List[Dict[str, Any]] = []
-    if result is None:
+    if not result:
         return rows
 
-    # v3: list with a dict payload
+    # Paddle v3 style: [{rec_texts, rec_boxes, ...}]
     if isinstance(result, list) and result and isinstance(result[0], dict):
         payload = result[0]
-        texts = payload.get("rec_texts")
-        boxes = payload.get("rec_boxes")
-        if texts is None:
-            texts = []
-        if boxes is None:
-            boxes = []
-        try:
-            n = min(len(texts), len(boxes))
-            for i in range(n):
-                b = boxes[i]
-                if b is None or len(b) < 4:
+        texts = payload.get("rec_texts") or []
+        boxes = payload.get("rec_boxes") or []
+        n = min(len(texts), len(boxes))
+        for i in range(n):
+            b = boxes[i]
+            if b is None or len(b) < 4:
+                continue
+            l, t, r, btm = map(int, b[:4])
+            rows.append({
+                "text": str(texts[i]) if texts[i] is not None else "",
+                "left": l,
+                "top": t,
+                "width": max(0, r - l),
+                "height": max(0, btm - t),
+            })
+        return rows
+
+    # Paddle v2 style: [[poly, (text, score)], ...]
+    if isinstance(result, list) and result and isinstance(result[0], (list, tuple)) and len(result[0]) >= 2:
+        # Could also be RapidOCR style; detect by second element type
+        sample = result[0]
+        second = sample[1]
+
+        # RapidOCR style: [box, text, score?]
+        if isinstance(second, str):
+            for item in result:
+                if not isinstance(item, (list, tuple)) or len(item) < 2:
                     continue
-                l, t, r, btm = map(int, b[:4])
+                box, text = item[0], item[1]
+                left = top = width = height = 0
+                if isinstance(box, (list, tuple)) and len(box) >= 4 and isinstance(box[0], (list, tuple)):
+                    xs = [int(p[0]) for p in box]
+                    ys = [int(p[1]) for p in box]
+                    left = min(xs)
+                    top = min(ys)
+                    width = max(xs) - left
+                    height = max(ys) - top
                 rows.append({
-                    "text": str(texts[i]) if texts[i] is not None else "",
-                    "left": l,
-                    "top": t,
-                    "width": max(0, r - l),
-                    "height": max(0, btm - t),
+                    "text": "" if text is None else str(text),
+                    "left": int(left),
+                    "top": int(top),
+                    "width": int(max(0, width)),
+                    "height": int(max(0, height)),
                 })
             return rows
-        except Exception:
-            pass
 
-    # v2: list of [poly, (text, score)]
-    if isinstance(result, list):
+        # Paddle v2 legacy
         for line in result:
             if line is None or not isinstance(line, (list, tuple)) or len(line) < 2:
                 continue
             box = line[0]
             text_info = line[1]
             text = text_info[0] if isinstance(text_info, (list, tuple)) else str(text_info)
-
+            left = top = width = height = 0
             if isinstance(box, (list, tuple)) and len(box) >= 4 and isinstance(box[0], (list, tuple)):
                 xs = [p[0] for p in box]
                 ys = [p[1] for p in box]
@@ -90,162 +112,201 @@ def _paddle_result_to_rows(result: Any) -> List[Dict[str, Any]]:
                 top = int(min(ys))
                 width = int(max(xs) - left)
                 height = int(max(ys) - top)
-            else:
-                left, top, width, height = 0, 0, 0, 0
-
             rows.append({"text": text or "", "left": left, "top": top, "width": width, "height": height})
         return rows
 
     return rows
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """啟動時載入 PaddleOCR 一次，關閉時不特別釋放（process 結束即釋放）。"""
-    global _ocr_engine
-
-    # Workarounds for some PaddlePaddle runtime issues on certain CPU builds.
-    # MUST be set BEFORE importing paddle/paddleocr.
+def _load_paddle() -> Any:
+    # runtime safety flags before import
     os.environ.setdefault("FLAGS_enable_pir_api", "0")
     os.environ.setdefault("FLAGS_enable_new_executor", "0")
-    # oneDNN / MKLDNN flags (names vary by Paddle version; safe as no-ops if unknown)
     os.environ.setdefault("FLAGS_use_mkldnn", "0")
     os.environ.setdefault("FLAGS_use_onednn", "0")
     os.environ.setdefault("FLAGS_enable_onednn", "0")
 
+    import paddle
+    from paddleocr import PaddleOCR
+
     try:
-        import paddle
-        # Some Paddle builds ignore env-only flags in specific boot paths.
-        # Force flags in-process before constructing PaddleOCR.
-        try:
-            paddle.set_flags({
-                'FLAGS_enable_pir_api': False,
-                'FLAGS_enable_new_executor': False,
-                'FLAGS_use_mkldnn': False,
-                'FLAGS_use_onednn': False,
-                'FLAGS_enable_onednn': False,
-            })
-        except Exception:
-            pass
-        from paddleocr import PaddleOCR
-    except ImportError as e:
-        raise RuntimeError(
-            "請先安裝 PaddleOCR：pip install \"paddleocr>=2.0.1\" \"paddlepaddle\""
-        ) from e
+        paddle.set_flags({
+            "FLAGS_enable_pir_api": False,
+            "FLAGS_enable_new_executor": False,
+            "FLAGS_use_mkldnn": False,
+            "FLAGS_use_onednn": False,
+            "FLAGS_enable_onednn": False,
+        })
+    except Exception:
+        pass
 
     lang = os.environ.get("OCR_LANG", "ch")
-    # PaddleOCR v3 uses `use_textline_orientation` (angle classifier).
-    use_textline_orientation = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
+    use_angle = _as_bool(os.environ.get("USE_ANGLE_CLS", "true"), True)
+    cpu_threads = int(os.environ.get("OCR_CPU_THREADS", "4"))
+    enable_mkldnn = _as_bool(os.environ.get("OCR_ENABLE_MKLDNN", "false"), False)
+    ir_optim = _as_bool(os.environ.get("OCR_IR_OPTIM", "false"), False)
 
-    lang = os.environ.get("OCR_LANG", "ch")
-    # PaddleOCR v3 uses `use_textline_orientation` (angle classifier).
-    use_textline_orientation = os.environ.get("USE_ANGLE_CLS", "true").lower() in ("1", "true", "yes")
-
-    _ocr_engine = PaddleOCR(
-        use_textline_orientation=use_textline_orientation,
+    # Keep direct parameters overridable by env
+    engine = PaddleOCR(
         lang=lang,
+        use_angle_cls=use_angle,
+        use_gpu=False,
+        cpu_threads=cpu_threads,
+        enable_mkldnn=enable_mkldnn,
+        ir_optim=ir_optim,
     )
+    return engine
+
+
+def _load_rapidocr(openvino: bool) -> Any:
+    from rapidocr_onnxruntime import RapidOCR
+
+    if openvino:
+        return RapidOCR(providers=["OpenVINOExecutionProvider", "CPUExecutionProvider"])
+    return RapidOCR(providers=["CPUExecutionProvider"])
+
+
+def _init_engine() -> Tuple[Any, str]:
+    backend = os.environ.get("OCR_BACKEND", "auto").strip().lower()
+
+    if backend == "paddle":
+        return _load_paddle(), "paddle"
+    if backend == "openvino":
+        return _load_rapidocr(openvino=True), "openvino"
+    if backend == "onnx":
+        return _load_rapidocr(openvino=False), "onnx"
+
+    # auto fallback chain
+    errs: List[str] = []
+    for name in ("openvino", "onnx", "paddle"):
+        try:
+            if name == "openvino":
+                return _load_rapidocr(openvino=True), name
+            if name == "onnx":
+                return _load_rapidocr(openvino=False), name
+            return _load_paddle(), name
+        except Exception as e:
+            errs.append(f"{name}: {e}")
+
+    raise RuntimeError("all backends failed: " + " | ".join(errs))
+
+
+def _run_ocr(img_np) -> Any:
+    if _engine is None:
+        raise RuntimeError("OCR engine not initialized")
+
+    if _backend == "paddle":
+        return _engine.ocr(img_np)
+
+    # rapidocr_onnxruntime => (result, elapsed)
+    result, _ = _engine(img_np)
+    return result
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _engine, _backend, _engine_error
+    _engine = None
+    _backend = None
+    _engine_error = None
+
+    try:
+        _engine, _backend = _init_engine()
+    except Exception as e:
+        _engine_error = str(e)
+        _engine = None
+        _backend = None
+
     yield
-    _ocr_engine = None
+
+    _engine = None
+    _backend = None
 
 
 app = FastAPI(
-    title="ZenTable PaddleOCR API",
-    description="單例 PaddleOCR 常駐服務，提供 OCR 辨識。",
+    title="ZenTable Unified OCR API",
+    description="Single OCR API with pluggable backend (auto/openvino/onnx/paddle).",
     lifespan=lifespan,
 )
 
 
 class OCRResponse(BaseModel):
-    """OCR 回傳格式，與 calibrate_analyze run_ocr_full 相容。"""
     success: bool
     rows: List[Dict[str, Any]]
     elapsed_ms: Optional[int] = None
     error: Optional[str] = None
 
 
+class OCRBase64Body(BaseModel):
+    image_base64: str
+
+
 @app.get("/health")
 async def health():
-    """健康檢查，可用於負載均衡或依賴檢查。"""
-    try:
-        _get_ocr_engine()
-        return {"status": "ok", "ocr": "ready"}
-    except RuntimeError:
+    if _engine is None:
         return JSONResponse(
             status_code=503,
-            content={"status": "unavailable", "ocr": "not_loaded"},
+            content={"status": "unavailable", "ocr": "not_loaded", "error": _engine_error},
         )
+    return {"status": "ok", "ocr": "ready", "backend": _backend}
 
 
 @app.post("/ocr", response_model=OCRResponse)
 async def ocr(image: UploadFile = File(...)):
-    """
-    上傳一張圖片，回傳辨識結果。
-    每筆含 text, left, top, width, height（與 run_ocr_full 相容）。
-    """
     if not image.content_type or not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="請上傳圖片檔（image/*）")
 
-    try:
-        raw = await image.read()
-    except Exception as e:
-        return OCRResponse(success=False, rows=[], error=str(e))
+    if _engine is None:
+        return OCRResponse(success=False, rows=[], error=f"engine_not_loaded: {_engine_error}")
 
     try:
-        engine = _get_ocr_engine()
-        # PaddleOCR 可接受路徑或 numpy 陣列；這裡用暫存或記憶體
+        raw = await image.read()
         import numpy as np
         from PIL import Image
+
         img = Image.open(io.BytesIO(raw))
         if img.mode != "RGB":
             img = img.convert("RGB")
         img_np = np.array(img)
-        # PaddleOCR v3: `cls` kwarg is not supported; orientation is configured by pipeline.
-        import time as _time
-        t0 = _time.time()
-        result = engine.ocr(img_np)
-        elapsed_ms = int((_time.time() - t0) * 1000)
-        rows = _paddle_result_to_rows(result)
+
+        t0 = time.time()
+        result = _run_ocr(img_np)
+        elapsed_ms = int((time.time() - t0) * 1000)
+
+        rows = _normalize_rows(result)
         return OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms)
     except Exception as e:
         return OCRResponse(success=False, rows=[], error=str(e))
 
 
-class OCRBase64Body(BaseModel):
-    """Base64 圖片 body（可選，方便 JSON 呼叫）。"""
-    image_base64: str
-
-
 @app.post("/ocr/base64", response_model=OCRResponse)
 async def ocr_base64(body: OCRBase64Body):
-    """以 JSON body 傳入 base64 圖片，回傳辨識結果。"""
-    try:
-        raw = base64.b64decode(body.image_base64)
-    except Exception as e:
-        return OCRResponse(success=False, rows=[], error=f"Base64 解碼失敗: {e}")
+    if _engine is None:
+        return OCRResponse(success=False, rows=[], error=f"engine_not_loaded: {_engine_error}")
 
     try:
+        raw = base64.b64decode(body.image_base64)
         import numpy as np
         from PIL import Image
+
         img = Image.open(io.BytesIO(raw))
         if img.mode != "RGB":
             img = img.convert("RGB")
         img_np = np.array(img)
-        engine = _get_ocr_engine()
-        # PaddleOCR v3: `cls` kwarg is not supported; orientation is configured by pipeline.
-        import time as _time
-        t0 = _time.time()
-        result = engine.ocr(img_np)
-        elapsed_ms = int((_time.time() - t0) * 1000)
-        rows = _paddle_result_to_rows(result)
+
+        t0 = time.time()
+        result = _run_ocr(img_np)
+        elapsed_ms = int((time.time() - t0) * 1000)
+
+        rows = _normalize_rows(result)
         return OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms)
     except Exception as e:
         return OCRResponse(success=False, rows=[], error=str(e))
 
 
 def run():
-    """供 python -m api.paddleocr_service 直接啟動。"""
     import uvicorn
+
     host = os.environ.get("OCR_HOST", "0.0.0.0")
     port = int(os.environ.get("OCR_PORT", "8000"))
     uvicorn.run(app, host=host, port=port)
