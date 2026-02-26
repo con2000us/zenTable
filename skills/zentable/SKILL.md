@@ -176,10 +176,11 @@ echo '{"title":"期末成績","headers":["姓名","國文","數學","英文"],"r
 
 ## OCR 多表格處理（後續實作註記）
 
-為避免一張圖含多表格時誤判，後續 OCR 流程預計新增：
+為避免一張圖含多表格時誤判，後續流程預計優先新增 **OpenCV 分割判斷程式**：
 
-- `table_segment.py`：先找多個表格 ROI（OpenCV 輪廓）
-- `ocr_by_regions.py`：各 ROI 分區 OCR
+- `table_segment.py`：先找多個表格 ROI（OpenCV 輪廓，主流程）
+- `table_segment_rules.py`：用幾何/線條規則做多表判斷與信心分數
+- `ocr_by_regions.py`：各 ROI 分區 OCR（可選輔助）
 - `reconstruct_table.py`：用文字框分布重建行列
 
 策略重點：
