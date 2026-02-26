@@ -5,7 +5,8 @@
 fastapi>=0.100.0
 uvicorn[standard]>=0.22.0
 python-multipart>=0.0.6
-paddleocr>=2.0.1
-paddlepaddle>=2.5.0
+# Pin to stable CPU combo to avoid PIR/oneDNN runtime regression in some environments
+paddleocr==2.7.3
+paddlepaddle==2.6.2
 Pillow>=9.0.0
 numpy>=1.20.0

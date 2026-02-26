@@ -114,6 +114,19 @@ async def lifespan(app: FastAPI):
     os.environ.setdefault("FLAGS_enable_onednn", "0")
 
     try:
+        import paddle
+        # Some Paddle builds ignore env-only flags in specific boot paths.
+        # Force flags in-process before constructing PaddleOCR.
+        try:
+            paddle.set_flags({
+                'FLAGS_enable_pir_api': False,
+                'FLAGS_enable_new_executor': False,
+                'FLAGS_use_mkldnn': False,
+                'FLAGS_use_onednn': False,
+                'FLAGS_enable_onednn': False,
+            })
+        except Exception:
+            pass
         from paddleocr import PaddleOCR
     except ImportError as e:
         raise RuntimeError(
