@@ -10,10 +10,10 @@ Goal: Continue canonical naming convergence to `zentable` while keeping compatib
 - [x] `js/app.js`
   - migrated cookie/local keys to `zentable_*`
   - remaining comment-level wording cleanup can continue in docs sweep
-- [ ] `gentable_export.php`, `gentable.php`, `gentable_*`
-  - legacy `/zenTable/` URL path usage (keep or alias route?)
-- [ ] `api/render_api.py`
-  - comments and error text still mention zeble naming in places
+- [x] `gentable_export.php`, `gentable.php`, `gentable_*`
+  - Decision: keep legacy `/zenTable/` URL path for deployment compatibility in Phase 1.x.
+- [x] `api/render_api.py`
+  - comment naming cleanup applied to canonical `zentable` wording.
 - [x] `skills/zentable/SKILL.md`
   - metadata name migrated to `name: zentable`
   - alias policy kept in documentation

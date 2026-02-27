@@ -108,6 +108,7 @@ if (file_exists($inputFile)) unlink($inputFile);
 if (file_exists($outputPath)) {
     echo json_encode([
         'success' => true,
+        // keep /zenTable path for deployment compatibility
         'image' => '/zenTable/' . $outputFile,
         'mode' => 'pil',
         'params' => $customParams

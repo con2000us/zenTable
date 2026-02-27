@@ -3,7 +3,7 @@
 #   from api.render_api import render_table
 #   result = render_table(data, "/tmp/out.png", mode="css", theme_name="neon_cyber")
 #
-# 使用方式二（若 zeble_render 已實作 run_render）：
+# 使用方式二（若 zentable_render 已實作 run_render）：
 #   from api.render_api import run_render
 #   result = run_render(data, "/tmp/out.png", mode="css", theme_name="neon_cyber")
 

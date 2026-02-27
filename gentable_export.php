@@ -58,6 +58,7 @@ $zip->close();
 if (file_exists($zipPath)) {
     echo json_encode([
         'success' => true,
+        // keep /zenTable path for deployment compatibility
         'url' => '/zenTable/' . $zipName,
         'filename' => $zipName
     ]);

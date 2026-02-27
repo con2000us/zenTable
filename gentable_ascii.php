@@ -115,6 +115,7 @@ if (file_exists($outputPath)) {
                 'stage3_details' => $parsed['stage3_details'] ?? null,
                 'stage1_pil_image' => $parsed['stage1_pil_image'] ?? null,
                 'stage1_pil_warning' => $parsed['stage1_pil_warning'] ?? null,
+                // keep /zenTable path for deployment compatibility
                 'file' => '/zenTable/' . $outputFile,
                 'mode' => 'ascii',
                 'debug' => true
@@ -126,6 +127,7 @@ if (file_exists($outputPath)) {
         echo json_encode([
             'success' => true,
             'text' => $content,
+            // keep /zenTable path for deployment compatibility
             'file' => '/zenTable/' . $outputFile,
             'mode' => 'ascii'
         ]);

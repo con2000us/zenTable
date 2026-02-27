@@ -86,6 +86,7 @@ if (file_exists($inputFile)) {
 
 // 檢查結果
 if (file_exists($outputPath)) {
+    // keep /zenTable path for deployment compatibility
     $imageUrl = '/zenTable/' . $outputFile;
     echo json_encode([
         'success' => true,

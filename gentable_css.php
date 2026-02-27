@@ -83,6 +83,7 @@ $output = shell_exec($command);
 if (file_exists($inputFile)) unlink($inputFile);
 if ($themeFile && file_exists($themeFile)) @unlink($themeFile);
 if (file_exists($outputPath)) {
+    // keep /zenTable path for deployment compatibility
     echo json_encode(['success' => true, 'image' => '/zenTable/' . $outputFile, 'mode' => 'css', 'theme' => $theme]);
 } else {
     echo json_encode(['success' => false, 'error' => '生成失敗', 'debug' => $output, 'theme' => $theme]);
