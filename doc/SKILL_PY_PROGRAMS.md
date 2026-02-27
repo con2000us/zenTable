@@ -59,8 +59,8 @@
 
 | 項目 | 說明 |
 |------|------|
-| **呼叫者** | gentable.php（舊 API）、本機 CLI |
-| **角色** | PIL 渲染，內建 8 主題，不讀 themes/ 目錄 |
+| **呼叫者** | （已棄用，無正式呼叫者） |
+| **角色** | legacy PIL 渲染器（已封存到 doc/archive/deprecated_code/） |
 | **輸入** | `<input.json>`、`<output.png>` |
 
 | 參數 | 說明 |
@@ -88,7 +88,7 @@
 
 | 項目 | 說明 |
 |------|------|
-| **呼叫者** | 無（獨立工具） |
+| **呼叫者** | 相容名（`scripts/zentable_render.py` 為 `zeble_render.py` symlink） |
 | **角色** | 另套渲染引擎，argparse、CSS 子集、PIL fallback |
 | **輸入** | `-t` 範本、`-d` 資料、`-o` 輸出 |
 
@@ -113,7 +113,7 @@
 | 項目 | 說明 |
 |------|------|
 | **呼叫者** | 無（測試工具） |
-| **角色** | 互動式測試各主題、呼叫 zeble.py |
+| **角色** | 舊測試工具（已封存，不在主流程） |
 | **輸入** | 無（內建範例） |
 | **輸出** | 產出 test_*.json、test_*.png |
 
@@ -124,7 +124,7 @@
 | 項目 | 說明 |
 |------|------|
 | **呼叫者** | OpenClaw / Agent（若整合） |
-| **角色** | 判斷輸出圖片或文字、載入偏好設定 |
+| **角色** | 舊輔助腳本（已封存，不在主流程） |
 | **輸入** | 無 CLI，函式 `should_use_image()` 等 |
 | **輸出** | 布林或偏好設定 |
 
@@ -160,6 +160,5 @@
               └─ gentable_ascii.php ────────→ zentable_renderer.py --force-ascii --output-ascii <path> [--page] [--sort]
                                                  └→ TXT
 
-[舊 API]  gentable.php ───────────────────→ zeble.py --dark 等
-                                              └→ PNG
+[舊 API]  gentable.php ───────────────────→ deprecated JSON 提示（不再呼叫 zeble.py）
 ```

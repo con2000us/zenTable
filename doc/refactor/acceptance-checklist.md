@@ -73,6 +73,7 @@
 
 - [x] `doc/archive/deprecated_code/` contains archived files
 - [x] `php -l gentable.php` (deprecated endpoint still returns valid JSON)
+- [x] stale docs updated (`doc/DEVELOPMENT.md`, `doc/SKILL_PY_PROGRAMS.md`, `doc/refactor/inventory.md`)
 - [ ] No broken imports: `python3 -c "import sys; sys.path.insert(0,'scripts'); import zentable"` succeeds
 - [ ] `php -l gentable_css.php && php -l gentable_pil.php && php -l gentable_ascii.php`
 - [ ] `bash tests/golden/run_golden.sh` exits 0
