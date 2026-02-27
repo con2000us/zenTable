@@ -22,7 +22,7 @@ function rel_path(string $abs, string $root): string {
     return basename($abs);
 }
 
-function collect_md_files(string $root): array {
+function collect_doc_files(string $root, bool $includeJson = false): array {
     $files = [];
     $it = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)
@@ -30,7 +30,9 @@ function collect_md_files(string $root): array {
     foreach ($it as $f) {
         if (!$f->isFile()) continue;
         $name = $f->getFilename();
-        if (preg_match('/\.md$/i', $name)) {
+        $isMd = preg_match('/\.md$/i', $name);
+        $isJson = $includeJson && preg_match('/\.json$/i', $name);
+        if ($isMd || $isJson) {
             $files[] = $f->getPathname();
         }
     }
@@ -62,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rel = $_POST['file'] ?? '';
     $content = $_POST['content'] ?? '';
     $abs = safe_abs_from_rel($rel, $docRoot);
-    if ($abs === null || !preg_match('/\.md$/i', $rel)) {
+    if ($abs === null || !preg_match('/\.(md|json)$/i', $rel)) {
         $error = 'Invalid file path';
     } elseif (!file_exists($abs)) {
         $error = 'File does not exist';
@@ -76,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$all = collect_md_files($docRoot);
+$includeJson = isset($_GET['showJson']) && $_GET['showJson'] === '1';
+$all = collect_doc_files($docRoot, $includeJson);
 $list = array_map(fn($p) => rel_path($p, $docRoot), $all);
 
 $focusFile = $docRoot . DIRECTORY_SEPARATOR . 'md_focus.json';
@@ -96,7 +99,7 @@ if (file_exists($focusFile)) {
 $current = $_GET['file'] ?? ($_POST['file'] ?? ($list[0] ?? ''));
 $currentAbs = safe_abs_from_rel($current, $docRoot);
 $currentContent = '';
-if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current)) {
+if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $current)) {
     $currentContent = file_get_contents($currentAbs) ?: '';
 } else {
     if ($current !== '') $error = $error ?: 'File not found';
@@ -145,12 +148,19 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
 <body>
 <div class="wrap">
   <aside class="sidebar">
-    <h2>Markdown Files (doc/)</h2>
+    <h2>Docs Files (doc/)</h2>
+    <div style="margin-bottom:8px;font-size:12px;">
+      <?php if ($includeJson): ?>
+        <a class="file" style="display:inline-block;padding:4px 8px;" href="?file=<?php echo urlencode($current); ?>">僅顯示 .md</a>
+      <?php else: ?>
+        <a class="file" style="display:inline-block;padding:4px 8px;" href="?showJson=1&file=<?php echo urlencode($current ?: 'md_focus.json'); ?>">顯示 .md + .json</a>
+      <?php endif; ?>
+    </div>
     <?php if (!$list): ?>
       <div class="empty">No markdown files found.</div>
     <?php else: ?>
       <?php foreach ($list as $f): ?>
-        <a class="file <?php echo ($focusSet[$f] ?? false) ? 'focus' : ''; ?> <?php echo $f === $current ? 'active' : ''; ?>" href="?file=<?php echo urlencode($f); ?>"><?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?></a>
+        <a class="file <?php echo ($focusSet[$f] ?? false) ? 'focus' : ''; ?> <?php echo $f === $current ? 'active' : ''; ?>" href="?<?php echo $includeJson ? 'showJson=1&' : ''; ?>file=<?php echo urlencode($f); ?>"><?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?></a>
       <?php endforeach; ?>
     <?php endif; ?>
   </aside>
