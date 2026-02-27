@@ -20,12 +20,12 @@ Goal: Continue canonical naming convergence to `zentable` while keeping compatib
 
 ## Should-fix (docs / consistency)
 
-- [ ] `WORKFLOW_VALIDATION.md`
-- [ ] `doc/ENVIRONMENT_DEPENDENCIES.md`
-- [ ] `doc/THEME_STRUCTURE.md`
-- [ ] `doc/INTEGRATION.md`
-- [ ] `doc/ZEBLE_FLOW.md` (could keep file name, but content should describe canonical `zentable`)
-- [ ] `doc/SPECIFICATION.md` legacy zeble terms
+- [x] `WORKFLOW_VALIDATION.md`
+- [x] `doc/ENVIRONMENT_DEPENDENCIES.md`
+- [x] `doc/THEME_STRUCTURE.md`
+- [x] `doc/INTEGRATION.md`
+- [x] `doc/ZEBLE_FLOW.md` (content updated to canonical naming; filename kept for compatibility)
+- [x] `doc/SPECIFICATION.md` legacy terms normalized
 
 ## Decide-and-document items
 

@@ -359,8 +359,8 @@ python3 zentable_render.py -t glass -d data.json -o out.png --rows-per-page 15
 python3 zentable_render.py -t glass -d data.json -o out.png --page 2
 python3 zentable_render.py -t glass -d data.json -o out.png --max-pages 3
 
-# 混合輸出
-python3 zentable_render.py -t glass -d data.json -o out.png --include-ascii
+# 同時輸出 PNG + ASCII（同主檔名 .txt）
+python3 zentable_render.py -t glass -d data.json -o out.png --both
 
 # 自定義資源目錄
 python3 zentable_render.py -t glass -d data.json -o out.png -R /path/to/resources
@@ -414,8 +414,8 @@ table_detect.py 偵測
     ↓
 needs_table = true?
     ├── 是 → 智慧判斷輸出
-    │   ├── 包含 URL → 輸出 zeble + ascii
-    │   └── 無 URL → 僅輸出 zeble
+    │   ├── 包含 URL → 輸出 zentable + ascii
+    │   └── 無 URL → 僅輸出 zentable
     └── 否 → 一般文字回覆
 ```
 
@@ -426,15 +426,15 @@ def smart_render(data: dict) -> list:
     """智慧渲染"""
     outputs = []
     
-    # 1. 輸出 zeble（主要表格）
+    # 1. 輸出 zentable（主要表格）
     if contains_url(data):
         # 2. 包含 URL 時，同時輸出 ascii
         ascii_output = render_ascii(data, theme="glass")
         outputs.append(("ascii", ascii_output))
     
-    # 3. 輸出 zeble 圖片
-    zeble_output = render_zeble(data, theme="glass")
-    outputs.append(("zeble", zeble_output))
+    # 3. 輸出 zentable 圖片
+    zentable_output = render_zentable(data, theme="glass")
+    outputs.append(("zentable", zentable_output))
     
     return outputs
 ```
@@ -519,5 +519,5 @@ def detect_environment():
 ## 11. 參考
 
 - **zenTable**：表格渲染引擎
-- **zeble**：表格渲染後的圖片輸出
-- **zeble化**：將表格轉為 zeble 圖片的過程
+- **zentable**：表格渲染後的圖片輸出
+- **zentable化**：將表格轉為 zentable 圖片的過程

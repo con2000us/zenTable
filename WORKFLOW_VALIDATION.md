@@ -61,7 +61,7 @@
 
 #### 步驟 5 所需函數
 - ✅ `render_ascii()`
-  - 位置: `/var/www/html/zenTable/scripts/zeble_render.py`
+  - 位置: `/var/www/html/zenTable/scripts/zentable_render.py`
   - 功能: 使用校準值渲染 ASCII 表格
   - 測試結果: **通過**
 
@@ -171,7 +171,7 @@
 ### Python 代碼
 ```python
 from calibrate_analyze import extract_chars_from_ascii_pattern, generate_calibration_pattern, find_calibration_start_point
-from zeble_render import render_ascii
+from zentable_render import render_ascii
 import json
 
 # 步驟 1: 準備數據
@@ -216,7 +216,7 @@ python3 calibrate_analyze.py screenshot.png \
   --test-chars "ABC字" \
   --chars-per-line 2
 
-# 使用校準值渲染（通過 zeble_render.py）
+# 使用校準值渲染（通過 zentable_renderer.py）
 python3 zentable_renderer.py data.json output.png \
   --force-ascii \
   --calibration calibration.json
@@ -250,7 +250,7 @@ python3 zentable_renderer.py data.json output.png \
 - 測試腳本: `/var/www/html/zenTable/test_calibration_workflow.py`
 - AI Agent 範例: （可自行新增，例如 `/var/www/html/zenTable/example_agent_workflow.py`）
 - 核心校準: `/var/www/html/zenTable/calibrate_analyze.py`
-- 渲染引擎: `/var/www/html/zenTable/scripts/zeble_render.py`
+- 渲染引擎: `/var/www/html/zenTable/scripts/zentable_render.py`
 
 ### 測試環境
 - Python 3.x

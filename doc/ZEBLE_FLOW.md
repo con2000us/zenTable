@@ -1,6 +1,6 @@
 # Zeble 流程圖
 
-![流程圖](zeble_flow_diagram.png)
+![流程圖](zentable_flow_diagram.png)
 
 ## 1. Skill 渲染流程
 
@@ -18,7 +18,7 @@
                                           │ 僅呼叫 skill（doc 僅參照）
                                           ▼
                                ┌──────────────────────┐
-                               │  /opt/.../zeble/     │
+                               │  /opt/.../zentable/     │
                                │  zentable_renderer.py     │
                                └──────────┬───────────┘
                                           │
@@ -80,7 +80,7 @@
 │  gentable_css.php / gentable_pil.php / gentable_ascii.php         │
 └─────────────────────────────────────────────────────────────────┘
     │
-    │ 呼叫本專案 scripts/zeble_render.py
+    │ 呼叫本專案 scripts/zentable_render.py
     ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  /var/www/html/zenTable/scripts/zentable_renderer.py                   │
@@ -93,6 +93,6 @@
 | 項目 | 路徑 |
 |------|------|
 | theme_api 讀取 | zenTable/themes/（固定，不再依賴 /opt skill） |
-| zeble_render 讀取 | zenTable/themes/（固定） |
+| zentable_render 讀取 | zenTable/themes/（固定） |
 | doc/zentable_renderer.py | 僅參照用，不參與執行 |
 | 實際執行腳本 | /var/www/html/zenTable/scripts/zentable_renderer.py |

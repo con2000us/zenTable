@@ -13,7 +13,7 @@ class ZenTableAgent:
     """整合 ZenTable 的 Agent"""
     
     def __init__(self):
-        self.render_script = "/var/www/html/zenTable/scripts/zeble_render.py"
+        self.render_script = "/var/www/html/zenTable/scripts/zentable_render.py"
     
     def handle_request(self, user_input: str):
         """處理用戶請求"""
@@ -121,7 +121,7 @@ def simple_example():
     
     # 呼叫渲染
     subprocess.run([
-        "python3", "/var/www/html/zenTable/scripts/zeble_render.py",
+        "python3", "/var/www/html/zenTable/scripts/zentable_render.py",
         "/tmp/data.json",
         "/tmp/table.png",
         "--force-css",

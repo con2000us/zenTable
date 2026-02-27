@@ -36,7 +36,7 @@ themes/
 
 ## CSS 主題 assets 與相對路徑
 
-CSS 主題的 `styles` 中可使用 `url('images/bg.png')` 等相對路徑。zeble_render 會將 zip 解壓至快取目錄，HTML 寫入同目錄，使相對路徑正確解析。
+CSS 主題的 `styles` 中可使用 `url('images/bg.png')` 等相對路徑。zentable_render 會將 zip 解壓至快取目錄，HTML 寫入同目錄，使相對路徑正確解析。
 
 - **zip 結構範例**：`template.json`、`images/logo.png`、`images/bg.png`
 - **快取**：解壓至 `/tmp/zentable_themes/{mode}_{theme_name}/`（可透過 `ZENTABLE_CACHE_DIR` 覆寫）
