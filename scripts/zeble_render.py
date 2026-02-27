@@ -68,6 +68,7 @@ from zentable.output.ascii.charwidth import (
 from zentable.output.ascii import renderer as ascii_renderer
 from zentable.output.css import crop as css_crop
 from zentable.output.css import chrome as css_chrome
+from zentable.output.css import viewport as css_viewport
 ASCII_STYLES = ascii_renderer.ASCII_STYLES
 
 # =============================================================================
@@ -200,6 +201,7 @@ def check_chrome_available() -> bool:
 # 透空背景：現代 Chrome 支援 --default-background-color=RRGGBBAA（8 位 hex，Alpha=00 為透明）
 # 直接輸出透明 PNG，無需 chroma key 後製，陰影半透明也不會出問題
 TRANSPARENT_BG_HEX = "00000000"  # RGBA，Alpha=0 = 透明
+MAX_VIEWPORT_DIM = css_viewport.MAX_VIEWPORT_DIM
 
 def _make_png_background_transparent_chroma(png_path: str, chroma_rgb: tuple = (255, 0, 255), tolerance: int = 8) -> bool:
     """Fallback：以 chroma key 後製透空（僅在 Chrome 不支援 --default-background-color 時使用）。"""
@@ -417,95 +419,20 @@ def _resolve_text_scale(
     return clamp(v, 1.0, max_v)
 
 
-def _scale_css_styles_px(theme: dict, scale: float) -> dict:
-    """
-    將 CSS 主題 styles 內所有 px 數值按倍率縮放（四捨五入到整數 px）。
-    回傳新 theme，避免污染 cache 中的原主題。
-    """
-    try:
-        s = float(scale)
-    except Exception:
-        return theme
-    if abs(s - 1.0) < 1e-6:
-        return theme
-
-    styles = (theme or {}).get("styles", {})
-    if not isinstance(styles, dict) or not styles:
-        return theme
-
-    def scale_px_values(style_str: str) -> str:
-        if not isinstance(style_str, str) or "px" not in style_str:
-            return style_str
-
-        def repl(m):
-            num = float(m.group(1))
-            return f"{int(round(num * s))}px"
-
-        return re.sub(r"(-?[0-9]*\.?[0-9]+)px", repl, style_str)
-
-    scaled_styles = {k: scale_px_values(v) for k, v in styles.items()}
-    new_theme = dict(theme or {})
-    new_theme["styles"] = scaled_styles
-    return new_theme
-
-
-# Chrome headless 視窗尺寸上限（高度約 16384px）
-MAX_VIEWPORT_DIM = 16384
+# CSS viewport helpers delegate to extracted module (wave4-b3)
+_scale_css_styles_px = css_viewport._scale_css_styles_px
 
 def estimate_css_viewport_width_height(data: dict, theme: dict) -> tuple:
-    """依表格內容估算 CSS 截圖所需的 viewport 寬高。回傳 (width, height)。"""
-    styles = theme.get("styles", {}) or {}
-    header_fs = _parse_font_size_px(styles.get("th", ""), 18)
-    cell_fs = _parse_font_size_px(styles.get("td", ""), 14)
-    title_fs = _parse_font_size_px(styles.get("title", ""), 20)
-    footer_fs = _parse_font_size_px(styles.get("footer", ""), 12)
-    
-    headers = data.get("headers", [])
-    rows = data.get("rows", [])
-    col_count = len(headers) if headers else 1
-    
-    col_widths = []
-    for i in range(col_count):
-        w = measure_text_width(headers[i] if i < len(headers) else "", header_fs)
-        for row in rows:
-            cells = _row_cells(row)
-            if i < len(cells):
-                w = max(w, measure_text_width(cell_text(cells[i]), cell_fs))
-        w = min(400, max(60, w + 28))  # padding
-        col_widths.append(w)
-    
-    table_width = sum(col_widths)
-    # CSS 主題 td 有 padding: 12px 14px，每列約 45px；header/footer 也較高
-    row_height = max(int(cell_fs * 2), 45)
-    header_height = 55
-    footer_height = 50
-    
-    width = 40 + table_width
-    height = 50  # body 外層 padding
-    if data.get("title"):
-        height += 60  # title padding 20px + font
-    height += header_height + len(rows) * row_height + footer_height
-    
-    margin = 40
-    scale_w, scale_h = 1.15, 1.25  # 高度預留多些（換行、padding 變異）
-    vw = int((width + margin) * scale_w)
-    vh = int((height + margin) * scale_h)
-    
-    # 若主題 body/container/table 有明確 width/min-width，視為最低 viewport 寬度，避免截圖被裁切
-    # 主題可能使用 "container" 或 ".container"；table 可能為 "table" 或 ".data-table"
-    explicit_width = False
-    _style_keys = {"body": ("body",), "container": ("container", ".container"), "table": ("table", ".data-table")}
-    for key, try_keys in _style_keys.items():
-        raw = ""
-        for k in try_keys:
-            raw = styles.get(k, "")
-            if raw:
-                break
-        w = _parse_width_px(raw)
-        if w is not None and w > vw:
-            vw = min(w, MAX_VIEWPORT_DIM)
-            explicit_width = True
-    return (vw, min(vh, MAX_VIEWPORT_DIM), explicit_width)
+    return css_viewport.estimate_css_viewport_width_height(
+        data, theme,
+        measure_text_width=measure_text_width,
+        row_cells=_row_cells,
+        cell_text=cell_text,
+    )
+
+
+def _inject_wrap_gap_css(html: str, gap_px: int) -> str:
+    return css_viewport._inject_wrap_gap_css(html, gap_px)
 
 def _strip_alpha_from_css(css_text: str) -> str:
     """Best-effort: strip alpha from colors, but keep shadow alpha.
@@ -672,37 +599,6 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
 </body>
 </html>"""
     return html
-
-
-def _inject_wrap_gap_css(html: str, gap_px: int) -> str:
-    """Inject wrap-gap CSS.
-
-    Purpose: when rendering with a fixed width (e.g. mobile w450), force the layout engine
-    to wrap earlier so text doesn't spill past the right edge.
-
-    This is an explicit user-controlled behavior via --wrap-gap.
-
-    Implementation:
-      - viewport width = (forced_width + gap)
-      - effective layout width = calc(100% - gap)
-      - keep a right margin gap for safety
-      - force table to 100% so columns are constrained by the layout width
-    """
-    try:
-        gap_px = max(0, int(gap_px))
-    except Exception:
-        gap_px = 0
-    if gap_px <= 0:
-        return html
-    css = (
-        f"\nhtml, body {{ width: calc(100% - {gap_px}px) !important; margin: 0 {gap_px}px 0 0 !important; box-sizing: border-box; }}"
-        f"\ntable {{ width: 100% !important; }}\n"
-        f"\nhtml {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}\n"
-    )
-    inject = f"\n<style id=\"zentable-wrap-gap\">{css}</style>\n"
-    if "</head>" in html:
-        return html.replace("</head>", inject + "</head>")
-    return html + inject
 
 
 # =============================================================================
