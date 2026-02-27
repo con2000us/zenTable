@@ -73,6 +73,24 @@ class TableParseResponse(BaseModel):
     error: Optional[str] = None
 
 
+def _to_jsonable(obj: Any) -> Any:
+    """Best-effort conversion for numpy-heavy Paddle outputs."""
+    try:
+        import numpy as np  # type: ignore
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.generic):
+            return obj.item()
+    except Exception:
+        pass
+
+    if isinstance(obj, dict):
+        return {str(k): _to_jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_jsonable(v) for v in obj]
+    return obj
+
+
 def _normalize_structure_output(raw: Any) -> List[Dict[str, Any]]:
     """Normalize PPStructure output to a stable table list format."""
     tables: List[Dict[str, Any]] = []
@@ -85,19 +103,27 @@ def _normalize_structure_output(raw: Any) -> List[Dict[str, Any]]:
         if block.get("type") != "table":
             continue
 
-        bbox = block.get("bbox")
+        bbox = _to_jsonable(block.get("bbox"))
         html = None
         cell_bbox = None
         if isinstance(block.get("res"), dict):
             html = block["res"].get("html")
-            cell_bbox = block["res"].get("boxes")
+            cell_bbox = _to_jsonable(block["res"].get("boxes"))
+
+        # keep a sanitized raw object for debugging
+        raw_slim = {
+            "type": block.get("type"),
+            "bbox": bbox,
+            "score": _to_jsonable(block.get("score")),
+            "res_keys": list(block.get("res", {}).keys()) if isinstance(block.get("res"), dict) else None,
+        }
 
         tables.append(
             {
                 "bbox": bbox,
                 "html": html,
                 "cell_boxes": cell_bbox,
-                "raw": block,
+                "raw": raw_slim,
             }
         )
 
