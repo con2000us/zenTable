@@ -66,7 +66,6 @@ from zentable.output.ascii.charwidth import (
     calculate_column_widths, align_text,
 )
 from zentable.output.ascii import renderer as ascii_renderer
-from zentable.output.css import crop as css_crop
 ASCII_STYLES = ascii_renderer.ASCII_STYLES
 
 # =============================================================================
@@ -475,15 +474,6 @@ def crop_to_content_height(png_path: str, transparent: bool = False, tolerance: 
     except Exception as e:
         print(f"⚠️  高度裁切失敗: {e}", file=sys.stderr)
         return False
-
-
-# CSS crop helpers delegate to extracted module (wave4-b3)
-_make_png_background_transparent_chroma = css_crop.make_png_background_transparent_chroma
-crop_to_content_bounds = css_crop.crop_to_content_bounds
-_bottom_edge_has_content = css_crop.bottom_edge_has_content
-_right_edge_metrics = css_crop.right_edge_metrics
-_right_edge_has_content = css_crop.right_edge_has_content
-crop_to_content_height = css_crop.crop_to_content_height
 
 
 def render_css(html: str, output_path: str, transparent: bool = False, html_dir: str = None,
