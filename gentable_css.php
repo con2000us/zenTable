@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 $uploadDir = __DIR__ . '/';
-$scriptPath = __DIR__ . '/scripts/zeble_render.py';
+$scriptPath = __DIR__ . '/scripts/zentable_render.py';
 $venvPython = __DIR__ . '/venv/bin/python';
 $pythonCmd = (file_exists($venvPython)) ? $venvPython : 'python3';
 // doc/zentable_renderer.py 僅供參照，不參與執行

@@ -5,7 +5,7 @@ Elegant table rendering with style
 
 Zen + Table - 讓表格文字有禪意的風格輸出
 
-用法: python3 zeble.py <input.json> <output.png> [options]
+用法: python3 zentable.py <input.json> <output.png> [options]
 """
 
 import json
@@ -530,10 +530,10 @@ def load_images(json_file: str) -> Dict:
 def main():
     if len(sys.argv) < 3:
         print(__doc__)
-        print("\n用法: python3 zeble.py <input.json> <output.png> [options]")
+        print("\n用法: python3 zentable.py <input.json> <output.png> [options]")
         print("\n示例:")
-        print('  python3 zeble.py data.json output.png')
-        print('  python3 zeble.py data.json out.png --dark --page 2')
+        print('  python3 zentable.py data.json output.png')
+        print('  python3 zentable.py data.json out.png --dark --page 2')
         sys.exit(1)
 
     input_json = sys.argv[1]

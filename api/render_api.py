@@ -1,5 +1,5 @@
 # ZenTable 渲染 API：供 ComfyUI / n8n 以模組或 subprocess 方式呼叫
-# 使用方式一（subprocess，不需改 zeble_render.py）：
+# 使用方式一（subprocess，不需改 zentable_renderer.py）：
 #   from api.render_api import render_table
 #   result = render_table(data, "/tmp/out.png", mode="css", theme_name="neon_cyber")
 #
@@ -14,9 +14,9 @@ import tempfile
 from typing import Any, Dict, Optional
 
 
-# 預設 zeble_render.py 路徑（與 gentable_*.php 一致）
+# 預設 zentable_renderer.py 路徑（與 gentable_*.php 一致）
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_SCRIPT = os.path.join(_PROJECT_ROOT, "scripts", "zeble_render.py")
+DEFAULT_SCRIPT = os.path.join(_PROJECT_ROOT, "scripts", "zentable_renderer.py")
 
 
 def render_table(
@@ -41,8 +41,8 @@ def render_table(
     output_ascii_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    透過 subprocess 呼叫 zeble_render.py 進行表格渲染。
-    不需修改 zeble_render.py 即可供 ComfyUI / n8n 使用。
+    透過 subprocess 呼叫 zentable_renderer.py 進行表格渲染。
+    不需修改 zentable_renderer.py 即可供 ComfyUI / n8n 使用。
 
     Args:
         data: 表格資料 {"headers": [...], "rows": [[...]], "title": "", "footer": ""}
@@ -50,7 +50,7 @@ def render_table(
         mode: "css" | "pil" | "ascii"
         theme_name: themes/<mode>/ 下的主題名稱
         theme_json: 若給定則寫入暫存檔並用 --theme 傳入（覆蓋 theme_name）
-        script_path: zeble_render.py 實際路徑
+        script_path: zentable_renderer.py 實際路徑
         page, per_page, sort_by, sort_asc: 分頁與排序
         calibration: ASCII 用校準 dict（來自 analyze_from_image 的 calibration）
         params_override: PIL/ASCII 額外參數
@@ -61,7 +61,7 @@ def render_table(
         {"success": bool, "path": str, "error": str, "stdout": str}
     """
     if not os.path.isfile(script_path):
-        return {"success": False, "path": "", "error": f"zeble_render.py 不存在: {script_path}", "stdout": ""}
+        return {"success": False, "path": "", "error": f"zentable_renderer.py 不存在: {script_path}", "stdout": ""}
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -155,7 +155,7 @@ def render_table(
 
 def run_render(*args, **kwargs) -> Dict[str, Any]:
     """
-    若 zeble_render.py 日後實作 run_render(data, output_path, mode=..., **kwargs)，
+    若 zentable_renderer.py 日後實作 run_render(data, output_path, mode=..., **kwargs)，
     可在此改為 import 並呼叫該函數，以同進程執行、避免 subprocess。
     目前直接轉給 render_table（subprocess）。
     """

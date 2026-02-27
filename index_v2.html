@@ -233,10 +233,10 @@
             var out = document.getElementById('commandOutput');
             if (!mode || !rows || !page || !out) return;
             
-            var cmd = 'python3 zentable.py zeble_data.json output.png';
+            var cmd = 'python3 zentable.py zentable_data.json output.png';
             if (currentTheme !== 'dark') cmd += ' --' + currentTheme;
-            if (mode.value === 'css') cmd = 'python3 zentable_renderer.py zeble_data.json output.png --force-css';
-            else if (mode.value === 'ascii') cmd = 'python3 zentable.py zeble_data.json output.txt --ascii';
+            if (mode.value === 'css') cmd = 'python3 zentable_renderer.py zentable_data.json output.png --force-css';
+            else if (mode.value === 'ascii') cmd = 'python3 zentable.py zentable_data.json output.txt --ascii';
             if (rows.value !== '10') cmd += ' --rows-per-page ' + rows.value;
             if (page.value !== '1') cmd += ' --page ' + page.value;
             if (maxP && maxP.value !== '0') cmd += ' --max-pages ' + maxP.value;
@@ -283,7 +283,7 @@
             var blob = new Blob([JSON.stringify(getFormData(), null, 2)], {type: 'application/json'});
             var a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'zeble_data.json';
+            a.download = 'zentable_data.json';
             a.click();
         }
         
@@ -291,7 +291,7 @@
             var blob = new Blob([JSON.stringify(themes[currentTheme], null, 2)], {type: 'application/json'});
             var a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'zeble_theme_' + currentTheme + '.json';
+            a.download = 'zentable_theme_' + currentTheme + '.json';
             a.click();
         }
         

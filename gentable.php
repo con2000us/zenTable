@@ -1,7 +1,7 @@
 <?php
 /**
  * ZenTable 圖片生成 API
- * 呼叫 zeble.py 將 JSON 資料轉為圖片
+ * 呼叫 zentable.py 將 JSON 資料轉為圖片
  */
 
 header('Content-Type: application/json');
@@ -42,7 +42,7 @@ $random = bin2hex(random_bytes(4));
 $outputFile = "table_{$timestamp}_{$random}.png";
 $outputPath = $uploadDir . $outputFile;
 
-// 轉換資料為 zeble.py 所需的格式
+// 轉換資料為 zentable.py 所需的格式
 $inputData = [
     'title' => $tableData['title'] ?? '',
     'headers' => $tableData['headers'] ?? [],
@@ -54,11 +54,11 @@ $inputData = [
 $inputFile = $uploadDir . 'input_' . $timestamp . '.json';
 file_put_contents($inputFile, json_encode($inputData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
-// 呼叫 zeble.py
+// 呼叫 zentable.py
 $validThemes = ['dark', 'light', 'cyberpunk', 'forest', 'ocean', 'sunset', 'rose', 'midnight'];
 $themeParam = in_array($theme, $validThemes) ? '--' . $theme : '--dark';
 $command = sprintf(
-    'cd %s && %s zeble.py %s %s %s',
+    'cd %s && %s zentable.py %s %s %s',
     escapeshellarg($workspaceZeble),
     escapeshellarg($pythonCmd),
     escapeshellarg($inputFile),

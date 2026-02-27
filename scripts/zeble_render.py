@@ -9,7 +9,7 @@ ZenTable / Zeble 表格渲染程式（專案內版本）
 1. CSS + Chrome（效果更好）
 2. Pure Python + PIL（無依賴 fallback）
 
-用法: python3 scripts/zeble_render.py <data.json> <output.png> [options]
+用法: python3 zentable_renderer.py <data.json> <output.png> [options]
 
 選項:
   --force-pil        強制使用 PIL 渲染
@@ -24,11 +24,13 @@ ZenTable / Zeble 表格渲染程式（專案內版本）
   --fill-width M     搭配 --width 使用：background | container | scale | no-shrink
 """
 
+import html as html_module
 import json
 import sys
 import os
 import re
 import glob
+import functools
 import subprocess
 import zipfile
 import time
@@ -193,13 +195,13 @@ def _space_width(calibration=None):
     return 1.0
 
 def calculate_column_widths(headers, rows, padding=2, calibration=None):
-    """計算每列最大顯示寬度（浮點數）。padding 以空格字元寬度為單位累加。"""
+    """計算每列最大顯示寬度（浮點數）。padding 以空格字元寬度為單位累加。支援 row 為 list 或 {cells}。"""
     sw = _space_width(calibration)
     widths = [display_width(str(h), calibration) for h in headers]
     for row in rows:
-        for i, cell in enumerate(row):
+        for i, cell in enumerate(_row_cells(row)):
             if i < len(widths):
-                widths[i] = max(widths[i], display_width(str(cell), calibration))
+                widths[i] = max(widths[i], display_width(cell_text(cell), calibration))
     return [w + padding * 2 * sw for w in widths]
 
 def align_text(text, target_width, align="left", calibration=None):
@@ -290,7 +292,7 @@ def render_ascii(data: dict, theme: dict = None, style: ASCIIStyle = None,
     header_height = 0
     for i in range(min(len(col_targets), len(header_lines))):
         header_height = max(header_height, len(header_lines[i]))
-    row_lines = [[_cell_lines(c) for c in (row if isinstance(row, list) else [])] for row in rows]
+    row_lines = [[_cell_lines(cell_text(c)) for c in _row_cells(row)] for row in rows]
     row_heights = []
     for r in row_lines:
         h = 1
@@ -322,7 +324,7 @@ def render_ascii(data: dict, theme: dict = None, style: ASCIIStyle = None,
             "title": title,
             "footer": footer,
             "headers": list(headers) if headers else [],
-            "rows": [[str(c) for c in row] for row in rows] if rows else [],
+            "rows": [[str(cell_text(c)) for c in _row_cells(row)] for row in rows] if rows else [],
             "header_lines": header_lines,
             "row_lines": row_lines,
         })
@@ -1155,8 +1157,9 @@ def estimate_css_viewport_width_height(data: dict, theme: dict) -> tuple:
     for i in range(col_count):
         w = measure_text_width(headers[i] if i < len(headers) else "", header_fs)
         for row in rows:
-            if i < len(row):
-                w = max(w, measure_text_width(cell_text(row[i]), cell_fs))
+            cells = _row_cells(row)
+            if i < len(cells):
+                w = max(w, measure_text_width(cell_text(cells[i]), cell_fs))
         w = min(400, max(60, w + 28))  # padding
         col_widths.append(w)
     
@@ -1194,21 +1197,56 @@ def estimate_css_viewport_width_height(data: dict, theme: dict) -> tuple:
     return (vw, min(vh, MAX_VIEWPORT_DIM), explicit_width)
 
 def _strip_alpha_from_css(css_text: str) -> str:
-    """Best-effort: strip alpha from rgba()/hsla()/8-digit hex colors.
+    """Best-effort: strip alpha from colors, but keep shadow alpha.
 
-    Used for non-tt mode to make backgrounds fully opaque.
+    Used for non-tt mode to make backgrounds fully opaque while preserving
+    box/text/drop shadows softness.
     """
     if not isinstance(css_text, str) or not css_text:
         return css_text
 
-    # rgba(r,g,b,a) -> rgb(r,g,b)
-    css_text = re.sub(r'rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)', r'rgb(\1,\2,\3)', css_text, flags=re.I)
-    # hsla(h,s,l,a) -> hsl(h,s,l)
-    css_text = re.sub(r'hsla\(([^,]+),([^,]+),([^,]+),([^\)]+)\)', r'hsl(\1,\2,\3)', css_text, flags=re.I)
+    def strip_alpha_colors(text: str) -> str:
+        # rgba(r,g,b,a) -> rgb(r,g,b)
+        text = re.sub(
+            r'rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)',
+            r'rgb(\1,\2,\3)',
+            text,
+            flags=re.I,
+        )
+        # hsla(h,s,l,a) -> hsl(h,s,l)
+        text = re.sub(r'hsla\(([^,]+),([^,]+),([^,]+),([^\)]+)\)', r'hsl(\1,\2,\3)', text, flags=re.I)
+        # #RRGGBBAA -> #RRGGBB
+        text = re.sub(r'#([0-9a-fA-F]{6})([0-9a-fA-F]{2})\b', r'#\1', text)
+        return text
 
-    # #RRGGBBAA -> #RRGGBB
-    css_text = re.sub(r'#([0-9a-fA-F]{6})([0-9a-fA-F]{2})\b', r'#\1', css_text)
-    return css_text
+    # Parse declaration list and preserve alpha for shadow-related properties.
+    raw_parts = css_text.split(';')
+    out_parts = []
+    has_decl = False
+    for part in raw_parts:
+        decl = part.strip()
+        if not decl:
+            continue
+        if ':' not in decl:
+            out_parts.append(strip_alpha_colors(decl))
+            continue
+        has_decl = True
+        prop, val = decl.split(':', 1)
+        prop_name = prop.strip().lower()
+        val_text = val.strip()
+        keep_alpha = (
+            prop_name in {"box-shadow", "text-shadow"}
+            or (prop_name == "filter" and "drop-shadow(" in val_text.lower())
+        )
+        out_val = val_text if keep_alpha else strip_alpha_colors(val_text)
+        out_parts.append(f"{prop.strip()}: {out_val}")
+
+    if not out_parts:
+        return css_text
+    out = '; '.join(out_parts)
+    if has_decl or css_text.rstrip().endswith(';'):
+        out += ';'
+    return out
 
 
 def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_width_pct: int = None, tt: bool = False) -> str:
@@ -1226,8 +1264,13 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
     title = data.get("title", "")
     footer = data.get("footer", "Generated by ZenTable")
     
-    # 斑馬紋 rows（支援 colspan/rowspan）
-    rows_html = build_css_rows_html(rows)
+    # 斑馬紋 rows（支援 colspan/rowspan、row_hl、cell.hl、col_hl、highlight_rules）
+    rows_html = build_css_rows_html(
+        rows, theme,
+        headers=headers,
+        highlight_rules=data.get("highlight_rules"),
+        col_hl=data.get("col_hl"),
+    )
     
     headers_html = ''.join(f'<th>{h}</th>' for h in headers)
     
@@ -1270,8 +1313,15 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
             return f'th:nth-child({n}), td:nth-child({n})'
         return '.' + key
     css = '\n'.join(f'{css_selector(k)} {{{v}}}' for k, v in styles.items())
-    css += "\ntd { white-space: pre-wrap !important; overflow-wrap: anywhere !important; word-break: break-word !important; }"
+    # Temporarily disabled for visual comparison:
+    # css += "\ntable, .data-table { border-collapse: collapse !important; }"
+    # css += "\ntable { table-layout: auto; }"
+    # css += "\ntd { white-space: pre-wrap !important; }"
     css += tt_css
+    # Highlight styles：theme.highlight_styles 轉成 td.hl-xxx, th.hl-xxx
+    hl_css = _highlight_styles_to_css(theme)
+    if hl_css:
+        css += "\n" + hl_css
     # 所有模式都讓 viewport/body 透明，使用 --default-background-color 控制實際輸出
     css += "\nhtml, body { background: transparent !important; background-image: none !important; }"
     if table_width_pct:
@@ -1284,6 +1334,16 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
         if _parse_width_px(_container_style) is None:
             css += "\n.container { width: fit-content !important; max-width: 100%; }"
     
+    # 與前端一致：theme 若有 .table-wrapper / table-wrapper 則包一層，table 使用 class="data-table"
+    has_table_wrapper = bool(styles.get(".table-wrapper") or styles.get("table-wrapper"))
+    table_html = f"""<table class="data-table">
+{ f'<thead><tr>{headers_html}</tr></thead>' if headers else '' }
+<tbody>
+{rows_html}
+</tbody>
+</table>"""
+    if has_table_wrapper:
+        table_html = f"<div class=\"table-wrapper\">\n{table_html}\n</div>"
     html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -1295,12 +1355,7 @@ def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_
 <body>
 <div class="container">
 { f'<div class="title">{title}</div>' if title else '' }
-<table>
-{ f'<thead><tr>{headers_html}</tr></thead>' if headers else '' }
-<tbody>
-{rows_html}
-</tbody>
-</table>
+{table_html}
 { f'<div class="footer">{footer}</div>' if footer else '' }
 </div>
 </body>
@@ -2265,8 +2320,9 @@ def render_pil(data: dict, theme: dict, custom_params: dict = None) -> Image.Ima
     for i in range(col_count):
         w = measure_text_width(headers[i] if i < len(headers) else "", header_font_size)
         for row in rows:
-            if i < len(row):
-                w = max(w, measure_text_width(str(row[i]), cell_font_size))
+            cells = _row_cells(row)
+            if i < len(cells):
+                w = max(w, measure_text_width(cell_text(cells[i]), cell_font_size))
         w = min(max_col_width, max(min_col_width, w + cell_padding))
         col_widths.append(w)
     
@@ -2324,9 +2380,9 @@ def render_pil(data: dict, theme: dict, custom_params: dict = None) -> Image.Ima
         draw.rectangle([padding, y, width-padding, y+cell_height], fill=parse_color(row_bg))
         draw.line([padding, y+cell_height, width-padding, y+cell_height], fill=parse_color(style.border_color))
         x_offset = padding
-        for i, cell in enumerate(row):
+        for i, cell in enumerate(_row_cells(row)):
             cw = col_widths[i] if i < len(col_widths) else 60
-            draw_text_aligned(draw, str(cell), x_offset, y+10, cw, cell_font_size, cell_fill, align, img_mode=img_mode_str)
+            draw_text_aligned(draw, cell_text(cell), x_offset, y+10, cw, cell_font_size, cell_fill, align, img_mode=img_mode_str)
             x_offset += cw
         y += cell_height
 
@@ -2514,8 +2570,75 @@ def get_theme(theme_name, mode='css'):
 
 ROWS_PER_PAGE = 15
 
+
+def _parse_page_spec(spec: str):
+    """
+    支援頁碼語法：
+    - N
+    - A-B
+    - A-
+    - all
+    """
+    s = (spec or "").strip().lower()
+    if not s:
+        return ("single", 1, None)
+    if s == "all":
+        return ("all", 1, None)
+    if re.fullmatch(r"\d+", s):
+        return ("single", max(1, int(s)), None)
+
+    m = re.fullmatch(r"(\d+)-(\d+)", s)
+    if m:
+        a = max(1, int(m.group(1)))
+        b = max(1, int(m.group(2)))
+        if a > b:
+            raise ValueError(f"Invalid page range '{spec}': start must be <= end")
+        return ("range", a, b)
+
+    m = re.fullmatch(r"(\d+)-", s)
+    if m:
+        a = max(1, int(m.group(1)))
+        return ("from", a, None)
+
+    raise ValueError(f"Invalid --page '{spec}'. Supported: N, A-B, A-, all")
+
+
+def _resolve_page_list(total_rows: int, per_page: int, page_spec: str = None, use_all: bool = False):
+    total_rows = max(0, int(total_rows))
+    per_page = max(1, int(per_page))
+    total_pages = max(1, (total_rows + per_page - 1) // per_page)
+
+    if use_all:
+        return list(range(1, total_pages + 1)), total_pages
+
+    kind, a, b = _parse_page_spec(page_spec or "1")
+    if kind == "all":
+        return list(range(1, total_pages + 1)), total_pages
+    if kind == "single":
+        if a > total_pages:
+            raise ValueError(f"--page {a} exceeds total pages ({total_pages})")
+        return [a], total_pages
+    if kind == "range":
+        if a > total_pages:
+            raise ValueError(f"--page {a}-{b} exceeds total pages ({total_pages})")
+        return list(range(a, min(b, total_pages) + 1)), total_pages
+
+    # kind == "from"
+    if a > total_pages:
+        raise ValueError(f"--page {a}- exceeds total pages ({total_pages})")
+    return list(range(a, total_pages + 1)), total_pages
+
+
+def _page_output_path(path: str, page: int, pages: list) -> str:
+    if len(pages) <= 1:
+        return path
+    root, ext = os.path.splitext(path)
+    if ext:
+        return f"{root}.p{page}{ext}"
+    return f"{path}.p{page}"
+
 def normalize_cell(cell):
-    """將 cell 統一為 dict，支援舊格式（字串/數字）與 CellSpec。"""
+    """將 cell 統一為 dict，支援舊格式（字串/數字）與 CellSpec。含 hl 時一併保留。"""
     if isinstance(cell, dict):
         text = cell.get("text", "")
         try:
@@ -2526,29 +2649,216 @@ def normalize_cell(cell):
             rowspan = int(cell.get("rowspan", 1))
         except (TypeError, ValueError):
             rowspan = 1
-        return {
+        out = {
             "text": "" if text is None else str(text),
             "colspan": max(1, colspan),
             "rowspan": max(1, rowspan),
         }
+        if "hl" in cell and cell["hl"] is not None:
+            out["hl"] = str(cell["hl"]).strip() or None
+        return out
     return {
         "text": "" if cell is None else str(cell),
         "colspan": 1,
         "rowspan": 1,
     }
 
+
+def _row_cells(row):
+    """從一列取得 cells 串列；支援 list 或 {"row_hl": ..., "cells": [...]}。"""
+    if isinstance(row, dict) and "cells" in row:
+        return list(row["cells"]) if row["cells"] is not None else []
+    if isinstance(row, list):
+        return row
+    return []
+
+
+def _try_numeric(s):
+    """嘗試將值轉成數字，失敗回傳 None。"""
+    if s is None:
+        return None
+    s = str(s).strip()
+    if not s:
+        return None
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
+
+
+def _highlight_rule_matches(rule: dict, cell_value: str) -> bool:
+    """依 PLAN op 清單判斷規則是否符合該格內容。first match 由呼叫端依序呼叫即可。"""
+    op = (rule.get("op") or "").strip().lower()
+    value = rule.get("value")
+    cell_str = (cell_value or "").strip() if cell_value is not None else ""
+    cell_num = _try_numeric(cell_value)
+
+    if op in ("empty", "is empty"):
+        return cell_str == ""
+    if op in ("not empty", "is not empty"):
+        return cell_str != ""
+
+    if op == "in":
+        if not isinstance(value, list):
+            return False
+        vals = [str(v).strip() for v in value]
+        if cell_num is not None:
+            for v in value:
+                n = _try_numeric(v)
+                if n is not None and cell_num == n:
+                    return True
+        return cell_str in vals
+
+    if op == "not in":
+        if not isinstance(value, list):
+            return False
+        vals = [str(v).strip() for v in value]
+        if cell_num is not None:
+            for v in value:
+                n = _try_numeric(v)
+                if n is not None and cell_num == n:
+                    return False
+            return True
+        return cell_str not in vals
+
+    if op == "contains":
+        if value is None:
+            return False
+        if isinstance(value, list):
+            return any(cell_str.find(str(v)) >= 0 for v in value)
+        return cell_str.find(str(value)) >= 0
+
+    if op in ("not contains", "excludes"):
+        if value is None:
+            return True
+        if isinstance(value, list):
+            return not any(cell_str.find(str(v)) >= 0 for v in value)
+        return cell_str.find(str(value)) < 0
+
+    if op in ("starts with", "startswith"):
+        if value is None:
+            return False
+        if isinstance(value, list):
+            return any(cell_str.startswith(str(v)) for v in value)
+        return cell_str.startswith(str(value))
+
+    if op in ("ends with", "endswith"):
+        if value is None:
+            return False
+        if isinstance(value, list):
+            return any(cell_str.endswith(str(v)) for v in value)
+        return cell_str.endswith(str(value))
+
+    # 數值或字串比較：<, <=, ==, !=, >=, >
+    compare_val = value
+    compare_num = _try_numeric(compare_val) if compare_val is not None else None
+    if cell_num is not None and compare_num is not None:
+        a, b = cell_num, compare_num
+        if op == "==":
+            return a == b
+        if op == "!=":
+            return a != b
+        if op == "<":
+            return a < b
+        if op == "<=":
+            return a <= b
+        if op == ">":
+            return a > b
+        if op == ">=":
+            return a >= b
+    # 字串比較
+    compare_str = str(compare_val).strip() if compare_val is not None else ""
+    if op == "==":
+        return cell_str == compare_str
+    if op == "!=":
+        return cell_str != compare_str
+    if op in ("<", "<=", ">", ">="):
+        return (cell_str < compare_str) if op == "<" else (cell_str <= compare_str) if op == "<=" else (cell_str > compare_str) if op == ">" else (cell_str >= compare_str)
+    return False
+
+
+def resolve_cell_highlight(
+    cell: dict,
+    row_hl: Optional[str],
+    theme: Optional[dict],
+    col_name: Optional[str] = None,
+    highlight_rules: Optional[list] = None,
+    col_hl: Optional[dict] = None,
+) -> str:
+    """決定該格的 highlight token：cell.hl > row_hl > col_hl > highlight_rules（first match）> default。"""
+    token = None
+    if cell.get("hl"):
+        token = str(cell["hl"]).strip()
+    if not token and row_hl:
+        token = str(row_hl).strip() if row_hl else None
+    if not token and col_hl and col_name and isinstance(col_hl, dict) and col_name in col_hl:
+        token = str(col_hl[col_name]).strip()
+    if not token and highlight_rules and col_name:
+        cell_val = cell.get("text") or ""
+        for r in highlight_rules:
+            if not isinstance(r, dict):
+                continue
+            if r.get("col") != col_name:
+                continue
+            if _highlight_rule_matches(r, cell_val):
+                token = (r.get("hl") or "").strip()
+                break
+    if not token:
+        token = "default"
+    highlight_styles = (theme or {}).get("highlight_styles") or {}
+    if not isinstance(highlight_styles, dict):
+        return "default"
+    if token not in highlight_styles:
+        if token != "default":
+            print(f"⚠️  highlight token '{token}' 未定義於 theme，fallback 至 default", file=sys.stderr)
+        return "default"
+    return token
+
+
+def _highlight_styles_to_css(theme: dict) -> str:
+    """將 theme.highlight_styles 轉成 td.hl-xxx, th.hl-xxx 的 CSS。value 可為字串或 {style: ...}（做法 A）。"""
+    highlight_styles = (theme or {}).get("highlight_styles") or {}
+    if not isinstance(highlight_styles, dict):
+        return ""
+    lines = []
+    for token, val in highlight_styles.items():
+        if not token or not isinstance(val, (str, dict)):
+            continue
+        css_val = val.get("style", val) if isinstance(val, dict) else val
+        if not css_val or not isinstance(css_val, str):
+            continue
+        css_val = css_val.strip().rstrip(";")
+        if css_val:
+            lines.append(f"td.hl-{token}, th.hl-{token} {{ {css_val}; }}")
+    return "\n".join(lines)
+
+
 def cell_text(cell) -> str:
     return normalize_cell(cell).get("text", "")
 
-def build_css_rows_html(rows) -> str:
-    """輸出 tbody rows，支援 colspan/rowspan 並跳過被 rowspan 覆蓋的格子。"""
+def build_css_rows_html(
+    rows,
+    theme: Optional[dict] = None,
+    headers: Optional[list] = None,
+    highlight_rules: Optional[list] = None,
+    col_hl: Optional[dict] = None,
+) -> str:
+    """輸出 tbody rows，支援 colspan/rowspan、row_hl、cell.hl、col_hl、highlight_rules。theme 有 highlight_styles 時輸出 hl hl-<token> class。"""
+    rows_list = rows if isinstance(rows, list) else []
+    use_hl = bool(theme and isinstance(theme.get("highlight_styles"), dict))
+    rules = highlight_rules if isinstance(highlight_rules, list) else []
+    col_hl_map = col_hl if isinstance(col_hl, dict) else None
+    header_list = headers if isinstance(headers, list) else []
     rows_html = []
     active_rowspans = []
-    for idx, row in enumerate(rows if isinstance(rows, list) else []):
-        row_class = "tr_even" if idx % 2 == 0 else "tr_odd"
+    for idx, row in enumerate(rows_list):
+        row_class = "row tr_even" if idx % 2 == 0 else "row tr_odd"
+        row_hl = row.get("row_hl") if isinstance(row, dict) and "cells" in row else None
+        raw_cells = _row_cells(row)
         row_cells = []
         col_cursor = 0
-        for raw_cell in (row if isinstance(row, list) else []):
+        col_idx = 0
+        for raw_cell in raw_cells:
             while col_cursor < len(active_rowspans) and active_rowspans[col_cursor] > 0:
                 col_cursor += 1
             cell = normalize_cell(raw_cell)
@@ -2557,8 +2867,20 @@ def build_css_rows_html(rows) -> str:
                 attrs.append(f'colspan="{cell["colspan"]}"')
             if cell["rowspan"] > 1:
                 attrs.append(f'rowspan="{cell["rowspan"]}"')
+            if use_hl:
+                col_name = header_list[col_idx] if col_idx < len(header_list) else None
+                hl_token = resolve_cell_highlight(
+                    cell, row_hl, theme,
+                    col_name=col_name,
+                    highlight_rules=rules,
+                    col_hl=col_hl_map,
+                )
+                cls = f"hl hl-{hl_token}"
+                attrs.append(f'class="{cls}"')
+            col_idx += 1
             attr_str = f" {' '.join(attrs)}" if attrs else ""
-            row_cells.append(f'<td{attr_str}>{cell["text"]}</td>')
+            text_escaped = html_module.escape(cell["text"])
+            row_cells.append(f'<td{attr_str}>{text_escaped}</td>')
             if cell["rowspan"] > 1:
                 for i in range(cell["colspan"]):
                     target_idx = col_cursor + i
@@ -2573,16 +2895,30 @@ def build_css_rows_html(rows) -> str:
     return "".join(rows_html)
 
 def normalise_data(data):
-    """將陣列 of 物件或 {headers, rows} 統一為 {headers, rows, title?, footer?}。"""
+    """將陣列 of 物件或 {headers, rows} 統一為 {headers, rows, title?, footer?}。
+    支援 row 為 list 或 {"row_hl": "token", "cells": [...]}。"""
     if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
         headers = list(data[0].keys())
         rows = [[row.get(h, "") for h in headers] for row in data]
         return {"headers": headers, "rows": rows, "title": "", "footer": ""}
     if isinstance(data, dict) and "headers" in data and "rows" in data:
-        out = {"headers": list(data["headers"]), "rows": [list(r) for r in data["rows"]], "title": data.get("title", ""), "footer": data.get("footer", "")}
+        rows = []
+        for r in data["rows"]:
+            if isinstance(r, dict) and "cells" in r:
+                rows.append({"row_hl": r.get("row_hl"), "cells": list(r["cells"])})
+            else:
+                rows.append(list(r) if isinstance(r, (list, tuple)) else [])
+        out = {"headers": list(data["headers"]), "rows": rows, "title": data.get("title", ""), "footer": data.get("footer", "")}
         return out
     if isinstance(data, dict):
-        return {"headers": data.get("headers", []), "rows": data.get("rows", []), "title": data.get("title", ""), "footer": data.get("footer", "")}
+        rows = data.get("rows", [])
+        out_rows = []
+        for r in rows:
+            if isinstance(r, dict) and "cells" in r:
+                out_rows.append({"row_hl": r.get("row_hl"), "cells": list(r["cells"])})
+            else:
+                out_rows.append(list(r) if isinstance(r, (list, tuple)) else [])
+        return {"headers": data.get("headers", []), "rows": out_rows, "title": data.get("title", ""), "footer": data.get("footer", "")}
     return {"headers": [], "rows": [], "title": "", "footer": ""}
 
 def transpose_table(data):
@@ -2623,19 +2959,292 @@ def transpose_table(data):
     return {"headers": out_headers, "rows": out_rows, "title": data.get("title", ""), "footer": data.get("footer", "")}
 
 
+def _split_csv(text: str):
+    return [x.strip() for x in str(text or "").split(",") if x.strip()]
+
+
+def _header_index_map(headers):
+    m = {}
+    for i, h in enumerate(headers or []):
+        key = str(h).strip().casefold()
+        if key and key not in m:
+            m[key] = i
+    return m
+
+
+def _find_header_idx(headers, name: str):
+    if not headers:
+        return None
+    target = str(name or "").strip()
+    if target in headers:
+        return headers.index(target)
+    m = _header_index_map(headers)
+    return m.get(target.casefold())
+
+
+def _parse_row_filter_condition(expr: str):
+    """
+    row 條件語法（單條）：
+      欄位>=60
+      狀態!=停用
+      類別 in 甲|乙|丙
+      備註 contains 逾期
+    """
+    pattern = re.compile(
+        r"^\s*(.+?)\s*(not contains|contains|not in|in|starts with|ends with|<=|>=|!=|==|=|<|>)\s*(.*?)\s*$",
+        re.IGNORECASE,
+    )
+    m = pattern.match(expr or "")
+    if not m:
+        return None
+    col = m.group(1).strip()
+    op = m.group(2).strip().lower()
+    raw_val = m.group(3).strip()
+    if op == "=":
+        op = "=="
+
+    if op in ("in", "not in"):
+        if raw_val.startswith("[") and raw_val.endswith("]"):
+            try:
+                value = json.loads(raw_val)
+            except Exception:
+                value = _split_csv(raw_val[1:-1])
+        elif "|" in raw_val:
+            value = [v.strip() for v in raw_val.split("|") if v.strip()]
+        else:
+            value = _split_csv(raw_val)
+    else:
+        value = raw_val
+    return {"col": col, "op": op, "value": value}
+
+
+def _parse_filter_specs(filter_specs):
+    """
+    f/filter 語法：
+    - col:姓名,分數          -> 只保留這些欄
+    - col:!備註,!附件       -> 排除這些欄
+    - row:狀態!=停用        -> 列條件（可多個，用 ; 分隔）
+    """
+    include_cols = []
+    exclude_cols = []
+    row_rules = []
+    errors = []
+
+    for raw in (filter_specs or []):
+        spec = str(raw or "").strip()
+        if not spec:
+            continue
+        if ":" not in spec:
+            errors.append(f"Invalid filter '{spec}' (missing ':'; use col:... or row:...)")
+            continue
+        kind, body = spec.split(":", 1)
+        kind = kind.strip().lower()
+        body = body.strip()
+        if kind in ("col", "cols", "column", "columns"):
+            for tok in _split_csv(body):
+                if tok.startswith("!"):
+                    name = tok[1:].strip()
+                    if name:
+                        exclude_cols.append(name)
+                else:
+                    include_cols.append(tok)
+        elif kind in ("row", "rows"):
+            conds = [c.strip() for c in body.split(";") if c.strip()]
+            if not conds and body.strip():
+                conds = [body.strip()]
+            for cond in conds:
+                parsed = _parse_row_filter_condition(cond)
+                if not parsed:
+                    errors.append(f"Invalid row filter condition '{cond}'")
+                else:
+                    row_rules.append(parsed)
+        else:
+            errors.append(f"Unknown filter kind '{kind}' in '{spec}'")
+
+    return {
+        "include_cols": include_cols,
+        "exclude_cols": exclude_cols,
+        "row_rules": row_rules,
+        "errors": errors,
+    }
+
+
+def apply_filters(data, filter_specs=None):
+    """
+    套用欄位/列過濾。流程：
+    1) row filter（依原始欄位判斷）
+    2) column include/exclude（投影欄位）
+    """
+    headers = list(data.get("headers", []) or [])
+    rows = list(data.get("rows", []) or [])
+    if not headers or not rows or not filter_specs:
+        return data, {"applied": False, "reason": "no-filter"}
+
+    parsed = _parse_filter_specs(filter_specs)
+    include_cols = parsed["include_cols"]
+    exclude_cols = parsed["exclude_cols"]
+    row_rules = parsed["row_rules"]
+    errors = parsed["errors"]
+
+    def _row_match(row):
+        if not row_rules:
+            return True
+        cells = _row_cells(row)
+        for r in row_rules:
+            idx = _find_header_idx(headers, r["col"])
+            if idx is None:
+                return False
+            val = cells[idx] if idx < len(cells) else ""
+            if not _highlight_rule_matches({"op": r["op"], "value": r["value"]}, cell_text(val)):
+                return False
+        return True
+
+    filtered_rows = [r for r in rows if _row_match(r)]
+
+    include_set = {c.casefold() for c in include_cols if c}
+    exclude_set = {c.casefold() for c in exclude_cols if c}
+
+    keep_indices = list(range(len(headers)))
+    if include_set:
+        keep_indices = [i for i, h in enumerate(headers) if str(h).strip().casefold() in include_set]
+    if exclude_set:
+        keep_indices = [i for i in keep_indices if str(headers[i]).strip().casefold() not in exclude_set]
+
+    # 若有指定欄位過濾但結果為空，回傳空欄位（明確反映過濾結果）
+    col_filter_used = bool(include_cols or exclude_cols)
+    if col_filter_used:
+        new_headers = [headers[i] for i in keep_indices]
+        new_rows = []
+        for r in filtered_rows:
+            src_cells = _row_cells(r)
+            dst_cells = [src_cells[i] if i < len(src_cells) else "" for i in keep_indices]
+            if isinstance(r, dict) and "cells" in r:
+                new_rows.append({"row_hl": r.get("row_hl"), "cells": dst_cells})
+            else:
+                new_rows.append(dst_cells)
+    else:
+        new_headers = headers
+        new_rows = filtered_rows
+
+    out = {
+        "headers": new_headers,
+        "rows": new_rows,
+        "title": data.get("title", ""),
+        "footer": data.get("footer", ""),
+    }
+    return out, {
+        "applied": True,
+        "rows_before": len(rows),
+        "rows_after": len(new_rows),
+        "cols_before": len(headers),
+        "cols_after": len(new_headers),
+        "errors": errors,
+    }
+
+
+def _try_sort_numeric(value):
+    """
+    排序用數值解析（比 _try_numeric 更寬鬆）：
+    - 支援千分位：1,234.56
+    - 支援百分比：12.5% -> 12.5
+    """
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    if s.endswith("%"):
+        s = s[:-1].strip()
+    s = s.replace(",", "")
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_sort_specs(sort_by, sort_asc=True):
+    """
+    解析多鍵排序規格：
+    - 單鍵：'分數'
+    - 多鍵：'分數>等級>姓名' 或 '分數,等級,姓名'
+    - 每鍵方向：'分數:desc,等級:asc'
+    """
+    if not sort_by:
+        return []
+    raw = str(sort_by).strip()
+    if not raw:
+        return []
+    tokens = [t.strip() for t in re.split(r"[>,]", raw) if t.strip()]
+    specs = []
+    for tok in tokens:
+        if ":" in tok:
+            col, dir_token = tok.rsplit(":", 1)
+            col = col.strip()
+            d = dir_token.strip().lower()
+            direction = "desc" if d in ("desc", "d", "-") else "asc"
+        else:
+            col = tok
+            direction = "asc" if sort_asc else "desc"
+        if col:
+            specs.append((col, direction))
+    return specs
+
+
 def apply_sort_and_page(data, sort_by=None, sort_asc=True, page=1, per_page=ROWS_PER_PAGE):
-    """依 sort_by 排序 rows，再取第 page 頁。"""
+    """依 sort_by（支援多鍵）排序 rows，再取第 page 頁。支援 row 為 list 或 {row_hl, cells}。"""
     headers = data.get("headers", [])
     rows = data.get("rows", [])
     if sort_by and headers and rows:
-        try:
-            col_idx = headers.index(sort_by)
-        except ValueError:
-            col_idx = 0
-        def sort_key(r):
-            v = r[col_idx] if col_idx < len(r) else ""
-            return cell_text(v)
-        rows = sorted(rows, key=sort_key, reverse=not sort_asc)
+        specs = _parse_sort_specs(sort_by, sort_asc=sort_asc)
+        idx_specs = []
+        for col_name, direction in specs:
+            try:
+                idx = headers.index(col_name)
+                idx_specs.append((idx, direction))
+            except ValueError:
+                continue
+        # 相容舊行為：若指定欄位不存在，fallback 到第 1 欄
+        if not idx_specs:
+            idx_specs = [(0, "asc" if sort_asc else "desc")]
+
+        def cmp_rows(a, b):
+            cells_a = _row_cells(a)
+            cells_b = _row_cells(b)
+            for idx, direction in idx_specs:
+                va = cell_text(cells_a[idx]) if idx < len(cells_a) else ""
+                vb = cell_text(cells_b[idx]) if idx < len(cells_b) else ""
+                na = _try_sort_numeric(va)
+                nb = _try_sort_numeric(vb)
+
+                # 數值優先：型別優先序固定，不受 asc/desc 影響
+                ka = 0 if na is not None else 1
+                kb = 0 if nb is not None else 1
+                if ka != kb:
+                    return -1 if ka < kb else 1
+
+                # 同型別再比較值；方向只影響同型別比較
+                if ka == 0:
+                    if na < nb:
+                        c = -1
+                    elif na > nb:
+                        c = 1
+                    else:
+                        c = 0
+                else:
+                    sa = str(va).casefold()
+                    sb = str(vb).casefold()
+                    if sa < sb:
+                        c = -1
+                    elif sa > sb:
+                        c = 1
+                    else:
+                        c = 0
+
+                if c != 0:
+                    return -c if direction == "desc" else c
+            return 0
+
+        rows = sorted(rows, key=functools.cmp_to_key(cmp_rows))
     total = len(rows)
     start = (page - 1) * per_page
     end = start + per_page
@@ -2674,9 +3283,9 @@ def _smart_wrap_text(text: str, limit: int) -> str:
 
 
 def apply_smart_wrap(data: dict, width: Optional[int] = None) -> Tuple[dict, dict]:
-    """依寬度/欄數預估每欄可容字數，對過長文字插入軟換行。"""
+    """依寬度/欄數預估每欄可容字數，對過長文字插入軟換行。保留 row_hl 結構。"""
     headers = list(data.get("headers", []) or [])
-    rows = [list(r) for r in (data.get("rows", []) or [])]
+    rows = data.get("rows", []) or []
     if not headers or not rows:
         return data, {"applied": False, "reason": "no-data"}
 
@@ -2688,8 +3297,9 @@ def apply_smart_wrap(data: dict, width: Optional[int] = None) -> Tuple[dict, dic
     changed_cells = 0
     new_rows = []
     for r in rows:
+        cells = _row_cells(r)
         rr = []
-        for i, c in enumerate(r):
+        for i, c in enumerate(cells):
             limit = max(6, per_col - 2) if i == 0 else per_col
             if isinstance(c, dict):
                 old_t = c.get("text", "")
@@ -2705,7 +3315,10 @@ def apply_smart_wrap(data: dict, width: Optional[int] = None) -> Tuple[dict, dic
                 if new_t != old_t:
                     changed_cells += 1
                 rr.append(new_t)
-        new_rows.append(rr)
+        if isinstance(r, dict) and "cells" in r:
+            new_rows.append({"row_hl": r.get("row_hl"), "cells": rr})
+        else:
+            new_rows.append(rr)
 
     out = {"headers": headers, "rows": new_rows, "title": data.get("title", ""), "footer": data.get("footer", "")}
     return out, {
@@ -2723,7 +3336,7 @@ def apply_smart_wrap(data: dict, width: Optional[int] = None) -> Tuple[dict, dic
 def main():
     if len(sys.argv) < 3:
         print(__doc__)
-        print("\n用法: python3 zeble_render.py <data.json> <output.png> [options]")
+        print("\n用法: python3 zentable_renderer.py <data.json> <output.png> [options]")
         print("\n選項:")
         print('  --force-pil     強制使用 PIL')
         print('  --force-css     強制使用 CSS + Chrome')
@@ -2738,12 +3351,14 @@ def main():
         print('  --auto-width   自動寬度（先量測/渲染後，必要時加寬再重渲）')
         print('  --auto-width-max W  auto-width 起始寬度（預設 2400）')
         print('  --no-auto-width / --no-aw  關閉自動寬度')
-        print('  --per-page N   每頁列數（預設 %d）' % ROWS_PER_PAGE)
+        print('  --per-page N / --pp N  每頁列數（預設 %d）' % ROWS_PER_PAGE)
         print('  --fill-width   background|container|scale|no-shrink（搭配 --width）')
         print('  --theme FILE    主題檔案（直接用於測試，不儲存）')
         print('  --theme-name    themes/ 目錄中的主題名稱')
         print('  --tt           透明模式：保留 theme 內 rgba/#RRGGBBAA 的 alpha（非 tt 會強制去除 alpha 變不透明）')
-        print('  --page N        第 N 頁（每頁 %d 列）' % ROWS_PER_PAGE)
+        print('  --no-tt        關閉透明模式（覆蓋 theme defaults 的 tt）')
+        print('  --page N|A-B|A-|all / --p ...  頁碼範圍（每頁 %d 列）' % ROWS_PER_PAGE)
+        print('  --all          等價 --page all')
         print('  --transpose     轉置表格（header 變第一欄；適合手機閱讀）')
         print('  --cc            --transpose 的別名')
         print('  --debug-auto-width  儲存每次 auto-width 嘗試的右側邊界裁切圖（用於診斷）')
@@ -2751,9 +3366,10 @@ def main():
         print('  --wrap-gap N   固定寬度模式用：viewport 變成 (width+N)，但排版寬度縮成 calc(100%-N) 以強制更早換行（避免右側溢出）')
         print('  --smart-wrap    啟用智慧換行（預設開）')
         print('  --no-smart-wrap / --nosw / nosw  關閉智慧換行，保留原始文字斷行')
-        print('  --sort <欄位>   依欄位排序')
+        print('  --sort <欄位規格>   排序；支援單鍵或多鍵（例：分數>等級>姓名、分數:desc,姓名:asc）')
         print('  --asc           升序（預設）')
         print('  --desc          降序')
+        print('  --f / --filter  過濾（例：col:!備註,附件；row:狀態!=停用；row:分數>=60;等級 in 甲|乙）')
         print("\n可用主題 (themes/css/):", ', '.join(list_themes_in_dir('css')) or '(無)')
         print("可用主題 (themes/pil/):", ', '.join(list_themes_in_dir('pil')) or '(無)')
         print("可用主題 (themes/text/):", ', '.join(list_themes_in_dir('text')) or '(無)')
@@ -2771,8 +3387,11 @@ def main():
     output_ascii = None  # 如果指定則輸出 ASCII 到檔案
     calibration_json = None  # 字元寬度校準數據
     page = 1
+    page_spec = None
+    all_pages = False
     sort_by = None
     sort_asc = True
+    filter_specs = []
     transpose = False
     bg_mode = "theme"  # transparent | theme | #RRGGBB
     force_width = None
@@ -2821,6 +3440,9 @@ def main():
         elif arg == "--tt":
             tt = True
             tt_set = True
+        elif arg == "--no-tt":
+            tt = False
+            tt_set = True
         elif arg == "--params" and i + 1 < len(sys.argv):
             try:
                 custom_params = json.loads(sys.argv[i + 1])
@@ -2830,14 +3452,21 @@ def main():
             output_ascii = sys.argv[i + 1]
         elif arg == "--transparent":
             pass  # 在下方用 transparent_flag 累加
-        elif arg == "--page" and i + 1 < len(sys.argv):
-            page = max(1, int(sys.argv[i + 1]))
+        elif (arg == "--page" or arg == "--p") and i + 1 < len(sys.argv):
+            page_spec = str(sys.argv[i + 1]).strip()
+            # 若為數字，維持原有單頁流程；範圍/all 稍後統一處理
+            if re.fullmatch(r"\d+", page_spec):
+                page = max(1, int(page_spec))
+        elif arg == "--all":
+            all_pages = True
         elif arg == "--sort" and i + 1 < len(sys.argv):
             sort_by = sys.argv[i + 1]
         elif arg == "--asc":
             sort_asc = True
         elif arg == "--desc":
             sort_asc = False
+        elif (arg == "--f" or arg == "--filter") and i + 1 < len(sys.argv):
+            filter_specs.append(sys.argv[i + 1])
         elif arg == "--transpose" or arg == "--cc":
             transpose = True
         elif arg == "--debug-auto-width":
@@ -2890,7 +3519,7 @@ def main():
                 scale_factor = max(0.1, min(5.0, float(sys.argv[i + 1])))
             except ValueError:
                 pass
-        elif arg == "--per-page" and i + 1 < len(sys.argv):
+        elif (arg == "--per-page" or arg == "--pp") and i + 1 < len(sys.argv):
             try:
                 per_page = max(1, int(sys.argv[i + 1]))
             except ValueError:
@@ -2948,8 +3577,62 @@ def main():
 
     # 統一輸入格式（陣列 of 物件 或 headers+rows）
     data = normalise_data(data)
+    if filter_specs:
+        data, filter_stats = apply_filters(data, filter_specs=filter_specs)
+        if filter_stats.get("applied"):
+            print(
+                f"🔎 filter 已套用: rows {filter_stats.get('rows_before')} -> {filter_stats.get('rows_after')}, "
+                f"cols {filter_stats.get('cols_before')} -> {filter_stats.get('cols_after')}",
+                file=sys.stderr,
+            )
+        for e in (filter_stats.get("errors") or []):
+            print(f"⚠️  filter warning: {e}", file=sys.stderr)
     if transpose:
         data = transpose_table(data)
+
+    # page range / all：在同一支腳本內展開逐頁渲染（供其他入口直接呼叫）
+    if all_pages or (page_spec is not None and not re.fullmatch(r"\d+", page_spec.strip())):
+        total_rows = len(data.get("rows", [])) if isinstance(data, dict) else 0
+        try:
+            pages, total_pages = _resolve_page_list(total_rows, per_page, page_spec=page_spec, use_all=all_pages)
+        except ValueError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            sys.exit(2)
+
+        base_args = sys.argv[3:]  # 去掉 data_file, output_file
+        last_rc = 0
+        print(f"📚 page spec 展開: pages={pages} / total_pages={total_pages}", file=sys.stderr)
+        for p in pages:
+            out_p = _page_output_path(output_file, p, pages)
+            child_args = []
+            i = 0
+            while i < len(base_args):
+                a = base_args[i]
+                # 移除範圍語法，改用單頁
+                if a in ("--all",):
+                    i += 1
+                    continue
+                if a in ("--page", "--p"):
+                    i += 2
+                    continue
+                # 支援 ASCII 多頁輸出檔名
+                if a == "--output-ascii" and i + 1 < len(base_args):
+                    ascii_out = _page_output_path(base_args[i + 1], p, pages)
+                    child_args += [a, ascii_out]
+                    i += 2
+                    continue
+                child_args.append(a)
+                i += 1
+
+            cmd = [sys.executable, sys.argv[0], data_file, out_p] + child_args + ["--page", str(p)]
+            if "--verbose" in base_args:
+                print("Running:", " ".join(cmd), file=sys.stderr)
+            rc = subprocess.run(cmd).returncode
+            last_rc = rc
+            if rc != 0:
+                sys.exit(rc)
+        sys.exit(last_rc)
+
     # 再套用排序與分頁
     data = apply_sort_and_page(data, sort_by=sort_by, sort_asc=sort_asc, page=page, per_page=per_page)
 
@@ -3197,27 +3880,8 @@ def main():
             # viewport becomes width+gap; layout uses calc(100%-gap)
             vw = int(force_width) + int(wrap_gap)
 
-        # Fixed-width wrapping helpers:
-        # When user forces width, ensure table is constrained to viewport and cells can shrink for wrapping.
-        if explicit_width and force_width and force_width > 0:
-            try:
-                wrap_css = """
-<style id="zentable-fixedwidth-wrap">
-  /* Fixed width mode: prevent content-driven table expansion */
-  table { width: 100% !important; table-layout: fixed !important; }
-  th, td {
-    min-width: 0 !important;
-    max-width: 0 !important;
-    overflow: hidden !important;
-  }
-</style>
-"""
-                if "</head>" in html:
-                    html = html.replace("</head>", wrap_css + "</head>")
-                else:
-                    html = wrap_css + html
-            except Exception:
-                pass
+        # (removed: #zentable-fixedwidth-wrap injected table-layout:fixed + max-width:0
+        #  which broke cell layout; table-layout: auto is now handled by generate_css_html)
 
         # Optional debug dump: save full HTML/CSS + resolved render inputs for diffing.
         if os.environ.get("ZENTABLE_DUMP_RENDER_INPUT") == "1":
