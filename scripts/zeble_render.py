@@ -71,6 +71,7 @@ from zentable.output.css import chrome as css_chrome
 from zentable.output.css import viewport as css_viewport
 from zentable.output.css import renderer as css_renderer
 from zentable.output.pil import font as pil_font
+from zentable.output.pil import draw as pil_draw
 ASCII_STYLES = ascii_renderer.ASCII_STYLES
 
 # =============================================================================
@@ -1002,77 +1003,12 @@ def render_ascii_blueprint_pil(blueprint: dict, out_png_path: str, unit_px: int 
         return None, f"PIL 儲存失敗: {e}"
     return out_png_path, warning
 
-def measure_text_width(text: str, font_size: int) -> int:
-    """使用混合字體測量文字寬度（不繪製）"""
-    segments = split_text_by_font(str(text))
-    total = 0
-    for seg_text, font_type in segments:
-        font = get_font_emoji(font_size) if font_type == "emoji" else get_font_cjk(font_size)
-        try:
-            bbox = font.getbbox(seg_text)
-            total += bbox[2] - bbox[0]
-        except Exception:
-            total += font_size * len(seg_text) * 0.6
-    return int(total)
-
-def _fill_for_draw(fill_color, img_mode="RGB"):
-    """PIL 繪製用顏色：確保為 (r,g,b) 或 (r,g,b,a) 的 tuple。"""
-    if isinstance(fill_color, (list, tuple)) and len(fill_color) >= 3:
-        part = fill_color[:4] if len(fill_color) > 3 else fill_color[:3]
-        out = tuple(int(x) for x in part)
-        return out[:3] if img_mode == "RGB" and len(out) == 4 else out
-    return (0, 0, 0)
-
-
-def draw_text_with_mixed_fonts(draw, text, x, y, font_size, fill_color, baseline_offset=0, img_mode=None):
-    """使用混合字體繪製文字：CJK 用 Noto Sans CJK，Emoji 用支援 emoji 的字型（Noto Color Emoji / Symbola 等）。"""
-    if img_mode is None:
-        img_mode = "RGB"
-    fill = _fill_for_draw(fill_color, img_mode) if isinstance(fill_color, (list, tuple)) else _fill_for_draw(parse_color(str(fill_color)), img_mode)
-    segments = split_text_by_font(str(text))
-    current_x = x
-
-    for segment_text, font_type in segments:
-        if font_type == "emoji":
-            font = get_font_emoji(font_size)
-            draw_y = y + 2  # emoji 字型與 CJK 對齊微調
-        else:
-            font = get_font_cjk(font_size)
-            draw_y = y
-        try:
-            draw.text((current_x, draw_y), segment_text, font=font, fill=fill)
-        except Exception:
-            if font_type == "emoji":
-                font = get_font_cjk(font_size)
-                draw.text((current_x, y), segment_text, font=font, fill=fill)
-            else:
-                raise
-        try:
-            width = font.getbbox(segment_text)[2] - font.getbbox(segment_text)[0]
-        except Exception:
-            width = int(font_size * len(segment_text) * 0.6)
-        current_x += width
-
-    return current_x
-
-
-def _align_x(cell_left, cell_width, text_width, align, padding=10):
-    """依對齊方式計算文字起始 x。align: left | center | right。"""
-    if align == "right":
-        return max(cell_left, cell_left + cell_width - padding - text_width)
-    if align == "center":
-        return cell_left + max(0, (cell_width - text_width) // 2)
-    return cell_left + padding
-
-
-def draw_text_aligned(draw, text, cell_left, y, cell_width, font_size, fill_color, align, img_mode=None):
-    """在欄位內依 align（left/center/right）繪製文字與 emoji（混合字體）。"""
-    if img_mode is None:
-        img_mode = "RGB"
-    text_str = str(text)
-    tw = measure_text_width(text_str, font_size)
-    x = _align_x(cell_left, cell_width, tw, align)
-    draw_text_with_mixed_fonts(draw, text_str, x, y, font_size, fill_color, img_mode=img_mode)
+# PIL draw helpers delegate to extracted module (wave4-b4)
+measure_text_width = pil_draw.measure_text_width
+_fill_for_draw = pil_draw._fill_for_draw
+draw_text_with_mixed_fonts = pil_draw.draw_text_with_mixed_fonts
+_align_x = pil_draw._align_x
+draw_text_aligned = pil_draw.draw_text_aligned
 
 def render_pil(data: dict, theme: dict, custom_params: dict = None) -> Image.Image:
     """使用 PIL 渲染表格，主題來自 themes/pil/<name>/template.json 的 params"""
