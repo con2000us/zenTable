@@ -11,21 +11,21 @@
 
 ### Wave 0: Foundation
 
-- [ ] `tests/golden/input.json` exists with representative data
-- [ ] `tests/golden/expected_css.png` exists (non-zero bytes)
-- [ ] `tests/golden/expected_pil.png` exists (non-zero bytes)
-- [ ] `tests/golden/expected_ascii.txt` exists (non-empty)
-- [ ] `bash tests/golden/run_golden.sh` exits 0
-- [ ] `python3 -c "from api import render_table"` succeeds (T-001 fix)
-- [ ] `python3 -c "import sys; sys.path.insert(0,'scripts'); import zentable"` succeeds (T-002 skeleton)
+- [x] `tests/golden/input.json` exists with representative data
+- [x] `tests/golden/expected_css.png` exists (non-zero bytes)
+- [x] `tests/golden/expected_pil.png` exists (non-zero bytes)
+- [x] `tests/golden/expected_ascii.txt` exists (non-empty)
+- [x] `bash tests/golden/run_golden.sh` exits 0
+- [x] `python3 -c "from api import render_table"` succeeds (T-001 fix)
+- [x] `python3 -c "import sys; sys.path.insert(0,'scripts'); import zentable"` succeeds (T-002 skeleton)
 
 ### Wave 1: Utilities
 
-- [ ] `python3 -m py_compile scripts/zentable/util/text.py`
-- [ ] `python3 -m py_compile scripts/zentable/util/color.py`
-- [ ] `python3 -c "from zentable.util.text import is_emoji, split_text_by_font"` (from scripts/ dir)
-- [ ] `python3 -c "from zentable.util.color import parse_color, hex_rgb"` (from scripts/ dir)
-- [ ] `bash tests/golden/run_golden.sh` exits 0
+- [x] `python3 -m py_compile scripts/zentable/util/text.py`
+- [x] `python3 -m py_compile scripts/zentable/util/color.py`
+- [x] `python3 -c "from zentable.util.text import is_emoji, split_text_by_font"` (from scripts/ dir)
+- [x] `python3 -c "from zentable.util.color import parse_color, hex_rgb"` (from scripts/ dir)
+- [x] `bash tests/golden/run_golden.sh` exits 0
 
 ### Wave 2: Detector Layer
 

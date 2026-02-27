@@ -7,6 +7,16 @@
 
 ---
 
+## Execution Status
+
+- [x] Wave 0 completed (T-000, T-001, T-002)
+- [x] Wave 1 completed (T-100, T-101)
+- [ ] Wave 2 pending
+- [ ] Wave 3 pending
+- [ ] Wave 4 pending
+- [ ] Wave 5 pending
+- [ ] Wave 6 pending
+
 ## Dependency Graph
 
 ```
