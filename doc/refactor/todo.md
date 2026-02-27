@@ -10,8 +10,8 @@
 > - ✅ Wave 2 done (T-200, T-201)
 > - ✅ Wave 3 done (T-300 ~ T-305)
 > - ✅ Wave 4 complete (T-400, T-401, T-410~T-413, T-420~T-423)
-> - ⏭️ Next: Wave 5 (T-500)
-> - ⏳ Wave 5+ pending
+> - ✅ Wave 5 complete (T-500)
+> - ⏭️ Next: Wave 6 cleanup tasks (T-600+)
 
 ---
 
