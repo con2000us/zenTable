@@ -114,6 +114,14 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
     .err { font-size:13px; color:#ff8b8b; }
     form { display:flex; flex:1; min-height:0; }
     textarea { flex:1; min-height:0; width:100%; border:0; outline:none; resize:none; padding:14px; font: var(--editor-font-size, 13px)/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0b1020; color:#e6edf7; }
+    .preview { flex:1; min-height:0; overflow:auto; padding:16px; background:#0b1020; color:#e6edf7; border:0; display:none; }
+    .preview h1,.preview h2,.preview h3 { margin: 0.8em 0 0.4em; }
+    .preview p { margin: 0.4em 0; }
+    .preview code { background:#16213e; padding:2px 6px; border-radius:6px; }
+    .preview pre { background:#16213e; padding:10px; border-radius:8px; overflow:auto; }
+    .preview blockquote { border-left:3px solid #3b7cff; margin:8px 0; padding:2px 10px; color:#b9c7ea; }
+    .mode-btn { background:#1d2b52; color:#cfe0ff; border:1px solid #2b3f77; border-radius:7px; padding:6px 10px; cursor:pointer; font-size:12px; }
+    .mode-btn.active { background:#3b7cff; color:#fff; border-color:#3b7cff; }
     button { background:#3b7cff; color:#fff; border:0; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:600; }
     button:hover { filter:brightness(1.05); }
     .empty { padding:16px; color:#9bb0de; }
@@ -138,6 +146,8 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
       <?php if ($message): ?><div class="msg"><?php echo $message; ?></div><?php endif; ?>
       <?php if ($error): ?><div class="err"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
       <?php if ($current): ?>
+      <button id="modeRaw" class="mode-btn active" type="button">Raw</button>
+      <button id="modeView" class="mode-btn" type="button">View</button>
       <label for="fontSize" style="font-size:12px;color:#b9c7ea;">字體</label>
       <input id="fontSize" type="range" min="11" max="28" step="1" value="13" style="width:120px;" />
       <span id="fontSizeVal" style="font-size:12px;color:#b9c7ea;">13px</span>
@@ -149,7 +159,8 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
     <?php if ($current): ?>
       <form id="editor" method="post">
         <input type="hidden" name="file" value="<?php echo htmlspecialchars($current, ENT_QUOTES, 'UTF-8'); ?>" />
-        <textarea name="content"><?php echo htmlspecialchars($currentContent, ENT_NOQUOTES, 'UTF-8'); ?></textarea>
+        <textarea id="editorArea" name="content"><?php echo htmlspecialchars($currentContent, ENT_NOQUOTES, 'UTF-8'); ?></textarea>
+        <div id="previewArea" class="preview"></div>
       </form>
     <?php else: ?>
       <div class="empty">No file available.</div>
@@ -161,7 +172,49 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
   const slider = document.getElementById('fontSize');
   const val = document.getElementById('fontSizeVal');
   const key = 'md_viewer_font_size_px';
+  const modeKey = 'md_viewer_mode';
+  const rawBtn = document.getElementById('modeRaw');
+  const viewBtn = document.getElementById('modeView');
+  const editor = document.getElementById('editorArea');
+  const preview = document.getElementById('previewArea');
   if (!slider) return;
+
+  const escapeHtml = (s) => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const renderMd = (src) => {
+    let t = escapeHtml(src || '');
+    t = t.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    t = t.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+    t = t.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+    t = t.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+    t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+    t = t.replace(/^>\s?(.+)$/gm, '<blockquote>$1</blockquote>');
+    t = t.replace(/^(?:-\s.+(?:\n|$))+?/gm, (m) => {
+      const items = m.trim().split(/\n/).map(x => x.replace(/^-\s/, '')).map(x => `<li>${x}</li>`).join('');
+      return `<ul>${items}</ul>`;
+    });
+    t = t.replace(/\n{2,}/g, '</p><p>');
+    if (!/^\s*<(h1|h2|h3|pre|ul|blockquote|p)/.test(t)) t = '<p>' + t + '</p>';
+    t = t.replace(/<p>\s*<\/(h1|h2|h3|pre|ul|blockquote)>/g, '</$1>');
+    t = t.replace(/<(h1|h2|h3|pre|ul|blockquote)>\s*<\/p>/g, '<$1>');
+    return t;
+  };
+
+  const setMode = (mode) => {
+    const isView = mode === 'view';
+    if (editor) editor.style.display = isView ? 'none' : 'block';
+    if (preview) {
+      preview.style.display = isView ? 'block' : 'none';
+      if (isView && editor) preview.innerHTML = renderMd(editor.value);
+    }
+    if (rawBtn) rawBtn.classList.toggle('active', !isView);
+    if (viewBtn) viewBtn.classList.toggle('active', isView);
+    try { localStorage.setItem(modeKey, isView ? 'view' : 'raw'); } catch (e) {}
+  };
 
   const apply = (n) => {
     const px = Math.max(11, Math.min(28, parseInt(n || 13, 10)));
@@ -178,7 +231,19 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
   } catch (e) {}
   apply(initial);
 
+  let mode = 'raw';
+  try {
+    const m = localStorage.getItem(modeKey);
+    if (m === 'view' || m === 'raw') mode = m;
+  } catch (e) {}
+  setMode(mode);
+
   slider.addEventListener('input', (e) => apply(e.target.value));
+  if (rawBtn) rawBtn.addEventListener('click', () => setMode('raw'));
+  if (viewBtn) viewBtn.addEventListener('click', () => setMode('view'));
+  if (editor) editor.addEventListener('input', () => {
+    if (preview && preview.style.display !== 'none') preview.innerHTML = renderMd(editor.value);
+  });
 })();
 </script>
 </body>
