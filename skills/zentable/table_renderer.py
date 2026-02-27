@@ -38,6 +38,12 @@ import tempfile
 from pathlib import Path
 
 ZEN_ROOT = Path("/var/www/html/zenTable")
+SCRIPTS_DIR = ZEN_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from zentable.transform.sort_page import _parse_page_spec, _resolve_page_list
+
 # Use a single stable entrypoint under the skill folder for dev/testing/distribution.
 ZEBLE_RENDER = ZEN_ROOT / "skills" / "zentable" / "zentable_renderer.py"
 THEMES_CSS = ZEN_ROOT / "themes" / "css"
@@ -95,72 +101,6 @@ def _count_rows(data_obj: object) -> int:
         if isinstance(rows, list):
             return len(rows)
     return 0
-
-
-def _parse_page_spec(spec: str) -> tuple[str, int, int | None]:
-    """
-    Parse page spec into:
-      ("single", n, None)
-      ("range", a, b)
-      ("from", a, None)
-      ("all", 1, None)
-    """
-    s = (spec or "").strip().lower()
-    if not s:
-        return ("single", 1, None)
-    if s == "all":
-        return ("all", 1, None)
-    if re.fullmatch(r"\d+", s):
-        n = max(1, int(s))
-        return ("single", n, None)
-    m = re.fullmatch(r"(\d+)-(\d+)", s)
-    if m:
-        a = max(1, int(m.group(1)))
-        b = max(1, int(m.group(2)))
-        if a > b:
-            raise SystemExit(f"Invalid --page range '{spec}': start must be <= end")
-        return ("range", a, b)
-    m = re.fullmatch(r"(\d+)-", s)
-    if m:
-        a = max(1, int(m.group(1)))
-        return ("from", a, None)
-    raise SystemExit(
-        f"Invalid --page '{spec}'. Supported: N, A-B, A-, all"
-    )
-
-
-def _resolve_pages(
-    total_pages: int,
-    page_spec: str | None,
-    use_all: bool,
-    default_cap: int = 3,
-) -> tuple[list[int], bool]:
-    """
-    Return (pages, truncated_by_default_cap).
-    """
-    total_pages = max(1, int(total_pages))
-    if use_all:
-        return (list(range(1, total_pages + 1)), False)
-
-    if page_spec is None:
-        pages = list(range(1, min(default_cap, total_pages) + 1))
-        return (pages, total_pages > default_cap)
-
-    kind, a, b = _parse_page_spec(page_spec)
-    if kind == "all":
-        return (list(range(1, total_pages + 1)), False)
-    if kind == "single":
-        if a > total_pages:
-            raise SystemExit(f"--page {a} exceeds total pages ({total_pages})")
-        return ([a], False)
-    if kind == "range":
-        if a > total_pages:
-            raise SystemExit(f"--page {a}-{b} exceeds total pages ({total_pages})")
-        return (list(range(a, min(b, total_pages) + 1)), False)
-    # kind == "from"
-    if a > total_pages:
-        raise SystemExit(f"--page {a}- exceeds total pages ({total_pages})")
-    return (list(range(a, total_pages + 1)), False)
 
 
 def _output_for_page(output_path: str, page: int, pages: list[int]) -> str:
@@ -243,6 +183,8 @@ def main() -> int:
     ap.add_argument("--desc", action="store_true")
     ap.add_argument("--f", "--filter", action="append", default=[],
                     help="Filter spec, e.g. col:!備註,附件 or row:狀態!=停用")
+    ap.add_argument("--both", "--bo", action="store_true",
+                    help="Besides PNG, also output ASCII table to same path with .txt extension")
     ap.add_argument("--smart-wrap", action="store_true")
     ap.add_argument("--no-smart-wrap", action="store_true")
     ap.add_argument("--nosw", action="store_true")
@@ -266,7 +208,19 @@ def main() -> int:
         per_page = max(1, int(args.per_page)) if args.per_page is not None else DEFAULT_ROWS_PER_PAGE
         total_rows = _count_rows(data_obj)
         total_pages = max(1, int(math.ceil(total_rows / float(per_page)))) if total_rows else 1
-        pages, truncated = _resolve_pages(total_pages, args.page, args.all, default_cap=3)
+
+        if args.all:
+            pages = list(range(1, total_pages + 1))
+            truncated = False
+        elif args.page is None:
+            pages = list(range(1, min(3, total_pages) + 1))
+            truncated = total_pages > 3
+        else:
+            try:
+                pages, _ = _resolve_page_list(total_rows=total_rows, per_page=per_page, page_spec=args.page, use_all=False)
+            except ValueError as e:
+                raise SystemExit(str(e))
+            truncated = False
 
         env = os.environ.copy()
         # Default: prefer CSS render FastAPI (if running). Renderer will fallback to local Chrome on errors.
@@ -320,6 +274,8 @@ def main() -> int:
                 cmd += ["--asc"]
             for fexpr in (args.f or []):
                 cmd += ["--f", str(fexpr)]
+            if args.both:
+                cmd += ["--both"]
 
             if args.tt:
                 cmd += ["--tt"]
