@@ -28,14 +28,14 @@ Goal: Continue canonical naming convergence to `zentable` while keeping compatib
 
 ## Decide-and-document items
 
-- [ ] Path policy: keep `/var/www/html/zenTable` as deployed folder for now?
-  - recommended: keep path for compatibility, document canonical code naming only.
-- [ ] Frontend key migration strategy:
-  - Option A: keep old localStorage/cookie keys forever.
-  - Option B: migrate to `zentable_*` with fallback read from old keys.
-- [ ] Skill display name policy:
-  - keep `zenbleTable` for external compatibility?
-  - or migrate to `zentable` and keep alias metadata.
+- [x] Path policy: keep `/var/www/html/zenTable` as deployed folder for now.
+  - Decision: keep path for compatibility, document canonical code naming only.
+- [x] Frontend key migration strategy.
+  - Decision: migrate to `zentable_*` keys.
+  - No long-term retention for old keys is required.
+  - Keep local storage mechanism itself for future features.
+- [x] Skill display name policy.
+  - Decision: migrate to `zentable` and keep alias metadata.
 
 ## Phase 1.2 completion criteria
 
