@@ -68,6 +68,8 @@ from zentable.output.ascii.charwidth import (
 from zentable.output.ascii import renderer as ascii_renderer
 from zentable.output.css import crop as css_crop
 from zentable.output.css import chrome as css_chrome
+from zentable.output.css import viewport as css_viewport
+from zentable.output.css import renderer as css_renderer
 ASCII_STYLES = ascii_renderer.ASCII_STYLES
 
 # =============================================================================
@@ -465,6 +467,8 @@ def crop_to_content_height(png_path: str, transparent: bool = False, tolerance: 
 
 # 透空背景（8 位 RGBA hex，Alpha=00）
 TRANSPARENT_BG_HEX = "00000000"
+# CSS viewport hard cap (Chrome practical limit guard)
+MAX_VIEWPORT_DIM = 16384
 
 # CSS chrome helpers delegate to extracted module (wave4-b3)
 check_chrome_available = css_chrome.check_chrome_available
@@ -483,6 +487,13 @@ _right_edge_metrics = css_crop.right_edge_metrics
 _right_edge_has_content = css_crop.right_edge_has_content
 crop_to_content_height = css_crop.crop_to_content_height
 
+
+# CSS viewport/renderer helpers delegate to extracted modules (wave4-b3)
+_scale_css_styles_px = css_viewport._scale_css_styles_px
+estimate_css_viewport_width_height = css_viewport.estimate_css_viewport_width_height
+_inject_wrap_gap_css = css_viewport._inject_wrap_gap_css
+_strip_alpha_from_css = css_renderer._strip_alpha_from_css
+generate_css_html = css_renderer.generate_css_html
 
 def render_css(html: str, output_path: str, transparent: bool = False, html_dir: str = None,
                viewport_width: int = None, viewport_height: int = None, bg_color: str = None,
@@ -650,294 +661,6 @@ def _resolve_text_scale(
     if max_v > 2.5:
         max_v = 2.5
     return clamp(v, 1.0, max_v)
-
-
-def _scale_css_styles_px(theme: dict, scale: float) -> dict:
-    """
-    將 CSS 主題 styles 內所有 px 數值按倍率縮放（四捨五入到整數 px）。
-    回傳新 theme，避免污染 cache 中的原主題。
-    """
-    try:
-        s = float(scale)
-    except Exception:
-        return theme
-    if abs(s - 1.0) < 1e-6:
-        return theme
-
-    styles = (theme or {}).get("styles", {})
-    if not isinstance(styles, dict) or not styles:
-        return theme
-
-    def scale_px_values(style_str: str) -> str:
-        if not isinstance(style_str, str) or "px" not in style_str:
-            return style_str
-
-        def repl(m):
-            num = float(m.group(1))
-            return f"{int(round(num * s))}px"
-
-        return re.sub(r"(-?[0-9]*\.?[0-9]+)px", repl, style_str)
-
-    scaled_styles = {k: scale_px_values(v) for k, v in styles.items()}
-    new_theme = dict(theme or {})
-    new_theme["styles"] = scaled_styles
-    return new_theme
-
-
-# Chrome headless 視窗尺寸上限（高度約 16384px）
-MAX_VIEWPORT_DIM = 16384
-
-def estimate_css_viewport_width_height(data: dict, theme: dict) -> tuple:
-    """依表格內容估算 CSS 截圖所需的 viewport 寬高。回傳 (width, height)。"""
-    styles = theme.get("styles", {}) or {}
-    header_fs = _parse_font_size_px(styles.get("th", ""), 18)
-    cell_fs = _parse_font_size_px(styles.get("td", ""), 14)
-    title_fs = _parse_font_size_px(styles.get("title", ""), 20)
-    footer_fs = _parse_font_size_px(styles.get("footer", ""), 12)
-    
-    headers = data.get("headers", [])
-    rows = data.get("rows", [])
-    col_count = len(headers) if headers else 1
-    
-    col_widths = []
-    for i in range(col_count):
-        w = measure_text_width(headers[i] if i < len(headers) else "", header_fs)
-        for row in rows:
-            cells = _row_cells(row)
-            if i < len(cells):
-                w = max(w, measure_text_width(cell_text(cells[i]), cell_fs))
-        w = min(400, max(60, w + 28))  # padding
-        col_widths.append(w)
-    
-    table_width = sum(col_widths)
-    # CSS 主題 td 有 padding: 12px 14px，每列約 45px；header/footer 也較高
-    row_height = max(int(cell_fs * 2), 45)
-    header_height = 55
-    footer_height = 50
-    
-    width = 40 + table_width
-    height = 50  # body 外層 padding
-    if data.get("title"):
-        height += 60  # title padding 20px + font
-    height += header_height + len(rows) * row_height + footer_height
-    
-    margin = 40
-    scale_w, scale_h = 1.15, 1.25  # 高度預留多些（換行、padding 變異）
-    vw = int((width + margin) * scale_w)
-    vh = int((height + margin) * scale_h)
-    
-    # 若主題 body/container/table 有明確 width/min-width，視為最低 viewport 寬度，避免截圖被裁切
-    # 主題可能使用 "container" 或 ".container"；table 可能為 "table" 或 ".data-table"
-    explicit_width = False
-    _style_keys = {"body": ("body",), "container": ("container", ".container"), "table": ("table", ".data-table")}
-    for key, try_keys in _style_keys.items():
-        raw = ""
-        for k in try_keys:
-            raw = styles.get(k, "")
-            if raw:
-                break
-        w = _parse_width_px(raw)
-        if w is not None and w > vw:
-            vw = min(w, MAX_VIEWPORT_DIM)
-            explicit_width = True
-    return (vw, min(vh, MAX_VIEWPORT_DIM), explicit_width)
-
-def _strip_alpha_from_css(css_text: str) -> str:
-    """Best-effort: strip alpha from colors, but keep shadow alpha.
-
-    Used for non-tt mode to make backgrounds fully opaque while preserving
-    box/text/drop shadows softness.
-    """
-    if not isinstance(css_text, str) or not css_text:
-        return css_text
-
-    def strip_alpha_colors(text: str) -> str:
-        # rgba(r,g,b,a) -> rgb(r,g,b)
-        text = re.sub(
-            r'rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)',
-            r'rgb(\1,\2,\3)',
-            text,
-            flags=re.I,
-        )
-        # hsla(h,s,l,a) -> hsl(h,s,l)
-        text = re.sub(r'hsla\(([^,]+),([^,]+),([^,]+),([^\)]+)\)', r'hsl(\1,\2,\3)', text, flags=re.I)
-        # #RRGGBBAA -> #RRGGBB
-        text = re.sub(r'#([0-9a-fA-F]{6})([0-9a-fA-F]{2})\b', r'#\1', text)
-        return text
-
-    # Parse declaration list and preserve alpha for shadow-related properties.
-    raw_parts = css_text.split(';')
-    out_parts = []
-    has_decl = False
-    for part in raw_parts:
-        decl = part.strip()
-        if not decl:
-            continue
-        if ':' not in decl:
-            out_parts.append(strip_alpha_colors(decl))
-            continue
-        has_decl = True
-        prop, val = decl.split(':', 1)
-        prop_name = prop.strip().lower()
-        val_text = val.strip()
-        keep_alpha = (
-            prop_name in {"box-shadow", "text-shadow"}
-            or (prop_name == "filter" and "drop-shadow(" in val_text.lower())
-        )
-        out_val = val_text if keep_alpha else strip_alpha_colors(val_text)
-        out_parts.append(f"{prop.strip()}: {out_val}")
-
-    if not out_parts:
-        return css_text
-    out = '; '.join(out_parts)
-    if has_decl or css_text.rstrip().endswith(';'):
-        out += ';'
-    return out
-
-
-def generate_css_html(data: dict, theme: dict, transparent: bool = False, table_width_pct: int = None, tt: bool = False) -> str:
-    """生成 CSS 版本的 HTML。table_width_pct: 若指定（如 96），表格填滿該比例的 viewport 寬度。
-
-    tt=True:
-      - container/table background forced transparent (but cell backgrounds keep their original alpha)
-    tt=False:
-      - backgrounds are forced opaque by stripping alpha from theme CSS.
-    """
-    engine = TemplateEngine()
-    
-    headers = data.get("headers", [])
-    rows = data.get("rows", [])
-    title = data.get("title", "")
-    footer = data.get("footer", "Generated by ZenTable")
-    
-    # 斑馬紋 rows（支援 colspan/rowspan、row_hl、cell.hl、col_hl、highlight_rules）
-    rows_html = build_css_rows_html(
-        rows, theme,
-        headers=headers,
-        highlight_rules=data.get("highlight_rules"),
-        col_hl=data.get("col_hl"),
-    )
-    
-    headers_html = ''.join(f'<th>{h}</th>' for h in headers)
-    
-    styles = theme.get("styles", {})
-
-    # Non-tt: force opaque backgrounds by stripping alpha from all style blocks.
-    if not tt and isinstance(styles, dict):
-        styles = {k: _strip_alpha_from_css(v) if isinstance(v, str) else v for k, v in styles.items()}
-
-    # tt: container/table background transparent (keep cell bg alpha as-is)
-    tt_css = ""
-    if tt:
-        tt_css += "\n.container, table { background: transparent !important; background-image: none !important; }"
-
-    # 正確對應 HTML：body/table/th/td 為標籤選擇器，其餘為 class；規格中的 .header/.cell-header/.cell 對應到 .title/th/td
-    TAG_SELECTORS = {'body', 'table', 'thead', 'tbody', 'tr', 'th', 'td'}
-    def css_selector(key):
-        if key in ('.header', 'header'):
-            return '.title'
-        if key in ('.cell-header', 'cell-header'):
-            return 'th'
-        if key in ('.cell', 'cell'):
-            return 'td'
-        if key.startswith('.'):
-            return key
-        if key in TAG_SELECTORS:
-            return key
-        if key == 'tbody_tr':
-            return 'tbody tr'
-        if key == 'tr_even':
-            return 'tr.tr_even'
-        if key == 'tr_odd':
-            return 'tr.tr_odd'
-        # 進階選擇器：包含 pseudo-class/複合選擇器時直接視為原生 selector
-        # 例如：th:first-child、td:last-child、tbody tr:last-child td、th:nth-child(2)
-        if ':' in key or ' ' in key or '>' in key or '+' in key or '~' in key or '[' in key:
-            return key
-        if key.startswith('col_') and key[4:].isdigit():
-            n = key[4:]
-            return f'th:nth-child({n}), td:nth-child({n})'
-        return '.' + key
-    css = '\n'.join(f'{css_selector(k)} {{{v}}}' for k, v in styles.items())
-    # Temporarily disabled for visual comparison:
-    # css += "\ntable, .data-table { border-collapse: collapse !important; }"
-    # css += "\ntable { table-layout: auto; }"
-    # css += "\ntd { white-space: pre-wrap !important; }"
-    css += tt_css
-    # Highlight styles：theme.highlight_styles 轉成 td.hl-xxx, th.hl-xxx
-    hl_css = _highlight_styles_to_css(theme)
-    if hl_css:
-        css += "\n" + hl_css
-    # 所有模式都讓 viewport/body 透明，使用 --default-background-color 控制實際輸出
-    css += "\nhtml, body { background: transparent !important; background-image: none !important; }"
-    if table_width_pct:
-        # 指定 viewport 寬度時，container 為 95% 寬度並置中
-        css += f"\n.container {{ width: 95% !important; max-width: {table_width_pct}% !important; margin: 0 auto; box-sizing: border-box; }}"
-        css += "\ntable { width: 100% !important; table-layout: auto; }"
-    else:
-        # 僅當主題未指定 container 寬度時才加 fit-content，否則尊重使用者設定的 width
-        _container_style = styles.get("container", "") or styles.get(".container", "")
-        if _parse_width_px(_container_style) is None:
-            css += "\n.container { width: fit-content !important; max-width: 100%; }"
-    
-    # 與前端一致：theme 若有 .table-wrapper / table-wrapper 則包一層，table 使用 class="data-table"
-    has_table_wrapper = bool(styles.get(".table-wrapper") or styles.get("table-wrapper"))
-    table_html = f"""<table class="data-table">
-{ f'<thead><tr>{headers_html}</tr></thead>' if headers else '' }
-<tbody>
-{rows_html}
-</tbody>
-</table>"""
-    if has_table_wrapper:
-        table_html = f"<div class=\"table-wrapper\">\n{table_html}\n</div>"
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        {css}
-    </style>
-</head>
-<body>
-<div class="container">
-{ f'<div class="title">{title}</div>' if title else '' }
-{table_html}
-{ f'<div class="footer">{footer}</div>' if footer else '' }
-</div>
-</body>
-</html>"""
-    return html
-
-
-def _inject_wrap_gap_css(html: str, gap_px: int) -> str:
-    """Inject wrap-gap CSS.
-
-    Purpose: when rendering with a fixed width (e.g. mobile w450), force the layout engine
-    to wrap earlier so text doesn't spill past the right edge.
-
-    This is an explicit user-controlled behavior via --wrap-gap.
-
-    Implementation:
-      - viewport width = (forced_width + gap)
-      - effective layout width = calc(100% - gap)
-      - keep a right margin gap for safety
-      - force table to 100% so columns are constrained by the layout width
-    """
-    try:
-        gap_px = max(0, int(gap_px))
-    except Exception:
-        gap_px = 0
-    if gap_px <= 0:
-        return html
-    css = (
-        f"\nhtml, body {{ width: calc(100% - {gap_px}px) !important; margin: 0 {gap_px}px 0 0 !important; box-sizing: border-box; }}"
-        f"\ntable {{ width: 100% !important; }}\n"
-        f"\nhtml {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}\n"
-    )
-    inject = f"\n<style id=\"zentable-wrap-gap\">{css}</style>\n"
-    if "</head>" in html:
-        return html.replace("</head>", inject + "</head>")
-    return html + inject
 
 
 # =============================================================================

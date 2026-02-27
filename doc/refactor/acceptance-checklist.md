@@ -55,8 +55,8 @@
 - [x] `python3 -m py_compile scripts/zentable/output/ascii/renderer.py`
 - [x] `python3 -m py_compile scripts/zentable/output/css/crop.py`
 - [x] `python3 -m py_compile scripts/zentable/output/css/chrome.py`
-- [ ] `python3 -m py_compile scripts/zentable/output/css/viewport.py`
-- [ ] `python3 -m py_compile scripts/zentable/output/css/renderer.py`
+- [x] `python3 -m py_compile scripts/zentable/output/css/viewport.py`
+- [x] `python3 -m py_compile scripts/zentable/output/css/renderer.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/font.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/draw.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/renderer.py`
@@ -74,7 +74,7 @@
 - [ ] `doc/archive/deprecated_code/` contains archived files
 - [ ] No broken imports: `python3 -c "import sys; sys.path.insert(0,'scripts'); import zentable"` succeeds
 - [ ] `php -l gentable_css.php && php -l gentable_pil.php && php -l gentable_ascii.php`
-- [ ] `bash tests/golden/run_golden.sh` exits 0
+- [x] `bash tests/golden/run_golden.sh` exits 0
 
 ---
 
