@@ -2,7 +2,7 @@
 
 ## 一、工作流中的主程式（被 API 呼叫）
 
-### 1. zeble_render.py
+### 1. zentable_render.py
 
 | 項目 | 說明 |
 |------|------|
@@ -88,7 +88,7 @@
 
 | 項目 | 說明 |
 |------|------|
-| **呼叫者** | 相容名（`scripts/zentable_render.py` 為 `zeble_render.py` symlink） |
+| **呼叫者** | 相容名（`scripts/zentable_render.py` 為 `zentable_render.py` symlink） |
 | **角色** | 另套渲染引擎，argparse、CSS 子集、PIL fallback |
 | **輸入** | `-t` 範本、`-d` 資料、`-o` 輸出 |
 

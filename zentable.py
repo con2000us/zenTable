@@ -1,1 +1,0 @@
-/var/www/html/zenTable/scripts/zeble.py

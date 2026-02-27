@@ -99,7 +99,7 @@ Canonical 結構建議（Agent 內部）：
 
 - Agent：可先做語法正規化，確保呼叫一致。
 - `table_renderer.py`：可直接接受常見語法糖並轉成合法呼叫。
-- 核心 `zeble_render.py`：仍以 canonical 參數為主。
+- 核心 `zentable_render.py`：仍以 canonical 參數為主。
 
 ### 實際轉譯範例（語法糖 -> canonical -> renderer）
 

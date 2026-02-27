@@ -1,53 +1,26 @@
-# Naming Phase 1.2 Closure Summary
+# Naming Migration Closure Summary (Phase 1.2 + Phase 2)
 
 Date: 2026-02-27
 
 ## Objective
 
-Unify project naming toward canonical `zentable` while preserving compatibility.
+Unify runtime naming to canonical `zentable` while preserving deployment compatibility.
 
-## Canonical policy
+## Final result
 
-- Code/runtime naming: `zentable` (lowercase)
-- Brand/UI display: `ZenTable`
-- Legacy aliases (`zeble*`, `zenble*`) kept where needed for compatibility
+- Canonical runtime renderer: `scripts/zentable_render.py`
+- Skill entry symlink: `skills/zentable/zentable_renderer.py -> scripts/zentable_render.py`
+- Legacy renderer pipeline archived:
+  - `scripts/zeble.py` archived
+  - `gentable.php` deprecated (returns deprecation JSON)
+- Removed stale legacy aliases/symlinks.
 
-## Completed in Phase 1.2
+## What remains intentionally unchanged
 
-### Runtime-facing updates
-- Updated command references to canonical names (`zentable_renderer.py`, `zentable.py`)
-- Migrated frontend local keys to `zentable_*`
-- Updated skill metadata name to `zentable`
-- Kept `/zenTable/` URL path in PHP responses for deployment compatibility (documented)
+- deployment root path: `/var/www/html/zenTable`
+- URL path in outputs: `/zenTable/...`
 
-### Docs sweep
-- Updated core docs to canonical wording:
-  - `WORKFLOW_VALIDATION.md`
-  - `doc/ENVIRONMENT_DEPENDENCIES.md`
-  - `doc/THEME_STRUCTURE.md`
-  - `doc/INTEGRATION.md`
-  - `doc/ZEBLE_FLOW.md`
-  - `doc/SPECIFICATION.md`
-- Added diagram alias: `doc/zentable_flow_diagram.png -> zeble_flow_diagram.png`
+## Practical conclusion
 
-## Compatibility strategy
-
-- Keep deployment root path `/var/www/html/zenTable` for now
-- Keep old executable aliases/symlinks active
-- Keep legacy URL route `/zenTable/...` in API outputs during Phase 1.x
-
-## Remaining (post-1.2 / optional)
-
-- Gradual cleanup of remaining historical terms in deep/archive docs
-- Decide Phase 2 timing for alias removal
-- Add automated naming lint/check to prevent regression
-
-## Key references
-
-- `NAMING_MIGRATION.md`
-- `NAMING_PHASE1_2_REMAINING.md`
-
-## Notes for Cursor handoff
-
-Phase 1.2 is functionally complete for active runtime + major docs.
-Proceed with feature work on canonical naming and only touch legacy aliases when needed for backward compatibility.
+Naming convergence is complete for active runtime paths.
+Remaining `zeble*` strings are limited to historical/archive documentation context.

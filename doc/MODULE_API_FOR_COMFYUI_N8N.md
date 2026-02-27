@@ -3,7 +3,7 @@
 ## 一、現況與目標
 
 - **校準**：`calibrate_analyze.py` 以 CLI 執行，主邏輯在 `analyze_widths(image_path, custom_chars, use_ocr)`。
-- **渲染**：`zeble_render.py` 以 CLI 執行，`main()` 內依參數分支呼叫 `render_ascii` / `generate_css_html` + `render_css` / `render_pil`。
+- **渲染**：`zentable_render.py` 以 CLI 執行，`main()` 內依參數分支呼叫 `render_ascii` / `generate_css_html` + `render_css` / `render_pil`。
 
 目標：抽出**可 import 的函數 API**，讓 ComfyUI 自訂節點或 n8n 的 Python/HTTP 節點能直接呼叫，而不必組 `sys.argv` 或跑 subprocess。
 
@@ -48,7 +48,7 @@ zenTable/
 | **analyze_widths** | 2383 | `analyze_widths(image_path: str, custom_chars: str = "", use_ocr: bool = True) -> Dict[str, Any]` | 主入口。回傳 `{ "calibration": {...}, "pixel_per_unit": float, "ocr_lines": [...], "char_measurements": [...] }` |
 | **analyze_widths_by_pixel** | 2257 | `analyze_widths_by_pixel(image_path: str, custom_chars: str = "") -> Dict` | 不用 OCR，純像素計數。 |
 
-**回傳的 calibration** 可直接給 `zeble_render.py` 的 ASCII 模式（`--calibration` JSON）。
+**回傳的 calibration** 可直接給 `zentable_render.py` 的 ASCII 模式（`--calibration` JSON）。
 
 ### 3.2 模組包裝範例（可放在 api/calibration_api.py）
 
@@ -195,7 +195,7 @@ class ZenTableCalibrateNode:
 關鍵：ComfyUI 需能 **import 到** `calibrate_analyze` 與 `zeble_render`（或其薄包裝）。做法二擇一：
 
 - 把 `zenTable` 目錄（或 `api`）加入 `sys.path`，例如在節點 `__init__.py` 裡 `sys.path.insert(0, "/var/www/html/zenTable")`；或
-- 把 `calibrate_analyze.py` / `zeble_render.py` 複製或 symlink 到 `custom_nodes/comfyui_zentable/`，再在節點內 import。
+- 把 `calibrate_analyze.py` / `zentable_render.py` 複製或 symlink 到 `custom_nodes/comfyui_zentable/`，再在節點內 import。
 
 ---
 
@@ -251,7 +251,7 @@ result = run_render(data, "/tmp/out.png", mode="css", theme_name="neon_cyber")
 | 項目 | 說明 |
 |------|------|
 | 校準 | `calibrate_analyze.analyze_widths` 已是純函數，可直接 import；可加薄包裝 `analyze_from_image` 並處理 `sys.path`。 |
-| 渲染 | 在 `zeble_render.py` 新增 `run_render(data, output_path, mode=..., theme_name=..., **kwargs)`，把 `main()` 的邏輯用參數驅動重現。 |
+| 渲染 | 在 `zentable_render.py` 新增 `run_render(data, output_path, mode=..., theme_name=..., **kwargs)`，把 `main()` 的邏輯用參數驅動重現。 |
 | ComfyUI | 新增 custom node，內部 import 校準/渲染 API，輸入輸出對應 ComfyUI 的 IMAGE / STRING。 |
 | n8n | 選一種：現成 PHP API、Execute Command 呼叫 CLI、或獨立 Flask/FastAPI 包一層再 HTTP 呼叫。 |
 
@@ -273,7 +273,7 @@ result = analyze_from_image("/path/to/cal_screenshot.png", custom_chars="", use_
 calibration = result["calibration"]  # 可傳給 ASCII 渲染或存檔
 ```
 
-### 渲染（subprocess 呼叫 zeble_render.py）
+### 渲染（subprocess 呼叫 zentable_render.py）
 
 ```python
 from api.render_api import render_table
@@ -283,7 +283,7 @@ out = render_table(
     output_path="/tmp/table.png",
     mode="css",
     theme_name="neon_cyber",
-    script_path="/var/www/html/zenTable/scripts/zeble_render.py",
+    script_path="/var/www/html/zenTable/scripts/zentable_render.py",
 )
 if out["success"]:
     print("輸出:", out["path"])

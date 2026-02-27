@@ -1,1 +1,1 @@
-/var/www/html/zenTable/scripts/zeble_render.py
+/var/www/html/zenTable/scripts/zentable_render.py

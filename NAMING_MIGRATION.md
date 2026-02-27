@@ -1,61 +1,42 @@
-# Naming Migration Plan (Phase 1)
+# Naming Migration Plan (Completed through Phase 2)
 
-Last updated: 2026-02-26
+Last updated: 2026-02-27
 
 ## Canonical naming
 
-Use **`zentable`** as the single canonical project identifier for code/runtime paths.
+Use **`zentable`** as the single canonical project identifier for code/runtime names.
 
-- code/module/path: `zentable` (all lowercase)
-- product display name: `ZenTable` (UI/branding only)
+- code/module/file: `zentable`
+- product display: `ZenTable`
 
-## Why
+## Phase status
 
-The repository currently mixes names such as:
+- ✅ Phase 1: compatibility-first normalization
+- ✅ Phase 1.2: runtime/docs consistency updates
+- ✅ Phase 2: legacy runtime alias cleanup + hard rename completion
 
-- `zeble`
-- `zable`
-- `zebleTable`
-- `zenTable`
-- `zentable`
+## Phase 2 completed actions
 
-This causes onboarding friction and path mistakes.
+1. Runtime renderer filename converged to canonical:
+   - active entry: `scripts/zentable_render.py`
+   - legacy `scripts/zeble_render.py` removed
+2. Skill symlink updated:
+   - `skills/zentable/zentable_renderer.py -> scripts/zentable_render.py`
+3. Legacy `zeble.py` pipeline retired/archived:
+   - `scripts/zeble.py` moved to `doc/archive/deprecated_code/zeble.py`
+   - `gentable.php` now returns explicit deprecation JSON
+4. Broken legacy aliases removed:
+   - removed stale `zenble-renderer.py`
+   - removed stale `zentable.py` symlink to old `scripts/zeble.py`
 
-## Phase 1 scope (safe migration)
+## Compatibility kept intentionally
 
-Phase 1 is intentionally non-breaking:
+- Deployment root path remains `/var/www/html/zenTable`
+- URL response path remains `/zenTable/...` (deployment compatibility)
 
-1. Define canonical naming policy (`zentable`).
-2. Keep compatibility aliases (symlinks/wrappers) for old names.
-3. Update docs and entry-point references first.
-4. Do **not** remove legacy names yet.
+## Validation checklist (Phase 2)
 
-## Current canonical entry points
-
-- Renderer script (real implementation):
-  - `/var/www/html/zenTable/scripts/zeble_render.py` (legacy filename, kept for compatibility)
-- Canonical renderer alias:
-  - `/var/www/html/zenTable/scripts/zentable_render.py`
-  - `/var/www/html/zenTable/zentable_renderer.py` (added in phase 1)
-
-## Name mapping table
-
-| Legacy | Canonical target | Phase 1 action |
-|---|---|---|
-| `zeble_render.py` | `zentable_render.py` | Keep legacy file, use canonical alias in docs |
-| `zeble.py` | `zentable.py` | Keep legacy file, add canonical alias |
-| `zenTable` path spelling | `zentable` naming policy | Keep existing folder for now; normalize references gradually |
-| `zenbleTable` skill label | `zentable` | Keep label now (compat), update docs to canonical naming |
-
-## Phase 2 (future)
-
-- Migrate implementation filenames from `zeble*` to `zentable*`.
-- Switch all runtime references to canonical names.
-- Remove legacy aliases after validation window.
-
-## Validation checklist
-
-- [ ] Existing commands still work (legacy names)
-- [ ] Canonical aliases also work
-- [ ] Skills/docs point to canonical naming
-- [ ] No service interruption during migration
+- [x] `python3 -m py_compile scripts/zentable_render.py`
+- [x] `bash tests/golden/run_golden.sh`
+- [x] skill wrapper path resolves to canonical renderer
+- [x] no active runtime caller depends on `scripts/zeble_render.py`

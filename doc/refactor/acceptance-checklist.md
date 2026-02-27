@@ -65,8 +65,8 @@
 
 ### Wave 5: Orchestration
 
-- [x] `wc -l scripts/zeble_render.py` ≤ 1,000
-- [x] `python3 -m py_compile scripts/zeble_render.py`
+- [x] `wc -l scripts/zentable_render.py` ≤ 1,000
+- [x] `python3 -m py_compile scripts/zentable_render.py`
 - [x] `bash tests/golden/run_golden.sh` exits 0
 
 ### Wave 6: Cleanup
@@ -90,7 +90,7 @@
 find scripts/zentable -name '*.py' -exec python3 -m py_compile {} \;
 
 # Main entry point
-python3 -m py_compile scripts/zeble_render.py
+python3 -m py_compile scripts/zentable_render.py
 
 # API modules
 python3 -m py_compile api/render_api.py
@@ -205,7 +205,7 @@ print('Architecture OK: util/ has no layer imports')
 
 | File | Before | Target | Check |
 |---|---|---|---|
-| `scripts/zeble_render.py` | 499 | ≤ 1,000 | `wc -l scripts/zeble_render.py` |
+| `scripts/zentable_render.py` | 499 | ≤ 1,000 | `wc -l scripts/zentable_render.py` |
 | Dead code in `doc/` | 4,043 | 0 (archived) | `ls doc/*.py 2>/dev/null \| wc -l` should be 0 |
 | `scripts/zentable/` (new) | 0 | ~3,200 | `find scripts/zentable -name '*.py' \| xargs wc -l` |
 
@@ -239,7 +239,7 @@ If any of the following break, the refactoring has a regression:
 | Wave 2 complete | | |
 | Wave 3 complete | | |
 | Wave 4 complete | | |
-| Wave 5 complete | ✅ | `zeble_render.py` 499 lines + golden ok |
+| Wave 5 complete | ✅ | `zentable_render.py` 499 lines + golden ok |
 | Wave 6 complete | ✅ | T-600~T-604 done, golden ok |
 | All golden tests pass | | |
 | All smoke tests pass | | |

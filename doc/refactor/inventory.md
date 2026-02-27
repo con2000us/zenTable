@@ -10,8 +10,8 @@ All PHP/Skill entry points rely on these symlinks. **Must be preserved or replac
 
 | Symlink Path | Target | Used By |
 |---|---|---|
-| `scripts/zentable_render.py` | `scripts/zeble_render.py` | `gentable_css.php`, `gentable_pil.php`, `gentable_ascii.php` |
-| `skills/zentable/zentable_renderer.py` | `scripts/zeble_render.py` | `skills/zentable/table_renderer.py` |
+| `scripts/zentable_render.py` | `scripts/zentable_render.py` | `gentable_css.php`, `gentable_pil.php`, `gentable_ascii.php` |
+| `skills/zentable/zentable_renderer.py` | `scripts/zentable_render.py` | `skills/zentable/table_renderer.py` |
 | `skills/zentable/themes` | `/var/www/html/zenTable/themes` | `table_renderer.py` theme discovery |
 | `skills/zentable/paddleocr_service.py` | `api/paddleocr_service.py` | Skill OCR access |
 | `skills/zentable/zentable_api_ctl.sh` | `scripts/zentable_api_ctl.sh` | Skill API control |
@@ -61,7 +61,7 @@ All PHP/Skill entry points rely on these symlinks. **Must be preserved or replac
 
 | File | Entry | Calls |
 |---|---|---|
-| `skills/zentable/table_renderer.py` | `main()` CLI | subprocess → `skills/zentable/zentable_renderer.py` (symlink → `zeble_render.py`) |
+| `skills/zentable/table_renderer.py` | `main()` CLI | subprocess → `skills/zentable/zentable_renderer.py` (symlink → `zentable_render.py`) |
 
 ### 2.5 Frontend (JS → PHP)
 
@@ -87,7 +87,7 @@ All PHP/Skill entry points rely on these symlinks. **Must be preserved or replac
 
 ## 3. Module Inventory
 
-### 3.1 Core Rendering Engine — `scripts/zeble_render.py` (4,176 lines)
+### 3.1 Core Rendering Engine — `scripts/zentable_render.py` (4,176 lines)
 
 **The monolith.** Contains 88 functions/classes across 6 categories:
 
@@ -131,8 +131,8 @@ Root-level monolith for ASCII calibration. Contains two `find_block_bounds_by_pi
 ### 3.4 OpenClaw Skill Shim — `skills/zentable/table_renderer.py` (350 lines)
 
 Subprocess wrapper with duplicated page logic:
-- `_parse_page_spec` — duplicates `zeble_render.py` L2574
-- `_resolve_pages` — duplicates `zeble_render.py` L2606
+- `_parse_page_spec` — duplicates `zentable_render.py` L2574
+- `_resolve_pages` — duplicates `zentable_render.py` L2606
 
 ### 3.5 API Layer — `api/` (4 files, ~700 lines active)
 
@@ -161,7 +161,7 @@ Standalone pipeline. Clean boundaries. No coupling to renderer.
 |---|---|---|---|
 | `scripts/zeble.py` | moved | **ARCHIVED** | moved to `doc/archive/deprecated_code/zeble.py` |
 | `doc/zeble.py` | moved | **ARCHIVED** | moved to `doc/archive/deprecated_code/doc_zeble.py` |
-| `doc/zeble_render.py` | 1,446 | **DEAD** | Marked as "document reference copy" |
+| `doc/zentable_render.py` | 1,446 | **DEAD** | Marked as "document reference copy" |
 | `doc/zentable_render.py` | 966 | **DEAD** | Early class-based version, superseded |
 | `doc/table_detect.py` | 129 | **DEAD** | Old version missing Zx features |
 | `doc/smart_table_output.py` | 163 | **DEAD** | References removed `zeble` module |
@@ -173,7 +173,7 @@ Standalone pipeline. Clean boundaries. No coupling to renderer.
 
 ## 4. Coupling Analysis
 
-### 4.1 Cross-Category Dependencies in `zeble_render.py`
+### 4.1 Cross-Category Dependencies in `zentable_render.py`
 
 Functions shared by 3+ categories (cannot be trivially extracted):
 
@@ -192,9 +192,9 @@ Functions shared by 3+ categories (cannot be trivially extracted):
 ```
 index.html + js/app.js
     │
-    ├──► gentable_css.php  ──► zentable_render.py (symlink) ──► zeble_render.py::main()
-    ├──► gentable_pil.php  ──► zentable_render.py (symlink) ──► zeble_render.py::main()
-    ├──► gentable_ascii.php ─► zentable_render.py (symlink) ──► zeble_render.py::main()
+    ├──► gentable_css.php  ──► zentable_render.py (symlink) ──► zentable_render.py::main()
+    ├──► gentable_pil.php  ──► zentable_render.py (symlink) ──► zentable_render.py::main()
+    ├──► gentable_ascii.php ─► zentable_render.py (symlink) ──► zentable_render.py::main()
     ├──► gentable.php (deprecated) ► returns warning JSON (no renderer call)
     ├──► table_detect_api.php ──► table_detect.py
     ├──► calibrate_upload.php ──► calibrate_analyze.py
@@ -203,7 +203,7 @@ index.html + js/app.js
     ├──► gentable_export.php (pure PHP)
     └──► fastapi_control.php ──► api.render_api:app (uvicorn)
 
-zeble_render.py::main()
+zentable_render.py::main()
     ├── Phase 1 (Input):  load_json → normalise_data
     ├── Phase 2 (Transform): apply_filters → transpose_table → apply_sort_and_page → apply_smart_wrap
     └── Phase 3 (Output):  render_ascii / render_css / render_pil
@@ -260,9 +260,9 @@ zeble_render.py::main()
 
 | Variant | Where | Actual |
 |---|---|---|
-| `zeble_render.py` | Actual filename in `scripts/` | **The real file** |
-| `zentable_render.py` | Symlink in `scripts/` | → `zeble_render.py` |
-| `zentable_renderer.py` | Symlink in `skills/zentable/` | → `zeble_render.py` |
+| `zentable_render.py` | Actual filename in `scripts/` | **The real file** |
+| `zentable_render.py` | Symlink in `scripts/` | → `zentable_render.py` |
+| `zentable_renderer.py` | Symlink in `skills/zentable/` | → `zentable_render.py` |
 | `zentable_renderer.py` | `api/render_api.py` L19 | **BROKEN** (no such file in `scripts/`) |
 | `zentable.py` | (none) | legacy alias, no active caller |
 | `zeble.py` | `doc/archive/deprecated_code/zeble.py` | archived legacy PIL renderer |

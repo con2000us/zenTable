@@ -154,7 +154,7 @@ Each wave can be executed in parallel within the wave. Must complete all tasks i
 |---|---|---|---|
 | 5.1 | **T-500**: Slim down `main()` | All of waves 1-4 | ~3,200 lines removed |
 
-**Wave 5 validation:** `bash tests/golden/run_golden.sh` passes; `zeble_render.py` ≤ 1,000 lines.
+**Wave 5 validation:** `bash tests/golden/run_golden.sh` passes; `zentable_render.py` ≤ 1,000 lines.
 
 ---
 
@@ -200,6 +200,6 @@ At any point, if a wave fails validation:
 4. Re-apply passing tasks, fix failing one, re-validate
 
 Each wave is independently rollbackable because:
-- `zeble_render.py` retains all functions until T-500 (final slim-down)
+- `zentable_render.py` retains all functions until T-500 (final slim-down)
 - New modules are additive (imports redirect, originals remain until T-500)
 - Symlinks and PHP files are never modified (except T-001 fix)

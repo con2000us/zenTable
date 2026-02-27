@@ -21,7 +21,7 @@ themes/
 
 | 來源 | 位置 | 說明 |
 |------|------|------|
-| **BUILTIN_THEMES** | zeble_render.py（已刪除） | 內建 CSS 主題字典（default_dark, default_light, cyberpunk, gradient_modern, glass, forest） |
+| **BUILTIN_THEMES** | zentable_render.py（已刪除） | 內建 CSS 主題字典（default_dark, default_light, cyberpunk, gradient_modern, glass, forest） |
 | **render_pil 內建 theme_colors** | zentable_renderer.py | PIL 的內建主題顏色 dict（default_dark, default_light, cyberpunk, gradient_modern, glass） |
 | **render_pil theme_name_map** | zentable_renderer.py | 前端 theme id 對應內建 key（dark→default_dark, light→default_light 等） |
 | **theme_api 靜態 text 主題** | theme_api.php | load 時對 simple/grid/double 回傳的內聯 JSON template |

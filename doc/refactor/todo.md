@@ -2,7 +2,7 @@
 
 > Generated: 2026-02-27
 > Architecture: 3-Layer (Detector → Engine → Renderer)
-> Source of truth: `scripts/zeble_render.py` (4,176 lines, 88 functions)
+> Source of truth: `scripts/zentable_render.py` (4,176 lines, 88 functions)
 >
 > Progress status:
 > - ✅ Wave 0 done (T-000, T-001, T-002)
@@ -53,7 +53,7 @@
 
 ```
 scripts/
-├── zeble_render.py              ← keeps CLI entry (main), becomes thin dispatcher
+├── zentable_render.py              ← keeps CLI entry (main), becomes thin dispatcher
 ├── zentable_render.py           ← symlink (preserved)
 │
 ├── zentable/                    ← NEW package
@@ -116,9 +116,9 @@ scripts/
 - **[Target]** `tests/golden/` (new directory)
 - **[Action]**
   1. Create `tests/golden/input.json` with representative data (CJK, emoji, highlight, multi-page)
-  2. Run `python scripts/zeble_render.py tests/golden/input.json tests/golden/expected_css.png --theme-name default_dark`
-  3. Run `python scripts/zeble_render.py tests/golden/input.json tests/golden/expected_pil.png --force-pil --theme-name default_dark`
-  4. Run `python scripts/zeble_render.py tests/golden/input.json /dev/null --force-ascii --output-ascii tests/golden/expected_ascii.txt --theme-name default_dark`
+  2. Run `python scripts/zentable_render.py tests/golden/input.json tests/golden/expected_css.png --theme-name default_dark`
+  3. Run `python scripts/zentable_render.py tests/golden/input.json tests/golden/expected_pil.png --force-pil --theme-name default_dark`
+  4. Run `python scripts/zentable_render.py tests/golden/input.json /dev/null --force-ascii --output-ascii tests/golden/expected_ascii.txt --theme-name default_dark`
   5. Store outputs as golden references
   6. Create `tests/golden/run_golden.sh` that re-renders and diffs
 - **[Compatibility]** N/A
@@ -184,7 +184,7 @@ scripts/
 - **[Category]** Engine (shared utility)
 - **[Priority]** P0
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `is_emoji_modifier_or_joiner(char)` L2093-2106
   - `is_emoji(char)` L2109-2155
   - `replace_color_circles(text)` L2157-2168
@@ -192,19 +192,19 @@ scripts/
 - **[Target]** `scripts/zentable/util/text.py`
 - **[Action]**
   1. Copy 4 functions to `util/text.py`
-  2. In `zeble_render.py`, replace function bodies with:
+  2. In `zentable_render.py`, replace function bodies with:
      ```python
      from zentable.util.text import is_emoji, is_emoji_modifier_or_joiner, replace_color_circles, split_text_by_font
      ```
   3. Remove original function definitions
   4. Verify no circular imports
 - **[Compatibility]** All callers use internal imports; no external interface change
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/util/text.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/util/text.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/util/text.py`
   - smoke: `python3 -c "from zentable.util.text import is_emoji; print(is_emoji('😀'))"`
   - golden: `bash tests/golden/run_golden.sh`
-- **[DoD]** Functions extracted; golden test passes; `zeble_render.py` imports from new module
+- **[DoD]** Functions extracted; golden test passes; `zentable_render.py` imports from new module
 
 ---
 
@@ -214,17 +214,17 @@ scripts/
 - **[Category]** Renderer (shared utility)
 - **[Priority]** P0
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `parse_color(c)` L1413-1442
   - `hex_rgb(c)` L1444-1447 (depends on `parse_color`)
   - `_hex_to_chrome_bg(hex_color)` L799-806
 - **[Target]** `scripts/zentable/util/color.py`
 - **[Action]**
   1. Copy 3 functions to `util/color.py`
-  2. In `zeble_render.py`, replace with import
+  2. In `zentable_render.py`, replace with import
   3. Remove original definitions
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/util/color.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/util/color.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/util/color.py`
   - smoke: `python3 -c "from zentable.util.color import parse_color; print(parse_color('#ff0000'))"`
@@ -243,7 +243,7 @@ scripts/
 - **[Category]** Detector
 - **[Priority]** P0
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `load_json(path)` L2407-2409
   - `normalise_data(data)` L2897-2922
 - **[Target]** `scripts/zentable/input/loader.py`
@@ -251,9 +251,9 @@ scripts/
   1. Copy 2 functions to `input/loader.py`
   2. `normalise_data` has no dependencies on other zeble_render functions
   3. `load_json` uses only `json` stdlib
-  4. Replace in `zeble_render.py` with import
+  4. Replace in `zentable_render.py` with import
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/input/loader.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/input/loader.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/input/loader.py`
   - smoke: `python3 -c "from zentable.input.loader import load_json, normalise_data; print('OK')"`
@@ -268,7 +268,7 @@ scripts/
 - **[Category]** Detector
 - **[Priority]** P0
 - **[Risk]** Medium (path calculation)
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_PROJECT_ROOT` L2402, `THEMES_DIR` L2403, `CACHE_BASE` L2405
   - `_read_template_from_zip(zip_path)` L2411-2424
   - `load_theme_from_themes_dir(name, mode)` L2426-2445
@@ -280,15 +280,15 @@ scripts/
 - **[Target]** `scripts/zentable/input/theme.py`
 - **[Action]**
   1. Copy all 8 functions + 3 constants to `input/theme.py`
-  2. **Critical:** Recalculate `_PROJECT_ROOT` — file moves from `scripts/zeble_render.py` (depth 1) to `scripts/zentable/input/theme.py` (depth 3). Must use:
+  2. **Critical:** Recalculate `_PROJECT_ROOT` — file moves from `scripts/zentable_render.py` (depth 1) to `scripts/zentable/input/theme.py` (depth 3). Must use:
      ```python
      _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
      ```
      Or better: find root by looking for `themes/` directory marker.
   3. `load_json` dependency: import from `zentable.input.loader`
-  4. Replace in `zeble_render.py` with imports
+  4. Replace in `zentable_render.py` with imports
 - **[Compatibility]** `THEMES_DIR` and `CACHE_BASE` paths must resolve identically
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/input/theme.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/input/theme.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/input/theme.py`
   - smoke: `python3 -c "from zentable.input.theme import list_themes_in_dir; print(list_themes_in_dir('css'))"`
@@ -307,7 +307,7 @@ scripts/
 - **[Category]** Engine
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `normalize_cell(cell)` L2640-2664
   - `_row_cells(row)` L2667-2673
   - `cell_text(cell)` L2836-2837
@@ -318,7 +318,7 @@ scripts/
   2. These are the most cross-referenced functions (used by ASCII, CSS, PIL, Transform)
   3. All other modules import from here
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/transform/cell.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/transform/cell.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/transform/cell.py`
   - smoke: `python3 -c "from zentable.transform.cell import normalize_cell, cell_text; print(cell_text('hello'))"`
@@ -333,7 +333,7 @@ scripts/
 - **[Category]** Engine
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_highlight_rule_matches(rule, cell_value)` L2689-2777
   - `resolve_cell_highlight(cell, ...)` L2780-2815
   - `_highlight_styles_to_css(theme)` L2818-2833
@@ -343,7 +343,7 @@ scripts/
   2. `_highlight_rule_matches` depends on `_try_numeric` → import from `cell.py`
   3. `_highlight_styles_to_css` is CSS-specific but logically belongs with highlight data
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/transform/highlight.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/transform/highlight.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/transform/highlight.py`
   - smoke: `python3 -c "from zentable.transform.highlight import resolve_cell_highlight; print('OK')"`
@@ -358,13 +358,13 @@ scripts/
 - **[Category]** Engine
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `transpose_table(data)` L2924-2959
 - **[Target]** `scripts/zentable/transform/transpose.py`
 - **[Action]**
   1. Copy function; depends on `cell_text` → import from `cell.py`
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/transform/transpose.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/transform/transpose.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/transform/transpose.py`
   - smoke: `python3 -c "from zentable.transform.transpose import transpose_table; print('OK')"`
@@ -379,7 +379,7 @@ scripts/
 - **[Category]** Engine
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_split_csv(text)` L2962-2963
   - `_header_index_map(headers)` L2966-2972
   - `_find_header_idx(headers, name)` L2975-2982
@@ -392,7 +392,7 @@ scripts/
   2. Dependencies: `_row_cells`, `cell_text` → import from `cell.py`
   3. `_highlight_rule_matches` → import from `highlight.py`
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/transform/filter.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/transform/filter.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/transform/filter.py`
   - smoke: `python3 -c "from zentable.transform.filter import apply_filters; print('OK')"`
@@ -407,7 +407,7 @@ scripts/
 - **[Category]** Engine
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_parse_page_spec(spec)` L2574-2603
   - `_resolve_page_list(total_rows, ...)` L2606-2629
   - `_page_output_path(path, page, pages)` L2632-2638
@@ -420,7 +420,7 @@ scripts/
   1. Copy 6 functions + 1 constant
   2. Dependencies: `_row_cells`, `cell_text` → import from `cell.py`
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/transform/sort_page.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/transform/sort_page.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/transform/sort_page.py`
   - smoke: `python3 -c "from zentable.transform.sort_page import apply_sort_and_page; print('OK')"`
@@ -435,7 +435,7 @@ scripts/
 - **[Category]** Engine
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_smart_wrap_text(text, limit)` L3255-3282
   - `apply_smart_wrap(data, width)` L3285-3330
 - **[Target]** `scripts/zentable/transform/wrap.py`
@@ -443,7 +443,7 @@ scripts/
   1. Copy 2 functions
   2. Dependencies: `_row_cells` → import from `cell.py`
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/transform/wrap.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/transform/wrap.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/transform/wrap.py`
   - smoke: `python3 -c "from zentable.transform.wrap import apply_smart_wrap; print('OK')"`
@@ -462,7 +462,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_is_zero_width(ch)` L92-104
   - `_classify_char(ch)` L106-122
   - `_clamp_width(w)` L124-130
@@ -476,7 +476,7 @@ scripts/
   2. Dependencies: `_row_cells`, `cell_text` → import from `transform/cell.py`
   3. External: `unicodedata` (stdlib)
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/ascii/charwidth.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/ascii/charwidth.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/ascii/charwidth.py`
   - smoke: `python3 -c "from zentable.output.ascii.charwidth import display_width; print(display_width('你好'))"`
@@ -491,7 +491,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Medium
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `ASCIIStyle` L45-50
   - `ASCII_STYLES` L53-90
   - `align_text(text, target_width, ...)` L207-222
@@ -503,7 +503,7 @@ scripts/
      - `charwidth.py`: `display_width`, `_space_width`, `char_display_width`, `calculate_column_widths`
      - `transform/cell.py`: `_row_cells`, `cell_text`
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/ascii/renderer.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/ascii/renderer.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/ascii/renderer.py`
   - smoke: `python3 -c "from zentable.output.ascii.renderer import render_ascii; print('OK')"`
@@ -518,7 +518,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Medium (PIL lazy imports)
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_make_png_background_transparent_chroma(...)` L530-555
   - `crop_to_content_bounds(png_path, ...)` L557-598
   - `_bottom_edge_has_content(png_path, ...)` L601-637
@@ -531,7 +531,7 @@ scripts/
   2. **Keep local `from PIL import Image` inside each function** (preserves ASCII-only mode compatibility)
   3. No dependency on other zeble_render functions
 - **[Compatibility]** Must work in environments without PIL (functions never called in ASCII mode)
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/css/crop.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/css/crop.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/css/crop.py`
   - smoke: Create test PNG, run `crop_to_content_bounds` on it
@@ -546,7 +546,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** High (global state, subprocess, file I/O)
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `TRANSPARENT_BG_HEX` L528
   - `check_chrome_available()` L515-524
   - `render_css(html, output_path, ...)` L812-904
@@ -561,7 +561,7 @@ scripts/
      - `crop.py`: `crop_to_content_bounds` (for non-skip_crop path)
   4. Clean up dead code in `measure_dom_scroll_width` (lines after return)
 - **[Compatibility]** `main()` must be updated to receive return dict instead of reading globals
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/css/chrome.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/css/chrome.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/css/chrome.py`
   - smoke: `python3 -c "from zentable.output.css.chrome import check_chrome_available; print(check_chrome_available())"`
@@ -576,7 +576,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `MAX_VIEWPORT_DIM` L1142
   - `_parse_font_size_px(style_str, default)` L1035-1040
   - `_parse_width_px(style_str)` L1042-1050
@@ -590,7 +590,7 @@ scripts/
      - `transform/cell.py`: `_row_cells`, `cell_text`
      - `output/pil/draw.py`: `measure_text_width` (cross-renderer dependency)
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/css/viewport.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/css/viewport.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/css/viewport.py`
   - smoke: `python3 -c "from zentable.output.css.viewport import estimate_css_viewport_width_height; print('OK')"`
@@ -605,7 +605,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Medium
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `_strip_alpha_from_css(css_text)` L1199-1249
   - `generate_css_html(data, theme, ...)` L1252-1363
   - `_inject_wrap_gap_css(html, gap_px)` L1366-1394
@@ -620,7 +620,7 @@ scripts/
      - `transform/highlight.py`: `resolve_cell_highlight`, `_highlight_styles_to_css`
   3. External: `html` module (stdlib)
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/css/renderer.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/css/renderer.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/css/renderer.py`
   - smoke: `python3 -c "from zentable.output.css.renderer import generate_css_html; print('OK')"`
@@ -635,7 +635,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Medium (font cache globals)
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `FONT_CJK` L1454, `FONT_CJK_LIST` L1455-1462, `FONT_EMOJI_LIST` L1464-1477
   - `_font_cache` L1480, `_emoji_font_available` L1481
   - `get_font_cjk(size)` L1483-1499
@@ -649,7 +649,7 @@ scripts/
   2. Module-level `_font_cache` and `_emoji_font_available` become the singletons
   3. External: `PIL.ImageFont`, `os`, `glob`
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/pil/font.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/pil/font.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/pil/font.py`
   - smoke: `python3 -c "from zentable.output.pil.font import get_font_cjk; f=get_font_cjk(14); print(f)"`
@@ -664,7 +664,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Low
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `measure_text_width(text, font_size)` L2201-2212
   - `_fill_for_draw(fill_color, img_mode)` L2214-2220
   - `draw_text_with_mixed_fonts(draw, ...)` L2223-2252
@@ -678,7 +678,7 @@ scripts/
      - `util/text.py`: `split_text_by_font`
      - `util/color.py`: `parse_color`
 - **[Compatibility]** Internal only; `measure_text_width` also used by CSS viewport
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/pil/draw.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/pil/draw.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/pil/draw.py`
   - smoke: `python3 -c "from zentable.output.pil.draw import measure_text_width; print(measure_text_width('hello', 14))"`
@@ -693,7 +693,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P1
 - **[Risk]** Medium
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `PILStyle` L1404-1411
   - `render_pil(data, theme, custom_params)` L2273-2394
 - **[Target]** `scripts/zentable/output/pil/renderer.py`
@@ -705,7 +705,7 @@ scripts/
      - `util/color.py`: `parse_color`
      - `transform/cell.py`: `_row_cells`, `cell_text`
 - **[Compatibility]** Internal only
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/pil/renderer.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/pil/renderer.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/pil/renderer.py`
   - smoke: `python3 -c "from zentable.output.pil.renderer import render_pil; print('OK')"`
@@ -720,7 +720,7 @@ scripts/
 - **[Category]** Renderer
 - **[Priority]** P2
 - **[Risk]** Medium
-- **[Source]** `scripts/zeble_render.py`:
+- **[Source]** `scripts/zentable_render.py`:
   - `render_ascii_blueprint_pil(blueprint, img_path, unit_px)` L1581-2091
 - **[Target]** `scripts/zentable/output/pil/blueprint.py`
 - **[Action]**
@@ -730,7 +730,7 @@ scripts/
      - `font.py`: `get_font_cjk`
   3. External: `PIL.Image`, `PIL.ImageDraw`, `PIL.ImageFont`
 - **[Compatibility]** Internal only (called from ASCII debug flow in main)
-- **[Rollback]** `git checkout scripts/zeble_render.py && rm scripts/zentable/output/pil/blueprint.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py && rm scripts/zentable/output/pil/blueprint.py`
 - **[Test]**
   - syntax: `python3 -m py_compile scripts/zentable/output/pil/blueprint.py`
   - smoke: ASCII debug mode with `stage1_pil_preview=1` must produce blueprint image
@@ -749,20 +749,20 @@ scripts/
 - **[Category]** Orchestration
 - **[Priority]** P2
 - **[Risk]** Medium
-- **[Source]** `scripts/zeble_render.py` `main()` L3336-4176
-- **[Target]** `scripts/zeble_render.py` (same file, slimmed)
+- **[Source]** `scripts/zentable_render.py` `main()` L3336-4176
+- **[Target]** `scripts/zentable_render.py` (same file, slimmed)
 - **[Action]**
   1. Replace all inline function calls with imports from `zentable.*` modules
-  2. `main()` remains in `zeble_render.py` (CLI contract preserved)
+  2. `main()` remains in `zentable_render.py` (CLI contract preserved)
   3. Remove all extracted function definitions from the file
-  4. Expected result: `zeble_render.py` shrinks from ~4,176 lines to ~900 lines (main + imports)
+  4. Expected result: `zentable_render.py` shrinks from ~4,176 lines to ~900 lines (main + imports)
 - **[Compatibility]** CLI interface 100% unchanged
-- **[Rollback]** `git checkout scripts/zeble_render.py`
+- **[Rollback]** `git checkout scripts/zentable_render.py`
 - **[Test]**
-  - syntax: `python3 -m py_compile scripts/zeble_render.py`
+  - syntax: `python3 -m py_compile scripts/zentable_render.py`
   - smoke: All three PHP endpoints render successfully
   - golden: `bash tests/golden/run_golden.sh`
-- **[DoD]** `zeble_render.py` is ≤1,000 lines; all golden tests pass
+- **[DoD]** `zentable_render.py` is ≤1,000 lines; all golden tests pass
 
 ---
 
@@ -778,7 +778,7 @@ scripts/
 - **[Risk]** Low
 - **[Source]** Dead files:
   - `doc/zeble.py` (633 lines — clone of `scripts/zeble.py`)
-  - `doc/zeble_render.py` (1,446 lines — old snapshot)
+  - `doc/zentable_render.py` (1,446 lines — old snapshot)
   - `doc/zentable_render.py` (966 lines — early version)
   - `doc/table_detect.py` (129 lines — old version)
   - `doc/smart_table_output.py` (163 lines — broken imports)
@@ -856,8 +856,8 @@ scripts/
 - **[Priority]** P2
 - **[Risk]** Medium
 - **[Source]** `skills/zentable/table_renderer.py`:
-  - `_parse_page_spec()` L100 — duplicates `zeble_render.py` L2574
-  - `_resolve_pages()` L132 — duplicates `zeble_render.py` L2606
+  - `_parse_page_spec()` L100 — duplicates `zentable_render.py` L2574
+  - `_resolve_pages()` L132 — duplicates `zentable_render.py` L2606
 - **[Target]** `skills/zentable/table_renderer.py`
 - **[Action]**
   1. Add `scripts/` to `sys.path` in `table_renderer.py`

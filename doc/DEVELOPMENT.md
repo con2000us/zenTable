@@ -5,8 +5,8 @@
 ```
 /var/www/html/zenTable/
 ├── scripts/
-│   ├── zeble_render.py        # 唯一 CLI 入口（CSS/PIL/ASCII）
-│   ├── zentable_render.py     # symlink -> zeble_render.py（相容名）
+│   ├── zentable_render.py        # 唯一 CLI 入口（CSS/PIL/ASCII）
+│   ├── zentable_render.py     # symlink -> zentable_render.py（相容名）
 │   └── zentable/              # 模組化實作（input/transform/output/orchestration）
 ├── themes/                    # css/pil/text 主題
 ├── tests/golden/              # golden baseline 與驗證腳本
@@ -19,16 +19,16 @@
 
 1. 修改 `scripts/` 與 `scripts/zentable/` 內程式碼。
 2. 必跑驗證：
-   - `python3 -m py_compile scripts/zeble_render.py`
+   - `python3 -m py_compile scripts/zentable_render.py`
    - `bash tests/golden/run_golden.sh`
 3. 如有 auto-width 相關調整，補跑：
    - `python3 scripts/zentable_render.py tests/golden/input.json /tmp/css_auto_check.png --force-css --theme-name minimal_ios --auto-width`
 
 ## 主要 API 端點
 
-- `gentable_css.php` → `zeble_render.py --force-css`
-- `gentable_pil.php` → `zeble_render.py --force-pil`
-- `gentable_ascii.php` → `zeble_render.py --force-ascii`
+- `gentable_css.php` → `zentable_render.py --force-css`
+- `gentable_pil.php` → `zentable_render.py --force-pil`
+- `gentable_ascii.php` → `zentable_render.py --force-ascii`
 - `gentable.php` → **deprecated**（僅回傳棄用訊息）
 
 ## 備註

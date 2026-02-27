@@ -2,17 +2,17 @@
 
 ZenTable 表格渲染腳本，支援 CSS、PIL、ASCII 三種輸出模式。
 
-**實際執行**：`scripts/zeble_render.py`  
-**參照副本**：`doc/zeble_render.py`（文件用，不參與後端呼叫）
+**實際執行**：`scripts/zentable_render.py`  
+**參照副本**：`doc/zentable_render.py`（文件用，不參與後端呼叫）
 
 ---
 
 ## 補充：OpenClaw Custom Skill（CSS/Chrome）`table_renderer.py`
 
-若你是在 OpenClaw / 個別 skill 內直接用 headless Chrome 產 PNG（不走 `scripts/zeble_render.py`），會用到另一支較輕量的 renderer：
+若你是在 OpenClaw / 個別 skill 內直接用 headless Chrome 產 PNG（不走 `scripts/zentable_render.py`），會用到另一支較輕量的 renderer：
 
 - **檔案**：`~/.openclaw/custom-skills/zentable/table_renderer.py`
-- **定位**：純 CSS + Chrome headless 截圖（單張表格），參數與 `zeble_render.py` **不同**
+- **定位**：純 CSS + Chrome headless 截圖（單張表格），參數與 `zentable_render.py` **不同**
 
 ### 基本用法
 

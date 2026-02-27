@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZenTable 專案進度表</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.75rem;
+      font-weight: 600;
+    }
+    .intro {
+      color: #555;
+      margin-bottom: 28px;
+      font-size: 0.95rem;
+    }
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .section-desc {
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      background: #f8f9fa;
+      border-left: 3px solid #6b7280;
+      font-size: 0.9rem;
+      color: #374151;
+      line-height: 1.55;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border: 1px solid #e5e5e5;
+    }
+    th {
+      background: #f8f8f8;
+      font-weight: 600;
+      color: #333;
+    }
+    tr:nth-child(even) { background: #fafafa; }
+    tr:hover { background: #f0f7ff; }
+    .status-done { color: #0d9488; }
+    .status-partial { color: #ca8a04; }
+    .status-none { color: #b91c1c; }
+    .legend-table { margin-bottom: 0; max-width: 420px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ZenTable 專案進度表</h1>
+    <p class="intro">依 doc 與程式現況整理。大項：輸入、JSON 調整、輸出、Theme 編輯、Fast API。</p>
+
+    <h2>一、輸入 (Input)</h2>
+    <p class="section-desc">負責表格資料的來源與前處理。接受標準 JSON（title / headers / rows / footer）或「陣列 of 物件」，經正規化後供渲染使用；Table Detect 判斷使用者輸入是否需以表格呈現；前端 Data 面板提供標題/表尾、JSON 編輯、範例載入、分頁與排序欄位；若資料含 URL，可依規格同時輸出 ASCII 供對照。</p>
+    <table>
+      <thead>
+        <tr><th>細項</th><th>說明</th><th>狀態</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>JSON 格式</td><td>title, headers, rows, footer 標準格式</td><td class="status-done">✅ 完成</td><td>SPECIFICATION §6.1；gentable_*.php 皆接受</td></tr>
+        <tr><td>陣列 of 物件正規化</td><td>物件陣列 → normalise_data → headers/rows</td><td class="status-done">✅ 完成</td><td>zeble_render normalise_data、apply_sort_and_page</td></tr>
+        <tr><td>Table Detect</td><td>判斷是否需要表格輸出</td><td class="status-done">✅ 完成</td><td>table_detect.py + table_detect_api.php；index 有 Table Detect 區塊</td></tr>
+        <tr><td>前端 Data 面板</td><td>標題/表尾、JSON 編輯、範例、分頁/排序</td><td class="status-done">✅ 完成</td><td>Data/Records 分頁、Page/每頁筆數/Sort/降序、dataJson、範例選單</td></tr>
+        <tr><td>URL 偵測</td><td>資料含 URL 時可同時輸出 ascii</td><td class="status-done">✅ 規格已定</td><td>SPECIFICATION §6.2、§7</td></tr>
+      </tbody>
+    </table>
+
+    <h2>二、JSON 調整</h2>
+    <p class="section-desc">負責在送入渲染前對「資料範圍」與「即時參數」的調整。包含分頁（每頁筆數、指定頁碼）、排序（依欄位升序/降序）；PIL / ASCII 的 --params 覆蓋（對齊、框線樣式、padding、校準等）；ASCII 的 grid_config（分隔線顯示與九宮格、儲存格格式）；以及進階 Render 選項（寬度、縮放、填滿方式、背景）的 CLI 與部分 UI。</p>
+    <table>
+      <thead>
+        <tr><th>細項</th><th>說明</th><th>狀態</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>分頁</td><td>--page, --per-page</td><td class="status-done">✅ 完成</td><td>gentable_*.php 傳入；zeble_render 支援</td></tr>
+        <tr><td>排序</td><td>--sort, --asc/--desc</td><td class="status-done">✅ 完成</td><td>同上；index 有 Sort by column、降序勾選</td></tr>
+        <tr><td>PIL 自訂參數</td><td>--params 覆蓋主題</td><td class="status-done">✅ 完成</td><td>cell_align, header_align, 顏色、字級等；多數有 UI</td></tr>
+        <tr><td>ASCII 自訂參數</td><td>style, padding, align, header_align, grid_config</td><td class="status-done">✅ 完成</td><td>gentable_ascii 傳入；zeble_render --params 支援</td></tr>
+        <tr><td>ASCII 校準</td><td>--calibration JSON</td><td class="status-done">✅ 完成</td><td>後端支援；index 有校準 JSON、輸出校準、PIL 藍圖</td></tr>
+        <tr><td>ASCII grid_config</td><td>sep/null/false、九宮格、cells.5</td><td class="status-done">✅ 文件與邏輯已定義</td><td>RENDER_PARAMS §二；cells.5 僅 ASCII</td></tr>
+        <tr><td>進階 Render</td><td>--width, --scale, --fill-width, --bg</td><td class="status-partial">⚠️ 部分</td><td>CLI 有；UI 在 Advanced 區</td></tr>
+      </tbody>
+    </table>
+
+    <h2>三、輸出 (Output)</h2>
+    <p class="section-desc">負責依選定模式產出最終檔案。三種模式為 ASCII（純文字 .txt）、PIL（.png）、CSS（Chrome 截圖 .png），並支援自動降級（css → pil → ascii）；可選透空背景。ASCII 模式提供除錯輸出（stage1/stage2/stage3_details）與藍圖 PIL 可視化（格線、座標、Regions、emoji 混合字體）；PIL 模式支援儲存格/表頭對齊與 emoji 用專用字型；進階尺寸（--width、--scale）可經 CLI 或 Advanced UI 傳入。</p>
+    <table>
+      <thead>
+        <tr><th>細項</th><th>說明</th><th>狀態</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>三模式</td><td>ascii / pil / css</td><td class="status-done">✅ 完成</td><td>zeble_render 三分支；gentable_ascii/pil/css.php</td></tr>
+        <tr><td>模式選擇與降級</td><td>auto：css → pil → ascii</td><td class="status-done">✅ 完成</td><td>SPECIFICATION §2</td></tr>
+        <tr><td>輸出格式</td><td>.txt（ASCII）、.png（PIL/CSS）</td><td class="status-done">✅ 完成</td><td>依模式寫入</td></tr>
+        <tr><td>透空背景</td><td>--transparent / --bg transparent</td><td class="status-done">✅ 完成</td><td>CSS；index 有透空勾選</td></tr>
+        <tr><td>ASCII 除錯輸出</td><td>stage1/stage2/stage3_details、ascii_debug</td><td class="status-done">✅ 完成</td><td>gentable_ascii 回傳；Backend 分頁</td></tr>
+        <tr><td>ASCII 藍圖 PIL 可視化</td><td>stage1 格線/座標/Regions、emoji 混合字體</td><td class="status-done">✅ 完成</td><td>stage1_pil_preview、unit_px；與 PIL 後端同字體</td></tr>
+        <tr><td>PIL 對齊</td><td>cell_align / header_align</td><td class="status-done">✅ 完成</td><td>render_pil 已實作；params 與 UI 對應</td></tr>
+        <tr><td>PIL/ASCII emoji</td><td>混合字體（emoji + CJK）</td><td class="status-done">✅ 完成</td><td>draw_text_with_mixed_fonts；blueprint 已套用</td></tr>
+        <tr><td>進階尺寸</td><td>--width, --scale</td><td class="status-done">✅ CLI</td><td>UI 在 Advanced</td></tr>
+      </tbody>
+    </table>
+
+    <h2>四、Theme 編輯</h2>
+    <p class="section-desc">負責主題的儲存、載入與視覺參數編輯。透過 theme_api.php 做主題列表、載入、儲存、刪除，每主題以 zip 存放 template.json；支援匯入單一 zip、匯出全部或單一主題。三種輸出模式對應不同主題結構（css / pil / text）與編輯方式：CSS 為選擇器或 Theme JSON、PIL 為 params 表、ASCII 為 style/padding/align 等；Quick Theme 可一鍵切換；進階選項（width、scale、fill-width、bg）在 Advanced 區塊中提供。</p>
+    <table>
+      <thead>
+        <tr><th>細項</th><th>說明</th><th>狀態</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>主題列表/載入</td><td>theme_api list, load</td><td class="status-done">✅ 完成</td><td>讀取專案 themes/</td></tr>
+        <tr><td>主題儲存/刪除</td><td>save, delete（zip）</td><td class="status-done">✅ 完成</td><td>每主題一 zip，內含 template.json</td></tr>
+        <tr><td>主題匯入/匯出</td><td>import 單一 zip、export-all</td><td class="status-done">✅ 完成</td><td>THEME_STRUCTURE；gentable_export 單一匯出</td></tr>
+        <tr><td>主題結構</td><td>css/pil/text、template.json</td><td class="status-done">✅ 完成</td><td>SPECIFICATION §3–4</td></tr>
+        <tr><td>Quick Theme</td><td>掃描 themes、一鍵選主題</td><td class="status-done">✅ 完成</td><td>index 主題下拉、Quick Theme</td></tr>
+        <tr><td>CSS 主題編輯</td><td>選擇器或 Theme JSON</td><td class="status-done">✅ 完成</td><td>body, container, table, th, td 等</td></tr>
+        <tr><td>PIL 主題編輯</td><td>params 對應 UI</td><td class="status-done">✅ 完成</td><td>顏色、字級、padding、對齊、浮水印等</td></tr>
+        <tr><td>font_family（PIL）</td><td>自訂字型路徑</td><td class="status-partial">⚠️ 無 UI</td><td>whitelist 有；編輯頁無欄位</td></tr>
+        <tr><td>ASCII 主題編輯</td><td>style, padding, align, header_align</td><td class="status-done">✅ 完成</td><td>有欄位並傳後端</td></tr>
+        <tr><td>進階選項 UI</td><td>width, scale, fill-width, bg</td><td class="status-done">✅ 有</td><td>在 Advanced 區</td></tr>
+      </tbody>
+    </table>
+
+    <h2>五、Fast API</h2>
+    <p class="section-desc">負責以 HTTP / API 方式對外提供服務。目前實作為 PaddleOCR 的 FastAPI 服務（/ocr、/health），供辨識使用；前端可顯示 FastAPI 狀態，並透過 fastapi_control.php 啟動/停止、檢查依賴。專案內另有校準與渲染的薄包裝（api/calibration_api、api/render_api），供 ComfyUI / n8n 等整合；「整站改為單一 FastAPI 取代 PHP 呼叫 CLI」尚未實作，目前渲染仍由 PHP 呼叫 zentable_render.py。</p>
+    <table>
+      <thead>
+        <tr><th>細項</th><th>說明</th><th>狀態</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>PaddleOCR FastAPI</td><td>OCR 服務 /ocr、/health</td><td class="status-done">✅ 完成</td><td>api/paddleocr_service.py</td></tr>
+        <tr><td>前端 FastAPI 狀態</td><td>執行中/已停止、Start/Stop</td><td class="status-done">✅ 完成</td><td>index System、fastapiIndicator、fastapi_control.php</td></tr>
+        <tr><td>fastapi_control.php</td><td>啟動/停止/檢查依賴</td><td class="status-done">✅ 完成</td><td>依賴：fastapi, uvicorn, Pillow, numpy 等</td></tr>
+        <tr><td>模組 API（ComfyUI/n8n）</td><td>校準/渲染薄包裝或 HTTP</td><td class="status-partial">⚠️ 建議階段</td><td>api/calibration_api、render_api；MODULE_API 文件</td></tr>
+        <tr><td>統一渲染 FastAPI</td><td>整站以 FastAPI 取代 PHP 呼叫 CLI</td><td class="status-none">❌ 未實作</td><td>目前仍 PHP + zentable_render.py</td></tr>
+      </tbody>
+    </table>
+
+    <h2>圖例</h2>
+    <table class="legend-table">
+      <thead>
+        <tr><th>符號</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="status-done">✅ 完成</td><td>已實作且與文件/UI 對應</td></tr>
+        <tr><td class="status-partial">⚠️ 部分 / 無 UI</td><td>後端有、前端缺或僅部分暴露</td></tr>
+        <tr><td class="status-none">❌ 未實作</td><td>尚未開發</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

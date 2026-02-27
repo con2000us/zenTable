@@ -32,7 +32,7 @@
 
 ### OpenClaw Custom Skill：table_renderer.py（額外參數）
 
-下列參數同時適用於 `table_renderer.py`（純 CSS + Chrome headless 截圖）與 `scripts/zeble_render.py` 的 CSS 模式（`--force-css` / Chrome 可用時）：
+下列參數同時適用於 `table_renderer.py`（純 CSS + Chrome headless 截圖）與 `scripts/zentable_render.py` 的 CSS 模式（`--force-css` / Chrome 可用時）：
 
 | 參數 | 格式 | 說明 |
 |------|------|------|
