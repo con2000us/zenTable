@@ -29,12 +29,12 @@
 
 ### Wave 2: Detector Layer
 
-- [ ] `python3 -m py_compile scripts/zentable/input/loader.py`
-- [ ] `python3 -m py_compile scripts/zentable/input/theme.py`
-- [ ] `python3 -c "from zentable.input.loader import load_json, normalise_data"` (from scripts/ dir)
-- [ ] `python3 -c "from zentable.input.theme import list_themes_in_dir; print(list_themes_in_dir('css'))"` (from scripts/ dir)
-- [ ] Theme list matches `ls themes/css/`
-- [ ] `bash tests/golden/run_golden.sh` exits 0
+- [x] `python3 -m py_compile scripts/zentable/input/loader.py`
+- [x] `python3 -m py_compile scripts/zentable/input/theme.py`
+- [x] `python3 -c "from zentable.input.loader import load_json, normalise_data"` (from scripts/ dir)
+- [x] `python3 -c "from zentable.input.theme import list_themes_in_dir; print(list_themes_in_dir('css'))"` (from scripts/ dir)
+- [x] Theme list matches `ls themes/css/`
+- [x] `bash tests/golden/run_golden.sh` exits 0
 
 ### Wave 3: Engine Layer
 

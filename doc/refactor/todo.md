@@ -7,7 +7,8 @@
 > Progress status:
 > - ✅ Wave 0 done (T-000, T-001, T-002)
 > - ✅ Wave 1 done (T-100, T-101)
-> - ⏳ Wave 2+ pending
+> - ✅ Wave 2 done (T-200, T-201)
+> - ⏳ Wave 3+ pending
 
 ---
 
