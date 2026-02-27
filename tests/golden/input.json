@@ -1,0 +1,11 @@
+{
+  "title": "Golden 測試表格 ✅",
+  "headers": ["名稱", "分類", "說明", "狀態"],
+  "rows": [
+    ["Alpha😀", "CJK", "中英文 mixed text", "ok"],
+    ["Beta", "Emoji", "測試 🚀✨ 字元寬", "ok"],
+    ["Gamma", "Long", "這是一段很長很長的說明用來測試自動換行與寬度估算", "warn"],
+    ["Delta", "Rule", "highlight rule target", "error"]
+  ],
+  "footer": "golden baseline"
+}

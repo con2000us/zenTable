@@ -52,3 +52,4 @@ theme_*.zip
 # OCR test generated data (optional feature; treat as runtime output)
 ocr_test_chars.json
 
+tests/golden/tmp/

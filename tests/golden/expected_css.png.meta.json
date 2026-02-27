@@ -1,0 +1,76 @@
+{
+  "render_mode": "CSS",
+  "theme_name": "minimal_ios",
+  "tt": false,
+  "smart_wrap": true,
+  "smart_wrap_stats": {
+    "applied": true,
+    "changed_cells": 3,
+    "per_col_limit": 11,
+    "col_count": 4,
+    "base_width": 600
+  },
+  "text_scale_mode": "auto",
+  "text_scale": 1.0,
+  "viewport": {
+    "w": 2400,
+    "h": 3600
+  },
+  "output": {
+    "w": 710,
+    "h": 384
+  },
+  "css_render_ms": 1229,
+  "auto_width_steps": [
+    {
+      "reason": "dom_overflow",
+      "vw": 2400,
+      "table": {
+        "scrollWidth": 706,
+        "clientWidth": 706,
+        "rectWidth": 706
+      },
+      "body": {
+        "scrollWidth": 2400,
+        "clientWidth": 2400,
+        "rectWidth": 2400
+      }
+    }
+  ],
+  "render_attempts": [
+    {
+      "attempt": 1,
+      "vw": 2400,
+      "vh": 3600,
+      "css_render_ms": 1229,
+      "dom": {
+        "table": {
+          "scrollWidth": 706,
+          "clientWidth": 706,
+          "rectWidth": 706
+        },
+        "body": {
+          "scrollWidth": 2400,
+          "clientWidth": 2400,
+          "rectWidth": 2400
+        }
+      },
+      "dom_source": "body",
+      "edge": {
+        "x": 2399,
+        "h": 3600,
+        "nonempty": 0,
+        "ratio": 0.0,
+        "best_run": 0
+      },
+      "edge_inset5": {
+        "x": 2394,
+        "h": 3600,
+        "nonempty": 0,
+        "ratio": 0.0,
+        "best_run": 0
+      },
+      "debug": null
+    }
+  ]
+}
