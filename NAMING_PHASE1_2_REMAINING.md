@@ -42,7 +42,7 @@ Goal: Continue canonical naming convergence to `zentable` while keeping compatib
 
 - [x] Runtime commands and scripts use canonical `zentable` names.
 - [x] Docs reflect canonical naming (legacy names marked as aliases).
-- [ ] No broken calls in PHP/JS/API flows. *(pending one final smoke test pass)*
+- [x] No broken calls in PHP/JS/API flows. *(smoke checks passed on 2026-02-27)*
 - [x] Compatibility aliases still function.
 
 ## Suggested next action order
