@@ -108,12 +108,12 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
     .file:hover { background:#1a2850; }
     .file.active { background:#243a74; color:#fff; }
     .main { display:flex; flex-direction:column; min-width:0; }
-    .bar { padding:10px 12px; border-bottom:1px solid #25314f; display:flex; gap:10px; align-items:center; background:#0f1830; }
+    .bar { padding:10px 12px; border-bottom:1px solid #25314f; display:flex; gap:10px; align-items:center; background:#0f1830; flex-wrap:wrap; }
     .bar .title { font-weight:600; font-size:14px; }
     .msg { font-size:13px; color:#83f1b8; }
     .err { font-size:13px; color:#ff8b8b; }
     form { display:flex; flex:1; min-height:0; }
-    textarea { flex:1; min-height:0; width:100%; border:0; outline:none; resize:none; padding:14px; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0b1020; color:#e6edf7; }
+    textarea { flex:1; min-height:0; width:100%; border:0; outline:none; resize:none; padding:14px; font: var(--editor-font-size, 13px)/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0b1020; color:#e6edf7; }
     button { background:#3b7cff; color:#fff; border:0; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:600; }
     button:hover { filter:brightness(1.05); }
     .empty { padding:16px; color:#9bb0de; }
@@ -138,6 +138,9 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
       <?php if ($message): ?><div class="msg"><?php echo $message; ?></div><?php endif; ?>
       <?php if ($error): ?><div class="err"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
       <?php if ($current): ?>
+      <label for="fontSize" style="font-size:12px;color:#b9c7ea;">字體</label>
+      <input id="fontSize" type="range" min="11" max="28" step="1" value="13" style="width:120px;" />
+      <span id="fontSizeVal" style="font-size:12px;color:#b9c7ea;">13px</span>
       <div style="margin-left:auto"></div>
       <button form="editor" type="submit">Save</button>
       <?php endif; ?>
@@ -153,5 +156,30 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
     <?php endif; ?>
   </section>
 </div>
+<script>
+(function () {
+  const slider = document.getElementById('fontSize');
+  const val = document.getElementById('fontSizeVal');
+  const key = 'md_viewer_font_size_px';
+  if (!slider) return;
+
+  const apply = (n) => {
+    const px = Math.max(11, Math.min(28, parseInt(n || 13, 10)));
+    document.documentElement.style.setProperty('--editor-font-size', px + 'px');
+    slider.value = px;
+    if (val) val.textContent = px + 'px';
+    try { localStorage.setItem(key, String(px)); } catch (e) {}
+  };
+
+  let initial = 13;
+  try {
+    const saved = parseInt(localStorage.getItem(key) || '13', 10);
+    if (!Number.isNaN(saved)) initial = saved;
+  } catch (e) {}
+  apply(initial);
+
+  slider.addEventListener('input', (e) => apply(e.target.value));
+})();
+</script>
 </body>
 </html>
