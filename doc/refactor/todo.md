@@ -9,7 +9,8 @@
 > - ✅ Wave 1 done (T-100, T-101)
 > - ✅ Wave 2 done (T-200, T-201)
 > - ✅ Wave 3 done (T-300 ~ T-305)
-> - ⏳ Wave 4 in progress (T-400, T-401 done; Batch 3 restarted with T-410~T-413 done; Batch 4 progress with T-420~T-422 done)
+> - ✅ Wave 4 complete (T-400, T-401, T-410~T-413, T-420~T-423)
+> - ⏭️ Next: Wave 5 (T-500)
 > - ⏳ Wave 5+ pending
 
 ---

@@ -60,7 +60,7 @@
 - [x] `python3 -m py_compile scripts/zentable/output/pil/font.py`
 - [x] `python3 -m py_compile scripts/zentable/output/pil/draw.py`
 - [x] `python3 -m py_compile scripts/zentable/output/pil/renderer.py`
-- [ ] `python3 -m py_compile scripts/zentable/output/pil/blueprint.py`
+- [x] `python3 -m py_compile scripts/zentable/output/pil/blueprint.py`
 - [x] `bash tests/golden/run_golden.sh` exits 0
 
 ### Wave 5: Orchestration
