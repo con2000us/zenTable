@@ -132,11 +132,11 @@
 ### 3. 執行渲染測試
 - **PIL 測試**：
   ```bash
-  python3 zeble.py rich_test_data.json output_pil.png --dark
+  python3 zentable.py rich_test_data.json output_pil.png --dark
   ```
 - **CSS 測試**：
   ```bash
-  python3 zeble_render.py rich_test_data.json output_css.png --force-css --theme-name dark
+  python3 zentable_renderer.py rich_test_data.json output_css.png --force-css --theme-name dark
   ```
 
 ### 4. 視覺比對
@@ -173,7 +173,7 @@
 - [x] 建立 PIL 主題：dark, light, forest, ocean, sunset, rose, midnight
 - [x] 更新前端從 theme_api.php 動態載入 theme 列表
 - [x] 更新前端預覽使用實際載入的 template styles
-- [x] 更新後端 zeble_render.py 支援從 themes/ 目錄載入
+- [x] 更新後端 zentable_renderer.py 支援從 themes/ 目錄載入
 - [x] 擴充範例資料至 6 個場景
 - [x] 修復 PIL emoji 彩色圓形替換（(綠), (紅) 等）
 - [x] 新增 PIL emoji 字體自動選擇（NotoColorEmoji 優先）
@@ -250,7 +250,7 @@ AJAX 請求 theme_api.php?action=load&theme=dark
 │         └── 固定：scripts/zeble_render.py
          │         │
          │         ▼
-         │   zeble_render.py 執行時讀取 theme
+         │   zentable_renderer.py 執行時讀取 theme
 │         └── 固定讀取專案 themes/
          │
          ├── POST table_detect_api.php
@@ -338,7 +338,7 @@ AJAX 請求 theme_api.php?action=load&theme=dark
 | 檔案 | 說明 | 建議處理 |
 |------|------|----------|
 | `theme_api.php` | 主題列表/載入/儲存；優先讀 skill themes | 維持；已符合「調用 skill」 |
-| `gentable_css.php` | CSS 渲染；目前優先用 doc/zeble_render.py | **重新調用 skill**：改為優先執行 skill 目錄的 zeble_render.py，doc 版 fallback |
+| `gentable_css.php` | CSS 渲染；目前優先用 doc/zentable_renderer.py | **重新調用 skill**：改為優先執行 skill 目錄的 zeble_render.py，doc 版 fallback |
 | `gentable_pil.php` | PIL 渲染 | 改為優先執行 skill 目錄對應腳本，doc 版 fallback |
 | `gentable_ascii.php` | ASCII 渲染 | 同上 |
 | `gentable_export.php` | 主題 ZIP 匯出 | 維持；產物結構對齊 skill themes/，即反更新用 |

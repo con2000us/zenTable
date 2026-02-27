@@ -16,9 +16,9 @@ zenTable/
 ├── zentable/                    # 可安裝的套件（選用）
 │   ├── __init__.py
 │   ├── calibration.py          # 校準：從 calibrate_analyze.py 抽出
-│   └── render.py                # 渲染：從 zeble_render.py 抽出
+│   └── render.py                # 渲染：從 zentable_renderer.py 抽出
 ├── calibrate_analyze.py         # CLI 入口，改為 import zentable.calibration 再呼叫
-├── zeble_render.py              # 或在 skill 目錄，CLI 入口改為 import zentable.render
+├── zentable_renderer.py              # 或在 skill 目錄，CLI 入口改為 import zentable.render
 └── doc/
     └── MODULE_API_FOR_COMFYUI_N8N.md
 ```
@@ -86,12 +86,12 @@ ComfyUI / n8n 只要把 `zenTable` 或 `api` 加入 `sys.path`，即可 `from ap
 
 ## 四、渲染 API（給 ComfyUI / n8n 呼叫）
 
-### 4.1 zeble_render.py 需新增「程式入口」
+### 4.1 zentable_renderer.py 需新增「程式入口」
 
 目前只有 `main()` 讀 `sys.argv`。建議新增一個**純參數的入口**，例如：
 
 ```python
-# 在 zeble_render.py 末尾、main() 之後或之前新增
+# 在 zentable_renderer.py 末尾、main() 之後或之前新增
 
 def run_render(
     data: dict,
@@ -218,7 +218,7 @@ n8n 用 **HTTP Request** 節點呼叫既有 API，無需改 Python：
 // n8n Code 節點（執行在 n8n 的 Node 環境，若同機可 subprocess）
 const { execSync } = require('child_process');
 const data = $input.first().json.data;  // 表資料
-const out = execSync(`python3 /var/www/html/zenTable/scripts/zeble_render.py /tmp/in.json /tmp/out.png --force-css --theme-name neon_cyber`, {
+const out = execSync(`python3 /var/www/html/zenTable/scripts/zentable_renderer.py /tmp/in.json /tmp/out.png --force-css --theme-name neon_cyber`, {
   input: JSON.stringify(data),
   encoding: 'utf-8'
 });

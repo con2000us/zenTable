@@ -44,11 +44,12 @@
 
 | 參數 | 說明 |
 |------|------|
-| 無 | 訊息由 `sys.argv[1]` 或 stdin 讀入 |
+| 無（純文字） | 訊息由 `sys.argv[1]` 或 stdin 讀入 |
+| JSON payload（新） | 可傳 `{message, previous_message, has_image, previous_has_image}`，支援 `Zx` 優先序判斷 |
 
 | 輸出 | 格式 | 說明 |
 |------|------|------|
-| **stdout** | JSON | `{ "needs_table": bool, "reason": str, "confidence": float }` |
+| **stdout** | JSON | 基本：`{ "needs_table": bool, "reason": str, "confidence": float }`；`Zx` 模式另含 `zx_mode/source_priority/selected_source/action` |
 
 ---
 
@@ -150,13 +151,13 @@
               │                                  │
               │                                  └→ stdout: JSON { needs_table, reason, confidence }
               │
-              ├─ gentable_css.php ──────────→ zeble_render.py --force-css --theme-name X [--transparent]
+              ├─ gentable_css.php ──────────→ zentable_renderer.py --force-css --theme-name X [--transparent]
               │                                  └→ PNG
               │
-              ├─ gentable_pil.php ───────────→ zeble_render.py --force-pil --theme-name X [--params {...}] [--page] [--sort] [--asc|--desc]
+              ├─ gentable_pil.php ───────────→ zentable_renderer.py --force-pil --theme-name X [--params {...}] [--page] [--sort] [--asc|--desc]
               │                                  └→ PNG
               │
-              └─ gentable_ascii.php ────────→ zeble_render.py --force-ascii --output-ascii <path> [--page] [--sort]
+              └─ gentable_ascii.php ────────→ zentable_renderer.py --force-ascii --output-ascii <path> [--page] [--sort]
                                                  └→ TXT
 
 [舊 API]  gentable.php ───────────────────→ zeble.py --dark 等

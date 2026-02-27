@@ -9,7 +9,7 @@ $uploadDir = __DIR__ . '/';
 $scriptPath = __DIR__ . '/scripts/zeble_render.py';
 $venvPython = __DIR__ . '/venv/bin/python';
 $pythonCmd = (file_exists($venvPython)) ? $venvPython : 'python3';
-// doc/zeble_render.py 僅供參照，不參與執行
+// doc/zentable_renderer.py 僅供參照，不參與執行
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => '僅支援 POST']);
@@ -75,14 +75,14 @@ foreach ($paramWhitelist as $param) {
 
 file_put_contents($inputFile, json_encode($inputData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
-// 分頁／排序（zeble_render.py --page, --per-page, --sort, --asc, --desc）
+// 分頁／排序（zentable_renderer.py --page, --per-page, --sort, --asc, --desc）
 $page = isset($_POST['page']) ? (int) $_POST['page'] : 0;
 $perPage = isset($_POST['per_page']) ? max(1, min(100, (int) $_POST['per_page'])) : 15;
 $sort = isset($_POST['sort']) ? trim((string) $_POST['sort']) : '';
 $sortOrder = (!empty($_POST['desc']) && $_POST['desc'] !== '0' && $_POST['desc'] !== 'false') ? '--desc' : '--asc';
 
 if (!file_exists($scriptPath)) {
-    echo json_encode(['success' => false, 'error' => 'zeble_render.py 不存在於本專案 scripts 目錄', 'path' => $scriptPath]);
+    echo json_encode(['success' => false, 'error' => 'zentable_renderer.py 不存在於本專案 scripts 目錄', 'path' => $scriptPath]);
     exit;
 }
 $pythonScript = $scriptPath;

@@ -19,7 +19,7 @@
                                           ▼
                                ┌──────────────────────┐
                                │  /opt/.../zeble/     │
-                               │  zeble_render.py     │
+                               │  zentable_renderer.py     │
                                └──────────┬───────────┘
                                           │
                                           │ 讀取 themes/
@@ -83,7 +83,7 @@
     │ 呼叫本專案 scripts/zeble_render.py
     ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  /var/www/html/zenTable/scripts/zeble_render.py                   │
+│  /var/www/html/zenTable/scripts/zentable_renderer.py                   │
 │  (讀取 /var/www/html/zenTable/themes/)                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -94,5 +94,5 @@
 |------|------|
 | theme_api 讀取 | zenTable/themes/（固定，不再依賴 /opt skill） |
 | zeble_render 讀取 | zenTable/themes/（固定） |
-| doc/zeble_render.py | 僅參照用，不參與執行 |
-| 實際執行腳本 | /var/www/html/zenTable/scripts/zeble_render.py |
+| doc/zentable_renderer.py | 僅參照用，不參與執行 |
+| 實際執行腳本 | /var/www/html/zenTable/scripts/zentable_renderer.py |

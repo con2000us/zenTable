@@ -4,9 +4,9 @@
 
 | 組件 | 專案端 | Skill 端 | 狀態 |
 |------|--------|----------|------|
-| CSS 渲染 | gentable_css.php | scripts/zeble_render.py | ✅ 固定調用本專案 |
-| PIL 渲染 | gentable_pil.php | scripts/zeble_render.py | ✅ 同上 |
-| ASCII 渲染 | gentable_ascii.php | scripts/zeble_render.py | ✅ 同上 |
+| CSS 渲染 | gentable_css.php | scripts/zentable_renderer.py | ✅ 固定調用本專案 |
+| PIL 渲染 | gentable_pil.php | scripts/zentable_renderer.py | ✅ 同上 |
+| ASCII 渲染 | gentable_ascii.php | scripts/zentable_renderer.py | ✅ 同上 |
 | 主題列表/載入 | theme_api.php | themes/ | ✅ 固定讀取本專案 |
 | 主題儲存 | theme_api.php action=save | themes/ | ⚠️ 需寫入權限 |
 | 表格偵測 | table_detect_api.php | scripts/table_detect.py | ✅ 固定調用本專案 |
@@ -15,7 +15,7 @@
 
 | 項目 | 路徑 | 狀態 |
 |------|------|------|
-| 主渲染程式 | /var/www/html/zenTable/scripts/zeble_render.py | ✅ |
+| 主渲染程式 | /var/www/html/zenTable/scripts/zentable_renderer.py | ✅ |
 | 表格偵測 | /var/www/html/zenTable/scripts/table_detect.py | ✅ |
 | CSS 主題 | themes/css/（dark, light, cyberpunk, glass...） | ✅ |
 | PIL 主題 | themes/pil/（dark, light, forest, gradient_modern...） | ✅ |
@@ -32,7 +32,7 @@
 
 - **Chrome/Chromium**：`google-chrome` 或 `chromium` 需在 PATH
 - **xvfb-run**：無 X11 時需安裝
-- **代理**：zeble_render.py 內含 `--proxy-server=http://localhost:8191`，若無代理可能導致 Chrome 卡住或失敗
+- **代理**：zentable_renderer.py 內含 `--proxy-server=http://localhost:8191`，若無代理可能導致 Chrome 卡住或失敗
 
 ### 3. PIL 模式
 
@@ -58,7 +58,7 @@
 
 | 項目 | 說明 |
 |------|------|
-| Chrome 代理 | zeble_render.py 的 `--proxy-server=...` 若環境無代理，可改為不加或設為空，避免 Chrome 卡住 |
+| Chrome 代理 | zentable_renderer.py 的 `--proxy-server=...` 若環境無代理，可改為不加或設為空，避免 Chrome 卡住 |
 | 主題儲存寫入 | theme_api save 寫入 skill themes 時，需 `themes/<mode>/` 可寫；否則可改為 fallback 寫專案 themes |
 | 輸出路徑 | gentable_*.php 寫入 `/var/www/html/zenTable/`，需確保 PHP 有寫入權限 |
 
@@ -68,10 +68,10 @@
 # 1. 直接測試 zeble_render.py（ASCII 最輕量）
 cd /var/www/html/zenTable
 echo '[{"a":1,"b":2}]' > /tmp/test.json
-python3 scripts/zeble_render.py /tmp/test.json /tmp/out.png --force-ascii --output-ascii /tmp/out.txt
+python3 zentable_renderer.py /tmp/test.json /tmp/out.png --force-ascii --output-ascii /tmp/out.txt
 
 # 2. 測試 PIL（需 Pillow）
-python3 scripts/zeble_render.py /tmp/test.json /tmp/out.png --force-pil --theme-name dark
+python3 zentable_renderer.py /tmp/test.json /tmp/out.png --force-pil --theme-name dark
 
 # 3. 測試 table_detect
 echo '列出價格比較表' | python3 scripts/table_detect.py

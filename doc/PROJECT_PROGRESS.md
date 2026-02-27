@@ -81,7 +81,7 @@
 | 前端 FastAPI 狀態 | 執行中/已停止、Start/Stop | ✅ 完成 | index System、fastapiIndicator、fastapi_control.php |
 | fastapi_control.php | 啟動/停止/檢查依賴 | ✅ 完成 | 依賴：fastapi, uvicorn, Pillow, numpy 等 |
 | 模組 API（ComfyUI/n8n） | 校準/渲染薄包裝或 HTTP | ⚠️ 建議階段 | api/calibration_api、render_api；MODULE_API 文件 |
-| 統一渲染 FastAPI | 整站以 FastAPI 取代 PHP 呼叫 CLI | ❌ 未實作 | 目前仍 PHP + zeble_render.py |
+| 統一渲染 FastAPI | 整站以 FastAPI 取代 PHP 呼叫 CLI | ❌ 未實作 | 目前仍 PHP + zentable_renderer.py |
 
 ---
 

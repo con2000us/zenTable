@@ -9,7 +9,7 @@ $uploadDir = __DIR__ . '/';
 $scriptPath = __DIR__ . '/scripts/zeble_render.py';
 $venvPython = __DIR__ . '/venv/bin/python';
 $pythonCmd = (file_exists($venvPython)) ? $venvPython : 'python3';
-// doc/zeble_render.py 僅供參照，不參與執行
+// doc/zentable_renderer.py 僅供參照，不參與執行
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => '僅支援 POST']);
@@ -67,6 +67,17 @@ if ($asciiDebug) {
     $asciiParams['ascii_debug'] = true;
 }
 
+// stage1 PIL 可視化（僅 ASCII debug）
+if ($asciiDebug) {
+    $stage1PilPreview = !empty($_POST['stage1_pil_preview']) && $_POST['stage1_pil_preview'] !== '0' && $_POST['stage1_pil_preview'] !== 'false';
+    if ($stage1PilPreview) {
+        $asciiParams['stage1_pil_preview'] = true;
+        $unitPx = isset($_POST['stage1_unit_px']) ? (int) $_POST['stage1_unit_px'] : 10;
+        $unitPx = max(5, min(30, $unitPx));
+        $asciiParams['stage1_unit_px'] = $unitPx;
+    }
+}
+
 $outputFile = $asciiDebug ? "table_ascii_debug_{$timestamp}_{$random}.json" : "table_ascii_{$timestamp}_{$random}.txt";
 $outputPath = $uploadDir . $outputFile;
 
@@ -74,7 +85,7 @@ $outputPath = $uploadDir . $outputFile;
 $calibration = isset($_POST['calibration']) ? trim((string) $_POST['calibration']) : '';
 
 if (!file_exists($scriptPath)) {
-    echo json_encode(['success' => false, 'error' => 'zeble_render.py 不存在於本專案 scripts 目錄', 'path' => $scriptPath]);
+    echo json_encode(['success' => false, 'error' => 'zentable_renderer.py 不存在於本專案 scripts 目錄', 'path' => $scriptPath]);
     exit;
 }
 $pythonScript = $scriptPath;
@@ -102,6 +113,8 @@ if (file_exists($outputPath)) {
                 'stage1' => $parsed['stage1'] ?? '',
                 'stage2' => $parsed['stage2'] ?? '',
                 'stage3_details' => $parsed['stage3_details'] ?? null,
+                'stage1_pil_image' => $parsed['stage1_pil_image'] ?? null,
+                'stage1_pil_warning' => $parsed['stage1_pil_warning'] ?? null,
                 'file' => '/zenTable/' . $outputFile,
                 'mode' => 'ascii',
                 'debug' => true

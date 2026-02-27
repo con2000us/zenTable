@@ -4,7 +4,7 @@ $uploadDir = __DIR__ . '/';
 $scriptPath = __DIR__ . '/scripts/zeble_render.py';
 $venvPython = __DIR__ . '/venv/bin/python';
 $pythonCmd = (file_exists($venvPython)) ? $venvPython : 'python3';
-// doc/zeble_render.py 僅供參照，不參與執行
+// doc/zentable_renderer.py 僅供參照，不參與執行
 $jsonData = urldecode($_POST['data'] ?? '');
 $theme = $_POST['theme'] ?? 'dark';
 $themeJson = $_POST['theme_json'] ?? '';
@@ -29,7 +29,7 @@ $sort = isset($_POST['sort']) ? trim((string) $_POST['sort']) : '';
 $sortOrder = (!empty($_POST['desc']) && $_POST['desc'] !== '0' && $_POST['desc'] !== 'false') ? '--desc' : '--asc';
 
 if (!file_exists($scriptPath)) {
-    echo json_encode(['success' => false, 'error' => 'zeble_render.py 不存在於本專案 scripts 目錄', 'path' => $scriptPath]);
+    echo json_encode(['success' => false, 'error' => 'zentable_renderer.py 不存在於本專案 scripts 目錄', 'path' => $scriptPath]);
     exit;
 }
 $pythonScript = $scriptPath;
@@ -51,6 +51,8 @@ if ($sort !== '') $command .= " --sort " . escapeshellarg($sort) . " " . $sortOr
 if ($transparent) {
     $command .= " --transparent";
 }
+// 將 tt 與頁面「透空背景」綁定：開=--tt，關=--no-tt（覆蓋 theme defaults）
+$command .= $transparent ? " --tt" : " --no-tt";
 $width = isset($_POST['width']) ? (int) $_POST['width'] : 0;
 if ($width > 0) $command .= " --width " . $width;
 $scale = isset($_POST['scale']) ? (float) $_POST['scale'] : 1.0;
@@ -59,6 +61,22 @@ $fillWidth = isset($_POST['fill_width']) ? trim((string) $_POST['fill_width']) :
 if ($fillWidth && in_array($fillWidth, ['background', 'container', 'scale', 'no-shrink'])) $command .= " --fill-width " . escapeshellarg($fillWidth);
 $bg = isset($_POST['bg']) ? trim((string) $_POST['bg']) : '';
 if ($bg && !$transparent && preg_match('/^(transparent|theme|#[0-9A-Fa-f]{6})$/i', $bg)) $command .= " --bg " . escapeshellarg($bg);
+
+// text-scale (CSS only)
+$textScale = isset($_POST['text_scale']) ? trim((string) $_POST['text_scale']) : '';
+if ($textScale !== '') {
+    $tsLower = strtolower($textScale);
+    $isMode = in_array($tsLower, ['smallest', 'small', 'auto', 'large', 'largest'], true);
+    $isNumber = preg_match('/^[0-9]*\.?[0-9]+$/', $textScale);
+    if ($isMode || $isNumber) {
+        $command .= " --text-scale " . escapeshellarg($textScale);
+    }
+}
+$textScaleMax = isset($_POST['text_scale_max']) ? (float) $_POST['text_scale_max'] : 0.0;
+if ($textScaleMax > 0) {
+    $command .= " --text-scale-max " . max(0.1, $textScaleMax);
+}
+
 $command .= " 2>&1";
 $output = shell_exec($command);
 

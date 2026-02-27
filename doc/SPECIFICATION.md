@@ -471,7 +471,7 @@ def detect_environment():
 ```
 /var/www/html/zenTable/
 ├── scripts/                 # Python 入口
-│   ├── zeble_render.py       # 主腳本（CSS/PIL/ASCII）
+│   ├── zentable_renderer.py       # 主腳本（CSS/PIL/ASCII）
 │   └── table_detect.py       # 表格偵測
 ├── themes/                   # 主題目錄
 │   ├── css/

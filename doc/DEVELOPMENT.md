@@ -6,7 +6,7 @@
 zeble/
 ├── zeble.py              # 主入口 CLI 工具
 ├── zentable_render.py    # 表格渲染核心 (PIL)
-├── zeble_render.py          # CSS 產生器
+├── zentable_renderer.py          # CSS 產生器
 ├── smart_table_output.py # 智能表格輸出
 ├── table_detect.py       # 表格偵測/分析
 ├── gen_test_data.py      # 測試資料生成
@@ -25,7 +25,7 @@ zeble/
 
 #### A. CLI 測試
 ```bash
-python3 zeble.py input.json output.png
+python3 zentable.py input.json output.png
 ```
 
 #### B. 瀏覽器測試

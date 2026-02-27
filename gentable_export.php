@@ -50,7 +50,7 @@ if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
 // zip 內容：template.json 置於根目錄（符合 themes/{mode}/{theme_name}.zip 格式）
 $zip->addFromString('template.json', json_encode($themeData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-$readme = "ZenTable Theme: $themeName ($mode)\nCreated: " . date('Y-m-d H:i:s') . "\n\nUsage:\n1. Save as themes/$mode/$themeName.zip (or use Import ZIP in index.html)\n2. Run: python3 scripts/zeble_render.py data.json out.png --theme-name $themeName";
+$readme = "ZenTable Theme: $themeName ($mode)\nCreated: " . date('Y-m-d H:i:s') . "\n\nUsage:\n1. Save as themes/$mode/$themeName.zip (or use Import ZIP in index.html)\n2. Run: python3 zentable_renderer.py data.json out.png --theme-name $themeName";
 $zip->addFromString('README.txt', $readme);
 
 $zip->close();

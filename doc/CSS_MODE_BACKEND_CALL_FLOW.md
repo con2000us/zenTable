@@ -18,11 +18,11 @@
 
 ```
 gentable_css.php
-  └─ shell_exec: python3 scripts/zeble_render.py <input.json> <output.png> [--theme <file>|--theme-name <name>] [--page N] [--per-page N] [--sort X] [--asc|--desc] [--transparent] [--width N] [--scale N] [--fill-width M] [--bg ...]
-       └─ zeble_render.py 被執行，從 sys.argv 讀取參數
+  └─ shell_exec: python3 zentable_renderer.py <input.json> <output.png> [--theme <file>|--theme-name <name>] [--page N] [--per-page N] [--sort X] [--asc|--desc] [--transparent] [--width N] [--scale N] [--fill-width M] [--bg ...]
+       └─ zentable_renderer.py 被執行，從 sys.argv 讀取參數
 ```
 
-### 2.2 zeble_render.py 主流程（CSS 路徑）
+### 2.2 zentable_renderer.py 主流程（CSS 路徑）
 
 ```
 main()                                    # 行 2307 入口
@@ -133,7 +133,7 @@ main()                                    # 行 2307 入口
 gentable_css.php
     │
     ▼
-python3 zeble_render.py <data.json> <out.png> [--theme-name NAME] [--width N] ...
+python3 zentable_renderer.py <data.json> <out.png> [--theme-name NAME] [--width N] ...
     │
     ▼
 main()

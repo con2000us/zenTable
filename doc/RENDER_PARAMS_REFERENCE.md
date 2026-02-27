@@ -24,13 +24,24 @@
 | 參數 | 格式 | 說明 |
 |------|------|------|
 | --width | 正整數 | viewport/輸出寬度 px |
+| --text-scale | smallest \| small \| auto \| large \| largest \| 浮點數 | （僅 CSS）文字/間距縮放倍率；預設 auto（依 --width 自動放大） |
+| --text-scale-max | 浮點數 | （僅 CSS, auto）自動縮放上限；預設 2.5 |
 | --scale | 0.1–5.0 | 輸出尺寸倍數 |
 | --fill-width | background \| container \| scale \| no-shrink | 搭配 --width |
 | --bg | transparent \| theme \| #RRGGBB | 背景（僅 CSS） |
 
+### OpenClaw Custom Skill：table_renderer.py（額外參數）
+
+下列參數同時適用於 `table_renderer.py`（純 CSS + Chrome headless 截圖）與 `scripts/zeble_render.py` 的 CSS 模式（`--force-css` / Chrome 可用時）：
+
+| 參數 | 格式 | 說明 |
+|------|------|------|
+| `--text-scale` | `smallest` \| `small` \| `auto` \| `large` \| `largest` \| 浮點數 | 文字與間距縮放倍率；預設 `auto`（依 `--width` 自動放大） |
+| `--text-scale-max` | 浮點數 | 自動縮放最大倍率（僅 auto 模式生效；預設 `2.5`） |
+
 ---
 
-## 一、zeble_render.py CLI 參數（全部）
+## 一、zentable_renderer.py CLI 參數（全部）
 
 | 參數 | 說明 | 適用模式 | Theme 編輯頁有？ |
 |------|------|----------|-----------------|
@@ -39,19 +50,21 @@
 | `--force-ascii` | 強制 ASCII | 全域 | 有（模式選擇） |
 | `--theme FILE` | 主題檔案路徑 | 全域 | 有（theme_json 時用） |
 | `--theme-name NAME` | 內建主題名稱 | 全域 | 有（主題下拉） |
-| `--params JSON` | 自訂參數覆蓋 | PIL / ASCII* | 見下方 |
+| `--params JSON` | 自訂參數覆蓋 | PIL / ASCII | 見下方 |
 | `--output-ascii FILE` | ASCII 輸出檔 | ASCII | 後端內部 |
 | `--transparent` | 透空背景 PNG | CSS | 有（透空勾選） |
 | `--bg MODE` | 背景：transparent \| theme \| #RRGGBB | CSS | **無** |
 | `--width N` | 強制 viewport/輸出寬度 | CSS / PIL | **無** |
 | `--scale N` | 輸出尺寸倍數（0.1–5.0） | 全域 | **無** |
-| `--per-page N` | 每頁列數 | 全域 | 有（每頁筆數） |
+| `--per-page N` / `--pp N` | 每頁列數 | 全域 | 有（每頁筆數） |
 | `--fill-width M` | 搭配 --width：background \| container \| scale \| no-shrink | CSS | **無** |
-| `--page N` | 第 N 頁 | 全域 | 有（頁碼） |
-| `--sort <欄位>` | 依欄位排序 | 全域 | 有（排序欄位） |
+| `--page N\|A-B\|A-\|all` / `--p ...` | 第 N 頁或頁碼範圍 | 全域 | 有（頁碼） |
+| `--all` | 等價 `--page all` | 全域 | **無** |
+| `--sort <欄位規格>` | 依欄位排序（支援多鍵，例：`分數>等級`、`分數:desc,姓名:asc`） | 全域 | 有（排序欄位） |
 | `--asc` / `--desc` | 升序 / 降序 | 全域 | 有（排序方向） |
+| `--f <過濾規格>` / `--filter <過濾規格>` | 欄位/列過濾（可重複），例：`col:!備註,附件`、`row:狀態!=停用;分數>=60` | 全域 | **無** |
 
-\* ASCII 的 `--params` 目前 zeble_render 未支援，gentable_ascii.php 也未傳入。
+註：ASCII 的 `--params` 已支援，`gentable_ascii.php` 也會傳入（含 `style/padding/align/header_align`、框線字元覆蓋、以及 `ascii_debug`）。
 
 ---
 
@@ -64,6 +77,14 @@
 - **額外**：透空背景（cssTransparent）
 
 **CLI 對應**：`--theme` / `--theme-name`、`--transparent`
+
+### Highlight 資料格式（CSS 模式）
+
+Theme 的 `highlight_styles` 定義語意 token（如 success、warning、danger），data 以 `hl` 標註即可套用樣式。
+
+- **Cell-level**：`{"text": "95", "hl": "success"}`
+- **Row-level**：`{"row_hl": "warning", "cells": ["項目A", "72", "注意"]}`
+- 優先序：`cell.hl` > `row_hl` > theme default；未知 token 會 fallback 至 `default` 並在 stderr 輸出 warning。
 
 ---
 
@@ -107,10 +128,11 @@
 
 | 參數 | UI 元素 | 後端有接收？ |
 |------|---------|--------------|
-| style | a_style | **否**（gentable_ascii 未傳） |
-| padding | a_padding | **否** |
-| align | a_align | **否** |
-| header_align | — | **無 UI** |
+| style | a_style | ✓ |
+| padding | a_padding | ✓ |
+| align | a_align | ✓ |
+| header_align | a_header_align | ✓ |
+| ascii_debug | （無，後端自動） | ✓（輸出 debug JSON：stage1/stage2/stage3_details） |
 
 **說明**：gentable_ascii 已接收 style、padding、align、header_align、border_mode、row_interval、col_interval、grid_config 等，zeble_render 支援 `--params` 覆蓋。
 

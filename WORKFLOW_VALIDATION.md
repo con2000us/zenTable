@@ -217,7 +217,7 @@ python3 calibrate_analyze.py screenshot.png \
   --chars-per-line 2
 
 # 使用校準值渲染（通過 zeble_render.py）
-python3 zeble_render.py data.json output.png \
+python3 zentable_renderer.py data.json output.png \
   --force-ascii \
   --calibration calibration.json
 ```

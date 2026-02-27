@@ -227,10 +227,10 @@
             var out = document.getElementById('commandOutput');
             if (!mode || !rows || !page || !out) return;
             
-            var cmd = 'python3 zeble.py zeble_data.json output.png';
+            var cmd = 'python3 zentable.py zeble_data.json output.png';
             if (currentTheme !== 'dark') cmd += ' --' + currentTheme;
-            if (mode.value === 'css') cmd = 'python3 zeble_render.py zeble_data.json output.png --force-css';
-            else if (mode.value === 'ascii') cmd = 'python3 zeble.py zeble_data.json output.txt --ascii';
+            if (mode.value === 'css') cmd = 'python3 zentable_renderer.py zeble_data.json output.png --force-css';
+            else if (mode.value === 'ascii') cmd = 'python3 zentable.py zeble_data.json output.txt --ascii';
             if (rows.value !== '10') cmd += ' --rows-per-page ' + rows.value;
             if (page.value !== '1') cmd += ' --page ' + page.value;
             if (maxP && maxP.value !== '0') cmd += ' --max-pages ' + maxP.value;
@@ -561,7 +561,7 @@
             <div class="param-group">
                 <div class="param-group-title">快速參考</div>
                 <div style="font-size:12px;color:#888;line-height:1.6;">
-                    <code>python3 zeble.py data.json out.png</code><br><br>
+                    <code>python3 zentable.py data.json out.png</code><br><br>
                     主題: --dark --light --glass<br>
                     分頁: --rows-per-page 15 --page 2
                 </div>

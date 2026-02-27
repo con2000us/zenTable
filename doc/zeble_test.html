@@ -268,13 +268,13 @@
         <h2>📖 使用說明</h2>
         <div class="code-block">
 # 基本用法
-python3 zeble.py data.json output.png --dark
+python3 zentable.py data.json output.png --dark
 
 # 自訂主題
-python3 zeble.py data.json out.png --theme custom.json
+python3 zentable.py data.json out.png --theme custom.json
 
 # 排序與分頁
-python3 zeble.py data.json out.png --dark --page 2 --sort 延遲 --desc
+python3 zentable.py data.json out.png --dark --page 2 --sort 延遲 --desc
         </div>
     </div>
 
@@ -614,12 +614,12 @@ python3 zeble.py data.json out.png --dark --page 2 --sort 延遲 --desc
             let outfile = 'output.png';
             
             if (mode === 'css') {
-                cmd = `python3 zeble_render.py zeble_data.json output.png --force-css --theme-name ${currentTheme}`;
+                cmd = `python3 zentable_renderer.py zeble_data.json output.png --force-css --theme-name ${currentTheme}`;
             } else if (mode === 'ascii') {
                 outfile = 'output.txt';
-                cmd = `python3 zeble_render.py zeble_data.json output.txt --force-ascii`;
+                cmd = `python3 zentable_renderer.py zeble_data.json output.txt --force-ascii`;
             } else { // pil
-                cmd = `python3 zeble.py zeble_data.json output.png --${currentTheme}`;
+                cmd = `python3 zentable.py zeble_data.json output.png --${currentTheme}`;
             }
             
             if (page !== '1') cmd += ` --page ${page}`;

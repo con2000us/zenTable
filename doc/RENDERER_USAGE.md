@@ -1,4 +1,4 @@
-# zeble_render.py 用法說明
+# zentable_renderer.py 用法說明
 
 ZenTable 表格渲染腳本，支援 CSS、PIL、ASCII 三種輸出模式。
 
@@ -54,7 +54,7 @@ python3 ~/.openclaw/custom-skills/zentable/table_renderer.py data.json out.png -
 ## 基本用法
 
 ```bash
-python3 scripts/zeble_render.py <data.json> <output> [options]
+python3 zentable_renderer.py <data.json> <output> [options]
 ```
 
 | 參數 | 格式 | 說明 |
@@ -114,11 +114,15 @@ python3 scripts/zeble_render.py <data.json> <output> [options]
 
 | 參數 | 格式 | 說明 |
 |------|------|------|
-| `--page` | 正整數 | 分頁頁碼（從 1 開始） |
+| `--page` | `N` \| `A-B` \| `A-` \| `all` | 分頁頁碼/範圍（從 1 開始） |
+| `--p` | 同 `--page` | `--page` 的別名 |
+| `--all` | 旗標（無值） | 等價 `--page all` |
 | `--per-page` | 正整數 | 每頁列數，預設 15 |
-| `--sort` | 欄位名稱 | 排序依據的欄位 |
+| `--pp` | 同 `--per-page` | `--per-page` 的別名 |
+| `--sort` | 欄位規格 | 單鍵或多鍵（例：`分數`、`分數>等級>姓名`、`分數:desc,姓名:asc`） |
 | `--asc` | 旗標 | 升序（預設） |
 | `--desc` | 旗標 | 降序 |
+| `--f` / `--filter` | 過濾規格 | 欄位/列過濾；可重複傳入（例：`col:!備註,附件`、`row:狀態!=停用;分數>=60`） |
 
 ### ASCII 輸出
 
@@ -198,37 +202,37 @@ python3 scripts/zeble_render.py <data.json> <output> [options]
 
 ```bash
 # 基本
-python3 zeble_render.py data.json out.png
+python3 zentable_renderer.py data.json out.png
 
 # 指定主題、透空背景
-python3 zeble_render.py data.json out.png --theme-name glass --transparent
+python3 zentable_renderer.py data.json out.png --theme-name glass --transparent
 
 # 背景色、縮放
-python3 zeble_render.py data.json out.png --bg "#1a1a2e" --scale 1.5
+python3 zentable_renderer.py data.json out.png --bg "#1a1a2e" --scale 1.5
 
 # 固定寬度、分頁、排序
-python3 zeble_render.py data.json out.png --width 800 --page 2 --sort "名稱" --desc
+python3 zentable_renderer.py data.json out.png --width 800 --page 2 --sort "名稱" --desc
 
 # 每頁 10 列
-python3 zeble_render.py data.json out.png --per-page 10
+python3 zentable_renderer.py data.json out.png --per-page 10
 
 # 固定寬度 800，表格填滿 96%
-python3 zeble_render.py data.json out.png --width 800 --fill-width container
+python3 zentable_renderer.py data.json out.png --width 800 --fill-width container
 
 # 固定寬度 800，背景填滿（表格置中）
-python3 zeble_render.py data.json out.png --width 800 --fill-width background
+python3 zentable_renderer.py data.json out.png --width 800 --fill-width background
 
 # 固定寬度，輸出縮放（可放大或縮小）
-python3 zeble_render.py data.json out.png --width 800 --fill-width scale
+python3 zentable_renderer.py data.json out.png --width 800 --fill-width scale
 
 # 固定寬度，僅放大不縮小
-python3 zeble_render.py data.json out.png --width 800 --fill-width no-shrink
+python3 zentable_renderer.py data.json out.png --width 800 --fill-width no-shrink
 
 # PIL 模式 + 自訂參數
-python3 zeble_render.py data.json out.png --force-pil --theme-name glass --params '{"bg_color":"#0f3460"}'
+python3 zentable_renderer.py data.json out.png --force-pil --theme-name glass --params '{"bg_color":"#0f3460"}'
 
 # ASCII 模式
-python3 zeble_render.py data.json dummy.png --force-ascii --output-ascii out.txt
+python3 zentable_renderer.py data.json dummy.png --force-ascii --output-ascii out.txt
 ```
 
 ---
