@@ -24,13 +24,20 @@ curl -s -X POST http://127.0.0.1:8012/table-parse \
 
 ## Hybrid extraction (structure + OpenVINO OCR text)
 
-After `table-parse`, you can re-read each cell text with OpenVINO OCR:
+After `table-parse`, you can re-read each table region with OpenVINO OCR:
 
 ```bash
 python3 table_hybrid_extract.py \
   --image /home/minecraft/.openclaw/media/inbound/a8cd7a76-0074-4ac7-9a8f-eef4e81d0d06.jpg \
   --parse-json /tmp/table_parse_result.json \
   --out /tmp/hybrid_table.json
+```
+
+Then normalize rows into stable rectangular arrays:
+
+```bash
+python3 normalize_rows.py --in /tmp/hybrid_table.json --out /tmp/hybrid_table_norm.json
+jq '.tables[] | {table_index,row_count,col_count}' /tmp/hybrid_table_norm.json
 ```
 
 ## Notes
