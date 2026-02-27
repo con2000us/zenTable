@@ -43,6 +43,7 @@ allowed-tools: ["exec", "read", "write"]
 - 使用者輸入 `Zx` 時，預設視為「使用 zenTable 輸出表格圖片（而非純文字精簡回覆）」。
 - `Zx` 的來源優先序：**本則附圖 OCR** → **本則文字整理表格** → **上一則附圖 OCR** → **上一則文字整理表格**。
 - 若 `Zx` 觸發但上下文沒有可用圖文資料，先回問一次補充（避免輸出空表）。
+- **`Zx` 預設渲染模式為 CSS**（優先走 `gentable_css.php` / `table_renderer.py` 的 CSS 路徑）。
 - 渲染預設啟用 smart-wrap（代理可在渲染前對長字串做語意斷行）。
 - 若要保留原始文字斷句，可加 `--no-smart-wrap`（或 `--nosw`）。
 - 若上下文已有表格主題（例如 skills 清單、參數清單、比較表），直接進行渲染並回傳圖片。
@@ -80,7 +81,7 @@ Canonical 結構建議（Agent 內部）：
 
 ```json
 {
-  "theme": "mobile_chat",
+  "theme": "minimal_ios_mobile",
   "width": 900,
   "transpose": false,
   "keep_theme_alpha": false,
@@ -105,7 +106,7 @@ Canonical 結構建議（Agent 內部）：
 
 範例 1：常見單頁輸出
 
-- 使用者語法糖：`Zx --theme mobile_chat --w 900 --ts large`
+- 使用者語法糖：`Zx --theme minimal_ios_mobile --w 900 --ts large`
 - canonical：
 
 ```json
@@ -121,7 +122,7 @@ Canonical 結構建議（Agent 內部）：
 - renderer 呼叫：
 
 ```bash
-python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --theme mobile_chat --width 900 --text-scale large --page 1
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --theme minimal_ios_mobile --width 900 --text-scale large --page 1
 ```
 
 範例 2：關閉智慧換行 + 轉置
@@ -243,7 +244,7 @@ echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.
 
 | 參數 | 說明 | 選項 |
 |------|------|------|
-| `--theme` | 視覺主題 | `default_light`, `default_dark`, `mobile_chat`, `minimal_ios`, `bubble_card`, `modern_line`, `compact_clean` |
+| `--theme` | 視覺主題 | `default_light`, `default_dark`, `mobile_chat`, `minimal_ios`, `minimal_ios_mobile`, `bubble_card`, `modern_line`, `compact_clean` |
 | `--transparent` | 透明背景 | 加上此參數 |
 | `--width` | 固定寬度 | 例如 `--width 800` |
 | `--sort` | 排序欄位規格 | 單鍵：`欄位`；多鍵：`欄位A>欄位B` 或 `欄位A:desc,欄位B:asc` |
@@ -274,7 +275,7 @@ echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.
 |------|---------|
 | 一般文件/報告 | `default_light` |
 | 暗色模式展示 | `default_dark` |
-| 手機聊天介面 | `mobile_chat` ⭐ 最常用 |
+| 手機聊天介面（預設） | `minimal_ios_mobile` ⭐ |
 | Apple 生態內容 | `minimal_ios` |
 | 視覺強調/卡片 | `bubble_card` |
 | Line 社群相關 | `modern_line` |
