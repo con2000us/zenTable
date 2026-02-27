@@ -31,6 +31,8 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from api.ocr_normalize import normalize_ocr_rows
+
 _engine: Any = None
 _backend: Optional[str] = None
 _engine_error: Optional[str] = None
@@ -43,79 +45,7 @@ def _as_bool(v: str, default: bool = False) -> bool:
 
 
 def _normalize_rows(result: Any) -> List[Dict[str, Any]]:
-    """Normalize outputs across backends to {text,left,top,width,height}."""
-    rows: List[Dict[str, Any]] = []
-    if not result:
-        return rows
-
-    # Paddle v3 style: [{rec_texts, rec_boxes, ...}]
-    if isinstance(result, list) and result and isinstance(result[0], dict):
-        payload = result[0]
-        texts = payload.get("rec_texts") or []
-        boxes = payload.get("rec_boxes") or []
-        n = min(len(texts), len(boxes))
-        for i in range(n):
-            b = boxes[i]
-            if b is None or len(b) < 4:
-                continue
-            l, t, r, btm = map(int, b[:4])
-            rows.append({
-                "text": str(texts[i]) if texts[i] is not None else "",
-                "left": l,
-                "top": t,
-                "width": max(0, r - l),
-                "height": max(0, btm - t),
-            })
-        return rows
-
-    # Paddle v2 style: [[poly, (text, score)], ...]
-    if isinstance(result, list) and result and isinstance(result[0], (list, tuple)) and len(result[0]) >= 2:
-        # Could also be RapidOCR style; detect by second element type
-        sample = result[0]
-        second = sample[1]
-
-        # RapidOCR style: [box, text, score?]
-        if isinstance(second, str):
-            for item in result:
-                if not isinstance(item, (list, tuple)) or len(item) < 2:
-                    continue
-                box, text = item[0], item[1]
-                left = top = width = height = 0
-                if isinstance(box, (list, tuple)) and len(box) >= 4 and isinstance(box[0], (list, tuple)):
-                    xs = [int(p[0]) for p in box]
-                    ys = [int(p[1]) for p in box]
-                    left = min(xs)
-                    top = min(ys)
-                    width = max(xs) - left
-                    height = max(ys) - top
-                rows.append({
-                    "text": "" if text is None else str(text),
-                    "left": int(left),
-                    "top": int(top),
-                    "width": int(max(0, width)),
-                    "height": int(max(0, height)),
-                })
-            return rows
-
-        # Paddle v2 legacy
-        for line in result:
-            if line is None or not isinstance(line, (list, tuple)) or len(line) < 2:
-                continue
-            box = line[0]
-            text_info = line[1]
-            text = text_info[0] if isinstance(text_info, (list, tuple)) else str(text_info)
-            left = top = width = height = 0
-            if isinstance(box, (list, tuple)) and len(box) >= 4 and isinstance(box[0], (list, tuple)):
-                xs = [p[0] for p in box]
-                ys = [p[1] for p in box]
-                left = int(min(xs))
-                top = int(min(ys))
-                width = int(max(xs) - left)
-                height = int(max(ys) - top)
-            rows.append({"text": text or "", "left": left, "top": top, "width": width, "height": height})
-        return rows
-
-    return rows
+    return normalize_ocr_rows(result)
 
 
 def _load_paddle() -> Any:

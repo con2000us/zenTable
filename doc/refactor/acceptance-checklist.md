@@ -71,6 +71,7 @@
 
 ### Wave 6: Cleanup
 
+- [x] `python3 -m py_compile api/ocr_normalize.py`
 - [x] `doc/archive/deprecated_code/` contains archived files
 - [x] `php -l gentable.php` (deprecated endpoint still returns valid JSON)
 - [x] stale docs updated (`doc/DEVELOPMENT.md`, `doc/SKILL_PY_PROGRAMS.md`, `doc/refactor/inventory.md`)
@@ -239,7 +240,7 @@ If any of the following break, the refactoring has a regression:
 | Wave 3 complete | | |
 | Wave 4 complete | | |
 | Wave 5 complete | ✅ | `zeble_render.py` 499 lines + golden ok |
-| Wave 6 complete | | |
+| Wave 6 complete | ✅ | T-600~T-604 done, golden ok |
 | All golden tests pass | | |
 | All smoke tests pass | | |
 | All symlinks valid | | |

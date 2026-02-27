@@ -11,8 +11,7 @@
 > - ✅ Wave 3 done (T-300 ~ T-305)
 > - ✅ Wave 4 complete (T-400, T-401, T-410~T-413, T-420~T-423)
 > - ✅ Wave 5 complete (T-500)
-> - ⏳ Wave 6 in progress (T-600, T-601, T-602, T-603 done)
-> - ⏭️ Next: T-604
+> - ✅ Wave 6 complete (T-600~T-604)
 
 ---
 

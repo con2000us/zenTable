@@ -13,42 +13,14 @@ from fastapi import FastAPI, File, HTTPException, UploadFile, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from api.ocr_normalize import normalize_ocr_rows
+
 _engine: Any = None
 _engine_err: Optional[str] = None
 
 
 def _to_rows(result: Any) -> List[Dict[str, Any]]:
-    """Convert RapidOCR result to ZenTable OCR rows."""
-    rows: List[Dict[str, Any]] = []
-    if not result:
-        return rows
-
-    for item in result:
-        if not isinstance(item, (list, tuple)) or len(item) < 2:
-            continue
-        box = item[0]
-        text = item[1] if len(item) >= 2 else ""
-
-        left = top = width = height = 0
-        if isinstance(box, (list, tuple)) and len(box) >= 4 and isinstance(box[0], (list, tuple)):
-            try:
-                xs = [int(p[0]) for p in box]
-                ys = [int(p[1]) for p in box]
-                left = min(xs)
-                top = min(ys)
-                width = max(xs) - left
-                height = max(ys) - top
-            except Exception:
-                pass
-
-        rows.append({
-            "text": "" if text is None else str(text),
-            "left": int(left),
-            "top": int(top),
-            "width": int(max(0, width)),
-            "height": int(max(0, height)),
-        })
-    return rows
+    return normalize_ocr_rows(result)
 
 
 @asynccontextmanager
