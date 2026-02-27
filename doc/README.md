@@ -12,5 +12,7 @@
 - [HIGHLIGHT_STYLE_PLAN.md](HIGHLIGHT_STYLE_PLAN.md) — Highlight 完整規格
 - [RENDER_PARAMS_REFERENCE.md](RENDER_PARAMS_REFERENCE.md) — Render 參數對照
 - [RENDERER_USAGE.md](RENDERER_USAGE.md) — 渲染器用法
+- [SPECIFICATION.md](SPECIFICATION.md) — 核心規格定義
+- [INTEGRATION.md](INTEGRATION.md) — 整合方式（ComfyUI / n8n / API）
 
-歷史／歸檔文件見 [archive/](archive/)。
+歷史／歸檔文件見 [archive/](archive/)（避免主流程文件雜訊）。

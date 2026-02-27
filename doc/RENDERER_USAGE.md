@@ -123,6 +123,7 @@ python3 zentable_renderer.py <data.json> <output> [options]
 | `--asc` | 旗標 | 升序（預設） |
 | `--desc` | 旗標 | 降序 |
 | `--f` / `--filter` | 過濾規格 | 欄位/列過濾；可重複傳入（例：`col:!備註,附件`、`row:狀態!=停用;分數>=60`） |
+| `--both` / `--bo` | 旗標 | 除 PNG 外同時輸出 ASCII（同主檔名 .txt） |
 
 ### ASCII 輸出
 

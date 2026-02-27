@@ -63,6 +63,7 @@
 | `--sort <欄位規格>` | 依欄位排序（支援多鍵，例：`分數>等級`、`分數:desc,姓名:asc`） | 全域 | 有（排序欄位） |
 | `--asc` / `--desc` | 升序 / 降序 | 全域 | 有（排序方向） |
 | `--f <過濾規格>` / `--filter <過濾規格>` | 欄位/列過濾（可重複），例：`col:!備註,附件`、`row:狀態!=停用;分數>=60` | 全域 | **無** |
+| `--both` / `--bo` | 除 PNG 外同時輸出 ASCII（同主檔名 .txt） | 全域 | **無** |
 
 註：ASCII 的 `--params` 已支援，`gentable_ascii.php` 也會傳入（含 `style/padding/align/header_align`、框線字元覆蓋、以及 `ascii_debug`）。
 
