@@ -57,7 +57,7 @@
 - [x] `python3 -m py_compile scripts/zentable/output/css/chrome.py`
 - [x] `python3 -m py_compile scripts/zentable/output/css/viewport.py`
 - [x] `python3 -m py_compile scripts/zentable/output/css/renderer.py`
-- [ ] `python3 -m py_compile scripts/zentable/output/pil/font.py`
+- [x] `python3 -m py_compile scripts/zentable/output/pil/font.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/draw.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/renderer.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/blueprint.py`
