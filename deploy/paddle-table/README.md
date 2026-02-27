@@ -22,6 +22,17 @@ curl -s -X POST http://127.0.0.1:8012/table-parse \
   -F "image=@/path/to/table.jpg"
 ```
 
+## Hybrid extraction (structure + OpenVINO OCR text)
+
+After `table-parse`, you can re-read each cell text with OpenVINO OCR:
+
+```bash
+python3 table_hybrid_extract.py \
+  --image /home/minecraft/.openclaw/media/inbound/a8cd7a76-0074-4ac7-9a8f-eef4e81d0d06.jpg \
+  --parse-json /tmp/table_parse_result.json \
+  --out /tmp/hybrid_table.json
+```
+
 ## Notes
 
 - This service is independent from existing OCR services (safe A/B testing).
