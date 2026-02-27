@@ -54,7 +54,7 @@
 - [x] `python3 -m py_compile scripts/zentable/output/ascii/charwidth.py`
 - [x] `python3 -m py_compile scripts/zentable/output/ascii/renderer.py`
 - [x] `python3 -m py_compile scripts/zentable/output/css/crop.py`
-- [ ] `python3 -m py_compile scripts/zentable/output/css/chrome.py`
+- [x] `python3 -m py_compile scripts/zentable/output/css/chrome.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/css/viewport.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/css/renderer.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/font.py`

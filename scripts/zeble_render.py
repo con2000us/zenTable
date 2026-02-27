@@ -67,6 +67,7 @@ from zentable.output.ascii.charwidth import (
 )
 from zentable.output.ascii import renderer as ascii_renderer
 from zentable.output.css import crop as css_crop
+from zentable.output.css import chrome as css_chrome
 ASCII_STYLES = ascii_renderer.ASCII_STYLES
 
 # =============================================================================
@@ -194,15 +195,7 @@ class TemplateEngine:
 # =============================================================================
 
 def check_chrome_available() -> bool:
-    """檢查 Chrome headless 是否可用"""
-    try:
-        result = subprocess.run(
-            ['which', 'google-chrome'],
-            capture_output=True, timeout=5
-        )
-        return result.returncode == 0
-    except:
-        return False
+    return css_chrome.check_chrome_available()
 
 # 透空背景：現代 Chrome 支援 --default-background-color=RRGGBBAA（8 位 hex，Alpha=00 為透明）
 # 直接輸出透明 PNG，無需 chroma key 後製，陰影半透明也不會出問題
@@ -337,131 +330,17 @@ def render_css(html: str, output_path: str, transparent: bool = False, html_dir:
     return True
 
 def measure_dom_scroll_width(html: str, html_dir: str, viewport_width: int, viewport_height: int) -> Optional[int]:
-    """Measure content scrollWidth from DOM using headless Chrome + --dump-dom.
-
-    Returns the needed width (scrollWidth) if measurable, else None.
-    Only works for local Chrome spawning (not remote CSS API).
-    """
+    return css_chrome.measure_dom_scroll_width(
+        html, html_dir, viewport_width, viewport_height,
+        transparent_bg_hex=TRANSPARENT_BG_HEX,
+    )
 
 
 def measure_dom_overflow(html: str, html_dir: str, viewport_width: int, viewport_height: int) -> Optional[dict]:
-    """Measure DOM overflow for the table element.
-
-    Returns dict: {scrollWidth, clientWidth, rectWidth}
-    """
-    try:
-        ts = str(int(time.time() * 1000))
-        html_file = os.path.join(html_dir, f"overflow_{ts}.html")
-
-        inject = """
-<script>
-(function(){
-  function pick(){ return document.querySelector('table') || document.querySelector('.table') || null; }
-  function measure(){
-    var el = pick();
-    var sw = 0, cw = 0, rw = 0;
-    if(el){
-      try { sw = el.scrollWidth||0; cw = el.clientWidth||0; rw = el.getBoundingClientRect().width||0; } catch(e) {}
-    }
-    var bsw = 0, bcw = 0, brw = 0;
-    try {
-      var b = document.body;
-      if(b){ bsw = b.scrollWidth||0; bcw = b.clientWidth||0; brw = b.getBoundingClientRect().width||0; }
-    } catch(e) {}
-    document.title = 'ZENTABLE_OVERFLOW=' + Math.ceil(sw) + ',' + Math.ceil(cw) + ',' + Math.ceil(rw)
-      + '|BODY=' + Math.ceil(bsw) + ',' + Math.ceil(bcw) + ',' + Math.ceil(brw);
-  }
-  window.addEventListener('load', function(){ setTimeout(measure, 50); });
-  setTimeout(measure, 200);
-})();
-</script>
-"""
-
-        with open(html_file, 'w', encoding='utf-8') as f:
-            f.write(html + inject)
-
-        parts = [
-            "xvfb-run", "-a", "google-chrome", "--headless",
-            "--disable-gpu",
-            "--virtual-time-budget=1000",
-            f"--window-size={int(viewport_width)},{int(viewport_height)}",
-            f"--default-background-color={TRANSPARENT_BG_HEX}",
-            "--dump-dom",
-            f"file://{html_file}",
-        ]
-        import subprocess
-        p = subprocess.run(parts, capture_output=True, text=True, timeout=30)
-        out = (p.stdout or "")
-        m = re.search(r"ZENTABLE_OVERFLOW=(\d+),(\d+),(\d+)\|BODY=(\d+),(\d+),(\d+)", out)
-        if m:
-            return {
-                "table": {"scrollWidth": int(m.group(1)), "clientWidth": int(m.group(2)), "rectWidth": int(m.group(3))},
-                "body": {"scrollWidth": int(m.group(4)), "clientWidth": int(m.group(5)), "rectWidth": int(m.group(6))},
-            }
-        # backward compat
-        m2 = re.search(r"ZENTABLE_OVERFLOW=(\d+),(\d+),(\d+)", out)
-        if m2:
-            return {"table": {"scrollWidth": int(m2.group(1)), "clientWidth": int(m2.group(2)), "rectWidth": int(m2.group(3))}}
-        return None
-    except Exception:
-        return None
-    finally:
-        try:
-            if 'html_file' in locals() and os.path.exists(html_file):
-                os.remove(html_file)
-        except Exception:
-            pass
-
-    try:
-        ts = str(int(time.time() * 1000))
-        html_file = os.path.join(html_dir, f"measure_{ts}.html")
-
-        inject = """
-<script>
-(function(){
-  function pick(){
-    return document.querySelector('table') || document.querySelector('.table') || null;
-  }
-  function measure(){
-    var el = pick();
-    var w = 0;
-    if(!el){ document.title = 'ZENTABLE_SCROLLWIDTH=0'; return; }
-    try { w = Math.max(el.scrollWidth||0, el.getBoundingClientRect().width||0); } catch(e) {}
-    document.title = 'ZENTABLE_SCROLLWIDTH=' + Math.ceil(w);
-  }
-  window.addEventListener('load', function(){ setTimeout(measure, 50); });
-  setTimeout(measure, 200);
-})();
-</script>
-"""
-
-        with open(html_file, 'w', encoding='utf-8') as f:
-            f.write(html + inject)
-
-        parts = [
-            "xvfb-run", "-a", "google-chrome", "--headless",
-            "--disable-gpu",
-            "--virtual-time-budget=1000",
-            f"--window-size={int(viewport_width)},{int(viewport_height)}",
-            f"--default-background-color={TRANSPARENT_BG_HEX}",
-            "--dump-dom",
-            f"file://{html_file}",
-        ]
-        import subprocess
-        p = subprocess.run(parts, capture_output=True, text=True, timeout=30)
-        out = (p.stdout or "")
-        m = re.search(r"ZENTABLE_SCROLLWIDTH=(\d+)", out)
-        if m:
-            return int(m.group(1))
-        return None
-    except Exception:
-        return None
-    finally:
-        try:
-            if 'html_file' in locals() and os.path.exists(html_file):
-                os.remove(html_file)
-        except Exception:
-            pass
+    return css_chrome.measure_dom_overflow(
+        html, html_dir, viewport_width, viewport_height,
+        transparent_bg_hex=TRANSPARENT_BG_HEX,
+    )
 
 
 def _parse_font_size_px(style_str: str, default: int = 14) -> int:
