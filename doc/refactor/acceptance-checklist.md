@@ -52,7 +52,7 @@
 ### Wave 4: Renderer Layer
 
 - [x] `python3 -m py_compile scripts/zentable/output/ascii/charwidth.py`
-- [ ] `python3 -m py_compile scripts/zentable/output/ascii/renderer.py`
+- [x] `python3 -m py_compile scripts/zentable/output/ascii/renderer.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/css/crop.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/css/chrome.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/css/viewport.py`
@@ -61,7 +61,7 @@
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/draw.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/renderer.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/blueprint.py`
-- [ ] `bash tests/golden/run_golden.sh` exits 0
+- [x] `bash tests/golden/run_golden.sh` exits 0
 
 ### Wave 5: Orchestration
 

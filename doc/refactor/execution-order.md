@@ -14,7 +14,7 @@
 - [x] Wave 2 completed (T-200, T-201)
 - [x] Wave 3 completed (T-300 ~ T-305)
   - rollback: `git revert d06c36c c1355aa 521c526` (or revert latest Wave 3 commit directly)
-- [~] Wave 4 in progress (Batch 1 done: T-400)
+- [~] Wave 4 in progress (Batch 1-2 done: T-400, T-401)
 - [ ] Wave 5 pending
 - [ ] Wave 6 pending
 

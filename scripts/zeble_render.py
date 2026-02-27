@@ -65,6 +65,8 @@ from zentable.output.ascii.charwidth import (
     char_display_width, display_width, _space_width,
     calculate_column_widths, align_text,
 )
+from zentable.output.ascii import renderer as ascii_renderer
+ASCII_STYLES = ascii_renderer.ASCII_STYLES
 
 # =============================================================================
 # ASCII RENDERER
@@ -78,50 +80,9 @@ class ASCIIStyle:
     header_align: str = "center"
 
 # ASCII 框線樣式
-ASCII_STYLES = {
-    "single": {
-        "tl": "+", "tr": "+", "bl": "+", "br": "+",
-        "h": "-", "v": "|",
-        "tm": "+", "bm": "+", "mm": "+",
-        "header_l": "+", "header_m": "+", "header_r": "+",
-        "row_l": "+", "row_m": "+", "row_r": "+",
-        "footer_l": "+", "footer_m": "+", "footer_r": "+",
-        "header": "+", "row": "+", "footer": "+"
-    },
-    "double": {
-        "tl": "╔", "tr": "╗", "bl": "╚", "br": "╝",
-        "h": "═", "v": "║",
-        "tm": "╦", "bm": "╩", "mm": "╬",
-        "header_l": "╠", "header_m": "╬", "header_r": "╣",
-        "row_l": "╠", "row_m": "╬", "row_r": "╣",
-        "footer_l": "╠", "footer_m": "╬", "footer_r": "╣",
-        "header": "╠", "row": "╠", "footer": "╠"
-    },
-    "grid": {
-        "tl": "┌", "tr": "┐", "bl": "└", "br": "┘",
-        "h": "─", "v": "│",
-        "tm": "┬", "bm": "┴", "mm": "┼",
-        "header_l": "├", "header_m": "┼", "header_r": "┤",
-        "row_l": "├", "row_m": "┼", "row_r": "┤",
-        "footer_l": "├", "footer_m": "┼", "footer_r": "┤",
-        "header": "├", "row": "├", "footer": "├"
-    },
-    "markdown": {
-        "tl": "|", "tr": "|", "bl": "|", "br": "|",
-        "h": "-", "v": "|",
-        "tm": "|", "bm": "|", "mm": "|",
-        "header_l": "|", "header_m": "|", "header_r": "|",
-        "row_l": "|", "row_m": "|", "row_r": "|",
-        "footer_l": "|", "footer_m": "|", "footer_r": "|",
-        "header": "|", "row": "|", "footer": "|"
-    }
-}
-
 def render_ascii(data: dict, theme: dict = None, style: ASCIIStyle = None,
                   calibration: dict = None, debug_details: dict = None) -> str:
-    """使用 ASCII 渲染表格，主題來自 themes/text/<name>/template.json 的 params。
-    calibration: 字元寬度校準字典 {char: width}，用於精確計算顯示寬度。
-    """
+    """ASCII 渲染（委派至 zentable.output.ascii.renderer）。"""
     if style is None:
         params = (theme or {}).get("params") or {}
         style = ASCIIStyle(
@@ -130,186 +91,9 @@ def render_ascii(data: dict, theme: dict = None, style: ASCIIStyle = None,
             align=params.get("align", "left"),
             header_align=params.get("header_align", "center"),
         )
-    
-    cal = calibration
-    if cal:
-        cats = [k for k in ('ascii','cjk','box','emoji') if k in cal]
-        custom_n = len(cal.get('custom', {}))
-        # 避免污染 ASCII 輸出（stdout），僅寫到 stderr。
-        print(
-            f"📐 套用校準: 類別寬度={{{', '.join(f'{k}={cal[k]}' for k in cats)}}}"
-            + (f", 自訂={custom_n}字元" if custom_n else ""),
-            file=sys.stderr
-        )
-    
-    headers = data.get("headers", [])
-    rows = data.get("rows", [])
-    title = data.get("title", "")
-    footer = data.get("footer", "")
-    
-    # 計算每欄最小內容寬度（浮點值）
-    raw_widths = calculate_column_widths(headers, rows, style.padding, cal, row_cells_fn=_row_cells, cell_text_fn=cell_text)
-    
-    # 獲取框線樣式
-    s = ASCII_STYLES.get(style.border_style, ASCII_STYLES["double"])
-    
-    sw = _space_width(cal)
-    if sw <= 0:
-        sw = 1.0
-
-    hch = s.get('h', '─')
-    vch = s.get('v', '|')
-    tm = s.get('tm', s.get('header', '+'))
-    bm = s.get('bm', s.get('footer', '+'))
-    header_l = s.get('header_l', s.get('header', '+'))
-    header_m = s.get('header_m', s.get('header', '+'))
-    header_r = s.get('header_r', s.get('header', '+'))
-
-    hw = char_display_width(hch, cal)
-    if hw <= 0:
-        hw = 1.0
-
-    # 以「校準寬度」決定每欄 h 的重複次數，並反推出內容目標寬度（確保框線與內容共用同一套目標）
-    col_h_counts = []
-    col_targets = []
-    for w in raw_widths:
-        full_w = w + 2 * sw  # cell 會包成 " {aligned} "
-        n = max(1, round(full_w / hw))
-        col_h_counts.append(n)
-        col_targets.append(max(0.0, n * hw - 2 * sw))
-
-    # 多行：先拆行，計算每一列高度（最大行數）
-    def _cell_lines(v):
-        s = "" if v is None else str(v)
-        ls = s.splitlines()
-        return ls if ls else [""]
-
-    header_lines = [_cell_lines(h) for h in headers] if headers else []
-    header_height = 0
-    for i in range(min(len(col_targets), len(header_lines))):
-        header_height = max(header_height, len(header_lines[i]))
-    row_lines = [[_cell_lines(cell_text(c)) for c in _row_cells(row)] for row in rows]
-    row_heights = []
-    for r in row_lines:
-        h = 1
-        for i in range(min(len(col_targets), len(r))):
-            h = max(h, len(r[i]))
-        row_heights.append(h)
-
-    if isinstance(debug_details, dict):
-        debug_details.clear()
-        debug_details.update({
-            "border_style": style.border_style,
-            "padding": style.padding,
-            "align": style.align,
-            "header_align": style.header_align,
-            "h_char": hch,
-            "v_char": vch,
-            "space_width": sw,
-            "h_char_width": hw,
-            "raw_widths": raw_widths,
-            "col_h_counts": col_h_counts,
-            "col_targets": col_targets,
-            "ncols": len(col_h_counts),
-            "nrows": len(rows),
-            "row_heights": row_heights,
-            "header_height": header_height,
-            "has_headers": bool(headers),
-            "has_title": bool(title),
-            "has_footer": bool(footer),
-            "title": title,
-            "footer": footer,
-            "headers": list(headers) if headers else [],
-            "rows": [[str(cell_text(c)) for c in _row_cells(row)] for row in rows] if rows else [],
-            "header_lines": header_lines,
-            "row_lines": row_lines,
-        })
-
-    def _hseg(i: int) -> str:
-        return hch * col_h_counts[i]
-
-    def _build_top_line() -> str:
-        parts = [_hseg(i) for i in range(len(col_h_counts))]
-        return s['tl'] + tm.join(parts) + s['tr']
-
-    def _build_bottom_line() -> str:
-        parts = [_hseg(i) for i in range(len(col_h_counts))]
-        return s['bl'] + bm.join(parts) + s['br']
-
-    def _build_header_sep() -> str:
-        parts = [_hseg(i) for i in range(len(col_h_counts))]
-        return header_l + header_m.join(parts) + header_r
-
-    def _align_chars(text: str, width: int, align: str) -> str:
-        """用「字元數」對齊（不走校準寬度）。用於 title/footer 這種裝飾列，確保與框線同寬。"""
-        text = "" if text is None else str(text)
-        if width <= 0:
-            return ""
-        if len(text) > width:
-            return text[:width]
-        pad = width - len(text)
-        if align == "right":
-            return (" " * pad) + text
-        if align == "center":
-            left = pad // 2
-            return (" " * left) + text + (" " * (pad - left))
-        return text + (" " * pad)
-
-    lines = []
-
-    # 標題：用 top line 的「實際字元數」對齊（避免 title 行寬度跑掉）
-    if title:
-        top_probe = _build_top_line()
-        inner_chars = max(0, len(top_probe) - 2)
-        title_w_chars = max(0, inner_chars - 6)  # 2*h + spaces around title
-        title_line = _align_chars(title, title_w_chars, "center")
-        lines.append(f"{s['tl']}{hch * 2} {title_line} {hch * 2}{s['tr']}")
-
-    # 頂部框線（含欄位交界）
-    lines.append(_build_top_line())
-
-    # 表頭
-    if headers:
-        header_cells = []
-        for i, h in enumerate(headers):
-            cell = align_text(h, col_targets[i], style.header_align, cal)
-            header_cells.append(f" {cell} ")
-        # 表頭也支援多行（若 header 本身含換行）
-        header_height = 1
-        for i in range(min(len(col_targets), len(header_lines))):
-            header_height = max(header_height, len(header_lines[i]))
-        for li in range(header_height):
-            line_cells = []
-            for i in range(min(len(col_targets), len(headers))):
-                txt = header_lines[i][li] if i < len(header_lines) and li < len(header_lines[i]) else ""
-                line_cells.append(f" {align_text(txt, col_targets[i], style.header_align, cal)} ")
-            lines.append(vch + vch.join(line_cells) + vch)
-        lines.append(_build_header_sep())
-
-    # 資料列
-    for r_idx, row in enumerate(rows):
-        row_cells_lines = row_lines[r_idx] if r_idx < len(row_lines) else []
-        height = row_heights[r_idx] if r_idx < len(row_heights) else 1
-        for li in range(height):
-            cells = []
-            for i in range(min(len(col_targets), len(row_cells_lines))):
-                txt = row_cells_lines[i][li] if li < len(row_cells_lines[i]) else ""
-                c = align_text(txt, col_targets[i], style.align, cal)
-                cells.append(f" {c} ")
-            lines.append(vch + vch.join(cells) + vch)
-
-    # 底部框線（含欄位交界）
-    lines.append(_build_bottom_line())
-
-    # 底部文字（同上，用字元數對齊）
-    if footer:
-        bottom_probe = _build_bottom_line()
-        inner_chars = max(0, len(bottom_probe) - 2)
-        footer_w_chars = max(0, inner_chars - 6)
-        footer_line = _align_chars(footer, footer_w_chars, "center")
-        lines.append(f"{s['bl']}{hch * 2} {footer_line} {hch * 2}{s['br']}")
-
-    return "\n".join(lines)
+    return ascii_renderer.render_ascii(
+        data=data, theme=theme, style=style, calibration=calibration, debug_details=debug_details
+    )
 
 class TemplateEngine:
     """Pure Python lightweight template engine"""
