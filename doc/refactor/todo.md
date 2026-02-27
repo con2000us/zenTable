@@ -104,6 +104,8 @@ scripts/
 
 ### Phase 0: Preparation (P0)
 
+> 中文說明：建立基線與安全網，先把 golden 測試、壞路徑修正、模組骨架準備好，確保後續重構可回歸驗證。
+
 ---
 
 #### T-000: Create golden test baseline
@@ -176,6 +178,8 @@ scripts/
 
 ### Phase 1: Extract Utilities (P0)
 
+> 中文說明：先抽出最底層共用工具（文字/色彩），降低主檔耦合，讓後面各層可直接重用。
+
 ---
 
 #### T-100: Extract `zentable/util/text.py`
@@ -234,6 +238,8 @@ scripts/
 ---
 
 ### Phase 2: Extract Detector Layer — `zentable/input/` (P0)
+
+> 中文說明：把輸入與主題載入邏輯模組化，統一資料進入點（JSON/Theme），避免 main 內混雜解析細節。
 
 ---
 
@@ -298,6 +304,8 @@ scripts/
 ---
 
 ### Phase 3: Extract Engine Layer — `zentable/transform/` (P1)
+
+> 中文說明：抽離核心轉換邏輯（cell/highlight/transpose/filter/sort/wrap），形成可測試、可重用的演算層。
 
 ---
 
@@ -453,6 +461,8 @@ scripts/
 ---
 
 ### Phase 4: Extract Renderer Layer — `zentable/output/` (P1)
+
+> 中文說明：將 ASCII/CSS/PIL 渲染細節拆模組，保留輸出行為一致，降低渲染回歸風險。
 
 ---
 
@@ -741,6 +751,8 @@ scripts/
 
 ### Phase 5: Refactor Orchestration (P2)
 
+> 中文說明：把 `main()` 瘦身成流程編排器，CLI 介面不變，細節改由模組負責。
+
 ---
 
 #### T-500: Slim down `main()` — import from modules
@@ -767,6 +779,8 @@ scripts/
 ---
 
 ### Phase 6: Cleanup (P2)
+
+> 中文說明：封存死碼、移除重複實作、更新文件，完成收尾並維持長期可維護性。
 
 ---
 
