@@ -37,6 +37,13 @@ import time
 import unicodedata
 from typing import Dict, Any, List, Callable, Optional, Tuple
 from dataclasses import dataclass
+from zentable.util.text import (
+    is_emoji,
+    is_emoji_modifier_or_joiner,
+    replace_color_circles,
+    split_text_by_font,
+)
+from zentable.util.color import parse_color, hex_rgb, _hex_to_chrome_bg
 
 # =============================================================================
 # ASCII RENDERER
@@ -796,19 +803,6 @@ def crop_to_content_height(png_path: str, transparent: bool = False, tolerance: 
         return False
 
 
-def _hex_to_chrome_bg(hex_color: str) -> str:
-    """將 #RRGGBB 或 #RRGGBBAA 轉為 Chrome --default-background-color 格式（8 位 RRGGBBAA）"""
-    h = hex_color.lstrip('#')
-    if len(h) == 6:
-        return h + 'FF'
-    if len(h) == 8:
-        return h
-    return '000000FF'
-
-LAST_CSS_RENDER_MS = None
-LAST_CSS_VIEWPORT = None
-
-
 def render_css(html: str, output_path: str, transparent: bool = False, html_dir: str = None,
                viewport_width: int = None, viewport_height: int = None, bg_color: str = None,
                skip_crop: bool = False) -> bool:
@@ -1029,7 +1023,6 @@ def measure_dom_overflow(html: str, html_dir: str, viewport_width: int, viewport
                 os.remove(html_file)
         except Exception:
             pass
-
 
 
 def _parse_font_size_px(style_str: str, default: int = 14) -> int:
@@ -1410,46 +1403,6 @@ class PILStyle:
     alt_row_color: str = "#16213e"
     border_color: str = "#4a5568"
 
-def parse_color(c):
-    """解析顏色格式：#RRGGBB、#RRGGBBAA、rgba(r,g,b,a)"""
-    c = c.strip()
-    
-    # rgba(r,g,b,a) 格式
-    if c.startswith('rgba('):
-        parts = c[5:-1].split(',')
-        if len(parts) == 4:
-            r = int(parts[0].strip())
-            g = int(parts[1].strip())
-            b = int(parts[2].strip())
-            a = float(parts[3].strip())
-            return (r, g, b, int(a * 255))
-    
-    # #RRGGBBAA 格式
-    if c.startswith('#') and len(c) == 9:
-        c = c.lstrip('#')
-        return tuple(int(c[i:i+2], 16) for i in (0, 2, 4, 6))
-    
-    # #RRGGBB 格式
-    if c.startswith('#') and len(c) == 7:
-        c = c.lstrip('#')
-        return tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
-    
-    # #RGB 格式
-    if c.startswith('#') and len(c) == 4:
-        c = c.lstrip('#')
-        return tuple(int(c[i]*2, 16) for i in (0, 1, 2))
-    
-    raise ValueError(f"Unknown color format: {c}")
-
-def hex_rgb(c):
-    """向下相容：返回 RGB 元組"""
-    color = parse_color(c)
-    return color[:3]  # 忽略 alpha
-
-# =============================================================================
-# MIXED FONT RENDERER (中文 + Emoji)
-# =============================================================================
-
 # 字體路徑（依優先順序，多路徑以支援不同發行版）
 FONT_CJK = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 FONT_CJK_LIST = [
@@ -1460,7 +1413,6 @@ FONT_CJK_LIST = [
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
-# Emoji 字體：優先彩色 Noto Color Emoji，備援 Symbola / DejaVu / Liberation（多路徑以支援不同發行版）
 FONT_EMOJI_LIST = [
     "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
     "/usr/share/fonts/google-noto-emoji/NotoColorEmoji.ttf",
@@ -1478,7 +1430,7 @@ FONT_EMOJI_LIST = [
 
 # 載入字體快取
 _font_cache = {}
-_emoji_font_available = None  # 快取可用的 emoji 字體
+_emoji_font_available = None
 
 def get_font_cjk(size=16):
     """取得中文字體（多路徑嘗試，避免單一路徑不存在導致文字不顯示）"""
@@ -2089,114 +2041,6 @@ def render_ascii_blueprint_pil(blueprint: dict, out_png_path: str, unit_px: int 
     except Exception as e:
         return None, f"PIL 儲存失敗: {e}"
     return out_png_path, warning
-
-def is_emoji_modifier_or_joiner(char):
-    """判斷是否為 emoji 修飾符或連接符（應與前一個 emoji 同一區段、用同一字型繪製）"""
-    code = ord(char)
-    if code == 0xFE0F:  # Variation Selector-16 (emoji style)
-        return True
-    if code == 0x200D:  # ZWJ (Zero Width Joiner)，用於組合 emoji
-        return True
-    if 0x1F3FB <= code <= 0x1F3FF:  # 膚色修飾
-        return True
-    if 0x1F9B0 <= code <= 0x1F9B3:   # 髮色修飾
-        return True
-    if 0xFE00 <= code <= 0xFE0F:     # 其他 variation selector
-        return True
-    return False
-
-
-def is_emoji(char):
-    """判斷是否為 Emoji（需用支援 emoji 的字型繪製）"""
-    # 顏色圈支援度不統一，統一替換為文字
-    color_circles = {
-        '🟢': '(綠)', '🟡': '(黃)', '🔴': '(紅)', '🟠': '(橙)',
-        '🔵': '(藍)', '⚫': '(黑)', '⚪': '(白)', '🟣': '(紫)',
-        '🟤': '(棕)', '🟣': '(紫)', '🟡': '(黃)'
-    }
-    if char in color_circles:
-        return 'special'
-    code = ord(char)
-    # 修飾/連接符單獨出現時不當作 emoji 起點，由 split_text_by_font 併入前段
-    if is_emoji_modifier_or_joiner(char):
-        return False
-    # Emoji Unicode 範圍（涵蓋常見符號與圖形）
-    emoji_ranges = [
-        (0x2600, 0x26FF),     # 雜項符號
-        (0x2700, 0x27BF),     # 裝飾字母
-        (0x1F300, 0x1F5FF),   # 符號和圖形
-        (0x1F600, 0x1F64F),   # 笑臉與情感
-        (0x1F680, 0x1F6FF),   # 交通和地圖
-        (0x1F1E0, 0x1F1FF),   # 國旗
-        (0x1F900, 0x1F9FF),   # 補充符號與圖形
-        (0x1FA00, 0x1FA6F),   # 象棋等
-        (0x1FA70, 0x1FAFF),   # 擴展 A
-        (0x203C, 0x203C), (0x2049, 0x2049), (0x2122, 0x2122), (0x2139, 0x2139),
-        (0x2194, 0x2199), (0x21A9, 0x21AA), (0x231A, 0x231B), (0x23E9, 0x23F3),
-        (0x23F8, 0x23FA), (0x25AA, 0x25AB), (0x25B6, 0x25B6), (0x25C0, 0x25C0),
-        (0x25FB, 0x25FE), (0x2614, 0x2615), (0x2648, 0x2653), (0x267F, 0x267F),
-        (0x2693, 0x2693), (0x26A1, 0x26A1), (0x26AA, 0x26AB), (0x26BD, 0x26BE),
-        (0x26C4, 0x26C5), (0x26CE, 0x26CE), (0x26D4, 0x26D4), (0x26EA, 0x26EA),
-        (0x26F2, 0x26F3), (0x26F5, 0x26F5), (0x26FA, 0x26FA), (0x26FD, 0x26FD),
-        (0x2702, 0x2702), (0x2705, 0x2705), (0x2708, 0x270D), (0x270F, 0x270F),
-        (0x2712, 0x2712), (0x2714, 0x2714), (0x2716, 0x2716), (0x271D, 0x271D),
-        (0x2721, 0x2721), (0x2728, 0x2728), (0x2733, 0x2734), (0x2744, 0x2744),
-        (0x2747, 0x2747), (0x274C, 0x274C), (0x274E, 0x274E), (0x2753, 0x2755),
-        (0x2757, 0x2757), (0x2763, 0x2764), (0x2795, 0x2797), (0x27A1, 0x27A1),
-        (0x27B0, 0x27B0), (0x27BF, 0x27BF), (0x2934, 0x2935), (0x2B05, 0x2B07),
-        (0x2B1B, 0x2B1C), (0x2B50, 0x2B50), (0x2B55, 0x2B55), (0x3030, 0x3030),
-        (0x303D, 0x303D), (0x3297, 0x3297), (0x3299, 0x3299),
-    ]
-    for start, end in emoji_ranges:
-        if start <= code <= end:
-            return True
-    if char in "🀀🌐🎉✨💯✅❌⚠️📦🖥️💰📊🔄🔗🎨⚡🔧🛠️":
-        return True
-    return False
-
-def replace_color_circles(text):
-    """替換顏色圈為文字（Symbola 不支援彩色圓形）"""
-    color_circles = {
-        '🟢': '(綠)', '🟡': '(黃)', '🔴': '(紅)', '🟠': '(橙)',
-        '🔵': '(藍)', '⚫': '(黑)', '⚪': '(白)', '🟣': '(紫)',
-        '🟤': '(棕)', '🟥': '(紅方)', '🟧': '(橙方)', '🟨': '(黃方)',
-        '🟩': '(綠方)', '🟦': '(藍方)', '🟪': '(紫方)', '🟫': '(棕方)',
-        '⬛': '(黑方)', '⬜': '(白方)'
-    }
-    for emoji, replacement in color_circles.items():
-        text = text.replace(emoji, replacement)
-    return text
-
-def split_text_by_font(text):
-    """將文字分段，返回 [(文字, 字體類型), ...]。Emoji 修飾符/ZWJ 會併入前一個 emoji 區段，整段用 emoji 字型繪製。"""
-    text = replace_color_circles(str(text))
-    segments = []
-    current_type = None
-    current_text = ""
-
-    for char in text:
-        # 若目前是 emoji 區段，且此字為修飾符/連接符，一律併入同一區段（用 emoji 字型畫整段）
-        if current_type == "emoji" and is_emoji_modifier_or_joiner(char):
-            current_text += char
-            continue
-        char_type = is_emoji(char)
-        if char_type == "special":
-            char_type = "cjk"
-        elif char_type is True:
-            char_type = "emoji"
-        if current_type not in (None, char_type):
-            if current_text:
-                segments.append((current_text, current_type))
-            current_type = char_type
-            current_text = char
-        else:
-            if current_type is None:
-                current_type = char_type
-            current_text += char
-
-    if current_text:
-        segments.append((current_text, current_type))
-    return segments
 
 def measure_text_width(text: str, font_size: int) -> int:
     """使用混合字體測量文字寬度（不繪製）"""
@@ -3370,6 +3214,7 @@ def main():
         print('  --asc           升序（預設）')
         print('  --desc          降序')
         print('  --f / --filter  過濾（例：col:!備註,附件；row:狀態!=停用；row:分數>=60;等級 in 甲|乙）')
+        print('  --both / --bo   除 PNG 外同時輸出 ASCII（同主檔名 .txt）')
         print("\n可用主題 (themes/css/):", ', '.join(list_themes_in_dir('css')) or '(無)')
         print("可用主題 (themes/pil/):", ', '.join(list_themes_in_dir('pil')) or '(無)')
         print("可用主題 (themes/text/):", ', '.join(list_themes_in_dir('text')) or '(無)')
@@ -3385,6 +3230,7 @@ def main():
     theme_name = "default_dark"
     custom_params = {}
     output_ascii = None  # 如果指定則輸出 ASCII 到檔案
+    output_both = False  # --both/--bo：除 PNG 外同時輸出 ASCII
     calibration_json = None  # 字元寬度校準數據
     page = 1
     page_spec = None
@@ -3450,6 +3296,8 @@ def main():
                 print("⚠️  無效的 params JSON", file=sys.stderr)
         elif arg == "--output-ascii" and i + 1 < len(sys.argv):
             output_ascii = sys.argv[i + 1]
+        elif arg == "--both" or arg == "--bo":
+            output_both = True
         elif arg == "--transparent":
             pass  # 在下方用 transparent_flag 累加
         elif (arg == "--page" or arg == "--p") and i + 1 < len(sys.argv):
@@ -3567,7 +3415,11 @@ def main():
         bg_color = bg_mode
     else:
         bg_color = None
-    
+
+    # --both/--bo：除 PNG 外同時輸出 ASCII，若未指定 --output-ascii 則由主輸出路徑衍生
+    if output_both and not output_ascii:
+        output_ascii = os.path.splitext(output_file)[0] + '.txt'
+
     data = load_json(data_file)
     
     # 從數據中提取自定義參數（gentable_pil.php 傳入）
@@ -4116,6 +3968,23 @@ def main():
                 pass
 
             print(f"✅ 已保存: {output_file}")
+            if output_ascii:
+                try:
+                    theme_text = get_theme(theme_name, 'text')
+                    theme_params = (theme_text or {}).get("params") or {}
+                    merged_ascii = {**(theme_params or {}), **(custom_params or {})}
+                    ascii_style_both = ASCIIStyle(
+                        border_style=merged_ascii.get("style", "double"),
+                        padding=int(merged_ascii.get("padding", 2)),
+                        align=merged_ascii.get("align", "left"),
+                        header_align=merged_ascii.get("header_align", "center"),
+                    )
+                    ascii_out = render_ascii(data, theme_text, style=ascii_style_both, calibration=None, debug_details=None)
+                    with open(output_ascii, 'w', encoding='utf-8') as f:
+                        f.write(ascii_out)
+                    print(f"✅ 已保存: {output_ascii}")
+                except Exception as e:
+                    print(f"⚠️  both 模式寫入 ASCII 失敗: {e}", file=sys.stderr)
         else:
             print("❌ CSS 渲染失敗")
             sys.exit(1)
@@ -4167,6 +4036,23 @@ def main():
 
         if os.path.exists(output_file):
             print(f"✅ 已保存: {output_file}")
+            if output_ascii:
+                try:
+                    theme_text = get_theme(theme_name, 'text')
+                    theme_params = (theme_text or {}).get("params") or {}
+                    merged_ascii = {**(theme_params or {}), **(custom_params or {})}
+                    ascii_style_both = ASCIIStyle(
+                        border_style=merged_ascii.get("style", "double"),
+                        padding=int(merged_ascii.get("padding", 2)),
+                        align=merged_ascii.get("align", "left"),
+                        header_align=merged_ascii.get("header_align", "center"),
+                    )
+                    ascii_out = render_ascii(data, theme_text, style=ascii_style_both, calibration=None, debug_details=None)
+                    with open(output_ascii, 'w', encoding='utf-8') as f:
+                        f.write(ascii_out)
+                    print(f"✅ 已保存: {output_ascii}")
+                except Exception as e:
+                    print(f"⚠️  both 模式寫入 ASCII 失敗: {e}", file=sys.stderr)
         else:
             print("❌ PIL 渲染失敗")
             sys.exit(1)
