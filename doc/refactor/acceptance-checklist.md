@@ -54,7 +54,7 @@
 - [x] `python3 -m py_compile scripts/zentable/output/ascii/charwidth.py`
 - [x] `python3 -m py_compile scripts/zentable/output/ascii/renderer.py`
 - [x] `python3 -m py_compile scripts/zentable/output/css/crop.py`
-- [ ] `python3 -m py_compile scripts/zentable/output/css/chrome.py`
+- [x] `python3 -m py_compile scripts/zentable/output/css/chrome.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/css/viewport.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/css/renderer.py`
 - [ ] `python3 -m py_compile scripts/zentable/output/pil/font.py`
@@ -67,7 +67,7 @@
 
 - [ ] `wc -l scripts/zeble_render.py` ≤ 1,000
 - [ ] `python3 -m py_compile scripts/zeble_render.py`
-- [ ] `bash tests/golden/run_golden.sh` exits 0
+- [x] `bash tests/golden/run_golden.sh` exits 0
 
 ### Wave 6: Cleanup
 
