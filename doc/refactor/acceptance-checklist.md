@@ -38,16 +38,16 @@
 
 ### Wave 3: Engine Layer
 
-- [ ] `python3 -m py_compile scripts/zentable/transform/cell.py`
-- [ ] `python3 -m py_compile scripts/zentable/transform/highlight.py`
-- [ ] `python3 -m py_compile scripts/zentable/transform/transpose.py`
-- [ ] `python3 -m py_compile scripts/zentable/transform/filter.py`
-- [ ] `python3 -m py_compile scripts/zentable/transform/sort_page.py`
-- [ ] `python3 -m py_compile scripts/zentable/transform/wrap.py`
-- [ ] `python3 -c "from zentable.transform.cell import normalize_cell, cell_text, _row_cells"` (from scripts/ dir)
-- [ ] `python3 -c "from zentable.transform.filter import apply_filters"` (from scripts/ dir)
-- [ ] `python3 -c "from zentable.transform.sort_page import apply_sort_and_page"` (from scripts/ dir)
-- [ ] `bash tests/golden/run_golden.sh` exits 0
+- [x] `python3 -m py_compile scripts/zentable/transform/cell.py`
+- [x] `python3 -m py_compile scripts/zentable/transform/highlight.py`
+- [x] `python3 -m py_compile scripts/zentable/transform/transpose.py`
+- [x] `python3 -m py_compile scripts/zentable/transform/filter.py`
+- [x] `python3 -m py_compile scripts/zentable/transform/sort_page.py`
+- [x] `python3 -m py_compile scripts/zentable/transform/wrap.py`
+- [x] `python3 -c "from zentable.transform.cell import normalize_cell, cell_text, _row_cells"` (from scripts/ dir)
+- [x] `python3 -c "from zentable.transform.filter import apply_filters"` (from scripts/ dir)
+- [x] `python3 -c "from zentable.transform.sort_page import apply_sort_and_page"` (from scripts/ dir)
+- [x] `bash tests/golden/run_golden.sh` exits 0
 
 ### Wave 4: Renderer Layer
 
