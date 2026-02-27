@@ -45,6 +45,14 @@ async def lifespan(app: FastAPI):
             ocr=True,
             layout=True,
             recovery=False,
+            # safer CPU path for hosts that hit SIGILL in IR optimization
+            ir_optim=False,
+            use_angle_cls=False,
+            enable_mkldnn=False,
+            cpu_threads=4,
+            # avoid SVTR_LCNet path that often triggers SelfAttentionFusePass issues
+            ocr_version="PP-OCRv2",
+            rec_algorithm="CRNN",
         )
     except Exception as e:
         _engine_err = str(e)
