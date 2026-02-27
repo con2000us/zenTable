@@ -1,5 +1,5 @@
 ---
-name: zenbleTable
+name: zentable
 description: "Render structured table data as high-quality PNG images using Headless Chrome. Use when: need to visualize tabular data for chat interfaces, reports, or social media. NOT for: simple text tables that don't need visualization."
 homepage: ~/.openclaw/custom-skills/zentable/SKILL.md
 metadata: 
@@ -66,6 +66,7 @@ allowed-tools: ["exec", "read", "write"]
 | `--smart-wrap` | `smart_wrap` | 明確設為 `true` | `--smart-wrap`（可省略；renderer 預設開） |
 | `--no-smart-wrap` / `--nosw` | `smart_wrap` | 設為 `false` | `--no-smart-wrap` |
 | `--theme NAME` / `-t NAME` | `theme` | 主題名稱字串 | `--theme NAME` |
+| `--both` / `--bo` | `output_both` | 布林；除 PNG 外同時輸出 ASCII（同主檔名 .txt） | `--both` |
 
 `page_spec` 展開規則（Agent 端）：
 
@@ -89,7 +90,8 @@ Canonical 結構建議（Agent 內部）：
   "sort_default_dir": "asc",
   "filters": ["col:!備註,附件", "row:狀態!=停用;分數>=60"],
   "text_scale": "auto",
-  "smart_wrap": true
+  "smart_wrap": true,
+  "output_both": false
 }
 ```
 
@@ -219,6 +221,17 @@ python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --so
 python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --f "col:!備註,附件" --f "row:狀態!=停用;分數>=60"
 ```
 
+範例 7：同時輸出 PNG 與 ASCII（both）
+
+- 使用者語法糖：`Zx --both` 或 `Zx --bo -t mobile_chat`
+- canonical：`"output_both": true`
+- renderer 呼叫：主輸出為 PNG，另產出同檔名副檔名 `.txt` 的 ASCII 表格。
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --theme mobile_chat --both
+# 產出 /tmp/out.png 與 /tmp/out.txt
+```
+
 
 ### 基礎呼叫
 
@@ -236,6 +249,7 @@ echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.
 | `--sort` | 排序欄位規格 | 單鍵：`欄位`；多鍵：`欄位A>欄位B` 或 `欄位A:desc,欄位B:asc` |
 | `--asc` / `--desc` | 排序方向 | 作為未指定方向欄位的預設方向 |
 | `--f` / `--filter` | 欄位/列過濾 | 例：`col:!備註,附件`、`row:狀態!=停用;分數>=60` |
+| `--both` / `--bo` | 同時輸出 ASCII | 除 PNG 外另產出同主檔名之 `.txt` |
 | `--no-smart-wrap` / `--nosw` | 關閉智慧換行（保留原始文字斷句） | 二選一即可 |
 
 ### JSON 資料格式

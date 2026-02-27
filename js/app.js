@@ -58,10 +58,10 @@ async function loadThemeTemplate(themeId) {
     return null;
 }
 
-const COOKIE_KEY = 'zenTable_settings';
-const STAGE1_PIL_COOKIE_KEY = 'zenTable_stage1PilPreview';
+const COOKIE_KEY = 'zentable_settings';
+const STAGE1_PIL_COOKIE_KEY = 'zentable_stage1PilPreview';
 const COOKIE_DAYS = 365;
-const BACKEND_CAL_CONTROLS_KEY = 'zenTable_backend_cal_controls';
+const BACKEND_CAL_CONTROLS_KEY = 'zentable_backend_cal_controls';
 function getSettingsStorage() {
     let fromLocal = null;
     let fromCookie = null;
@@ -91,7 +91,7 @@ function setSettingsStorage(value) {
     }
     setCookie(COOKIE_KEY, value, COOKIE_DAYS);
 }
-const CAL_TABLE_CONTROLS_KEY = 'zenTable_cal_table_controls';
+const CAL_TABLE_CONTROLS_KEY = 'zentable_cal_table_controls';
 function getCookie(name) {
     const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
     return m ? decodeURIComponent(m[2]) : null;

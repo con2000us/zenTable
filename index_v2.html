@@ -127,12 +127,12 @@
         }
         
         function saveCustomTheme() {
-            localStorage.setItem('zeble_custom_theme', JSON.stringify(themes[currentTheme]));
+            localStorage.setItem('zentable_custom_theme', JSON.stringify(themes[currentTheme]));
             alert('已儲存');
         }
         
         function loadCustomTheme() {
-            var saved = localStorage.getItem('zeble_custom_theme');
+            var saved = localStorage.getItem('zentable_custom_theme');
             if (saved) {
                 themes[currentTheme] = JSON.parse(saved);
                 updateThemePreview();

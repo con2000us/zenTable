@@ -5,17 +5,18 @@ Goal: Continue canonical naming convergence to `zentable` while keeping compatib
 
 ## Must-fix (runtime-facing)
 
-- [ ] `index_v2.html`
-  - `zeble_custom_theme` / `zeble_data.json` / `zeble_theme_*` keys + filenames
-- [ ] `js/app.js`
-  - cookie keys still `zenTable_*` (decide: keep as compatibility or migrate with fallback read)
-  - comments mention `zeble_render`
+- [x] `index_v2.html`
+  - migrated to `zentable_custom_theme` / `zentable_data.json` / `zentable_theme_*`
+- [x] `js/app.js`
+  - migrated cookie/local keys to `zentable_*`
+  - remaining comment-level wording cleanup can continue in docs sweep
 - [ ] `gentable_export.php`, `gentable.php`, `gentable_*`
   - legacy `/zenTable/` URL path usage (keep or alias route?)
 - [ ] `api/render_api.py`
   - comments and error text still mention zeble naming in places
-- [ ] `skills/zentable/SKILL.md`
-  - metadata `name: zenbleTable` (decide migration policy with skill compatibility)
+- [x] `skills/zentable/SKILL.md`
+  - metadata name migrated to `name: zentable`
+  - alias policy kept in documentation
 
 ## Should-fix (docs / consistency)
 
