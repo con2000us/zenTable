@@ -79,6 +79,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $all = collect_md_files($docRoot);
 $list = array_map(fn($p) => rel_path($p, $docRoot), $all);
 
+$focusFile = $docRoot . DIRECTORY_SEPARATOR . 'md_focus.json';
+$focusSet = [];
+if (file_exists($focusFile)) {
+    $rawFocus = @file_get_contents($focusFile);
+    $arr = json_decode($rawFocus ?: '[]', true);
+    if (is_array($arr)) {
+        foreach ($arr as $f) {
+            if (!is_string($f)) continue;
+            $f = str_replace('\\', '/', trim($f));
+            if ($f !== '') $focusSet[$f] = true;
+        }
+    }
+}
+
 $current = $_GET['file'] ?? ($_POST['file'] ?? ($list[0] ?? ''));
 $currentAbs = safe_abs_from_rel($current, $docRoot);
 $currentContent = '';
@@ -107,6 +121,7 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
     .file { display:block; color:#b9c7ea; text-decoration:none; padding:6px 8px; border-radius:8px; margin:2px 0; font-size:13px; }
     .file:hover { background:#1a2850; }
     .file.active { background:#243a74; color:#fff; }
+    .file.focus { outline:1px solid #f6c453; background:#2c2a14; color:#ffe6a3; }
     .main { display:flex; flex-direction:column; min-width:0; }
     .bar { padding:10px 12px; border-bottom:1px solid #25314f; display:flex; gap:10px; align-items:center; background:#0f1830; flex-wrap:wrap; }
     .bar .title { font-weight:600; font-size:14px; }
@@ -135,7 +150,7 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
       <div class="empty">No markdown files found.</div>
     <?php else: ?>
       <?php foreach ($list as $f): ?>
-        <a class="file <?php echo $f === $current ? 'active' : ''; ?>" href="?file=<?php echo urlencode($f); ?>"><?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?></a>
+        <a class="file <?php echo ($focusSet[$f] ?? false) ? 'focus' : ''; ?> <?php echo $f === $current ? 'active' : ''; ?>" href="?file=<?php echo urlencode($f); ?>"><?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?></a>
       <?php endforeach; ?>
     <?php endif; ?>
   </aside>
@@ -167,6 +182,7 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
     <?php endif; ?>
   </section>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
 <script>
 (function () {
   const slider = document.getElementById('fontSize');
@@ -185,23 +201,16 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.md$/i', $current))
     .replace(/>/g, '&gt;');
 
   const renderMd = (src) => {
-    let t = escapeHtml(src || '');
-    t = t.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-    t = t.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
-    t = t.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
-    t = t.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
-    t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
-    t = t.replace(/^>\s?(.+)$/gm, '<blockquote>$1</blockquote>');
-    t = t.replace(/^(?:-\s.+(?:\n|$))+?/gm, (m) => {
-      const items = m.trim().split(/\n/).map(x => x.replace(/^-\s/, '')).map(x => `<li>${x}</li>`).join('');
-      return `<ul>${items}</ul>`;
-    });
-    t = t.replace(/\n{2,}/g, '</p><p>');
-    if (!/^\s*<(h1|h2|h3|pre|ul|blockquote|p)/.test(t)) t = '<p>' + t + '</p>';
-    t = t.replace(/<p>\s*<\/(h1|h2|h3|pre|ul|blockquote)>/g, '</$1>');
-    t = t.replace(/<(h1|h2|h3|pre|ul|blockquote)>\s*<\/p>/g, '<$1>');
-    return t;
+    const text = src || '';
+    if (window.markdownit) {
+      try {
+        const md = window.markdownit({ html: false, linkify: true, breaks: true });
+        return md.render(text);
+      } catch (e) {}
+    }
+    // fallback (very basic)
+    const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return '<pre>' + esc(text) + '</pre>';
   };
 
   const setMode = (mode) => {
