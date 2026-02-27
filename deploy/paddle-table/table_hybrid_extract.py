@@ -40,7 +40,11 @@ def _ocr_json(ocr_url: str, crop_img: Image.Image) -> Dict[str, Any]:
     with tempfile.NamedTemporaryFile(suffix=".png") as tf:
         crop_img.save(tf.name)
         with open(tf.name, "rb") as f:
-            r = requests.post(ocr_url, files={"image": f}, timeout=30)
+            r = requests.post(
+                ocr_url,
+                files={"image": ("crop.png", f, "image/png")},
+                timeout=30,
+            )
         r.raise_for_status()
         return r.json()
 
