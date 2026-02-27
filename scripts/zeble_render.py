@@ -60,6 +60,11 @@ from zentable.transform.transpose import transpose_table
 from zentable.transform.filter import _split_csv, _header_index_map, _find_header_idx, _parse_row_filter_condition, _parse_filter_specs, apply_filters
 from zentable.transform.sort_page import ROWS_PER_PAGE, _parse_page_spec, _resolve_page_list, _page_output_path, _try_sort_numeric, _parse_sort_specs, apply_sort_and_page
 from zentable.transform.wrap import _smart_wrap_text, apply_smart_wrap
+from zentable.output.ascii.charwidth import (
+    _is_zero_width, _classify_char, _clamp_width,
+    char_display_width, display_width, _space_width,
+    calculate_column_widths, align_text,
+)
 
 # =============================================================================
 # ASCII RENDERER
@@ -112,138 +117,6 @@ ASCII_STYLES = {
     }
 }
 
-def _is_zero_width(ch):
-    """判斷字元是否為零寬度（不佔顯示空間）。"""
-    cp = ord(ch)
-    if cp in (0x200B, 0x200C, 0x200D, 0xFEFF, 0x00AD):
-        return True
-    if 0xFE00 <= cp <= 0xFE0F:
-        return True
-    if 0xE0100 <= cp <= 0xE01EF:
-        return True
-    cat = unicodedata.category(ch)
-    if cat in ('Mn', 'Me'):
-        return True
-    return False
-
-def _classify_char(ch):
-    """將字元分類為 ascii/cjk/box/half_space/full_space/emoji 之一。"""
-    cp = ord(ch)
-    if 0x2500 <= cp <= 0x257F or 0x2580 <= cp <= 0x259F:
-        return 'box'
-    if cp == 0x3000:
-        return 'full_space'
-    if cp in (0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2009, 0x200A):
-        return 'half_space'
-    if (0x1F300 <= cp <= 0x1F9FF or 0x2600 <= cp <= 0x27BF or
-        0x2B50 <= cp <= 0x2B55 or 0x23E9 <= cp <= 0x23FA or
-        0x1FA00 <= cp <= 0x1FA6F or 0x1FA70 <= cp <= 0x1FAFF):
-        return 'emoji'
-    eaw = unicodedata.east_asian_width(ch)
-    if eaw in ('W', 'F'):
-        return 'cjk'
-    return 'ascii'
-
-def _clamp_width(w):
-    """校準寬度的安全處理：轉成 float，並把負值夾成 0。"""
-    try:
-        fw = float(w)
-    except Exception:
-        return None
-    return 0.0 if fw < 0 else fw
-
-def char_display_width(ch, calibration=None):
-    """取得單一字元的顯示寬度（浮點數）。
-    有校準時回傳浮點值（如 1.742），無校準時回傳整數（1 或 2）。
-    calibration 格式: {ascii:1, cjk:2, box:1, emoji:2, custom:{char:width}, ...}
-    """
-    if _is_zero_width(ch):
-        # 零寬字元（如 VS16 / ZWJ / combining marks）一律視為 0，
-        # 校準資料若出現負值或微幅修正，這裡也不要讓它影響排版。
-        return 0.0
-    if ch == ' ':
-        return _space_width(calibration)
-    if calibration:
-        custom = calibration.get('custom') if isinstance(calibration, dict) else None
-        if custom and ch in custom:
-            cw = _clamp_width(custom[ch])
-            if cw is not None:
-                return cw
-        cat = _classify_char(ch)
-        if isinstance(calibration, dict) and cat in calibration:
-            kw = _clamp_width(calibration[cat])
-            if kw is not None:
-                return kw
-    cat = _classify_char(ch)
-    if cat == 'emoji':
-        return 2
-    if cat == 'full_space':
-        return 2
-    eaw = unicodedata.east_asian_width(ch)
-    if eaw in ('W', 'F'):
-        return 2
-    return 1
-
-def display_width(text, calibration=None):
-    """計算字串的顯示寬度（有校準時為浮點數）。
-
-    若字串包含換行，採用「最寬那一行」作為 cell 寬度（符合表格排版邏輯）。
-    """
-    s = str(text)
-    if "\n" in s:
-        lines = s.splitlines() or [""]
-        return max(sum(char_display_width(ch, calibration) for ch in line) for line in lines)
-    return sum(char_display_width(ch, calibration) for ch in s)
-
-def _space_width(calibration=None):
-    """取得空格字元（U+0020）的校準寬度。
-
-    注意：前端/校準輸出的 `half_space` 通常代表「一般空白」的寬度，
-    因此這裡優先使用 `half_space`，其次才是 `ascii`。
-    """
-    if calibration:
-        custom = calibration.get('custom') if isinstance(calibration, dict) else None
-        if custom and ' ' in custom:
-            cw = _clamp_width(custom[' '])
-            if cw is not None:
-                return cw
-        if isinstance(calibration, dict) and 'half_space' in calibration:
-            hw = _clamp_width(calibration['half_space'])
-            if hw is not None:
-                return hw
-        if isinstance(calibration, dict) and 'ascii' in calibration:
-            aw = _clamp_width(calibration['ascii'])
-            if aw is not None:
-                return aw
-    return 1.0
-
-def calculate_column_widths(headers, rows, padding=2, calibration=None):
-    """計算每列最大顯示寬度（浮點數）。padding 以空格字元寬度為單位累加。支援 row 為 list 或 {cells}。"""
-    sw = _space_width(calibration)
-    widths = [display_width(str(h), calibration) for h in headers]
-    for row in rows:
-        for i, cell in enumerate(_row_cells(row)):
-            if i < len(widths):
-                widths[i] = max(widths[i], display_width(cell_text(cell), calibration))
-    return [w + padding * 2 * sw for w in widths]
-
-def align_text(text, target_width, align="left", calibration=None):
-    """對齊文字：用浮點寬度計算需要多少個空格來補齊。"""
-    text = str(text)
-    dw = display_width(text, calibration)
-    sw = _space_width(calibration)
-    if sw <= 0:
-        sw = 1.0
-    pad_count = max(0, round((target_width - dw) / sw))
-    if align == "right":
-        return ' ' * pad_count + text
-    elif align == "center":
-        left = pad_count // 2
-        right = pad_count - left
-        return ' ' * left + text + ' ' * right
-    else:  # left
-        return text + ' ' * pad_count
-
 def render_ascii(data: dict, theme: dict = None, style: ASCIIStyle = None,
                   calibration: dict = None, debug_details: dict = None) -> str:
     """使用 ASCII 渲染表格，主題來自 themes/text/<name>/template.json 的 params。
@@ -275,7 +148,7 @@ def render_ascii(data: dict, theme: dict = None, style: ASCIIStyle = None,
     footer = data.get("footer", "")
     
     # 計算每欄最小內容寬度（浮點值）
-    raw_widths = calculate_column_widths(headers, rows, style.padding, cal)
+    raw_widths = calculate_column_widths(headers, rows, style.padding, cal, row_cells_fn=_row_cells, cell_text_fn=cell_text)
     
     # 獲取框線樣式
     s = ASCII_STYLES.get(style.border_style, ASCII_STYLES["double"])
