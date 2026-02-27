@@ -12,7 +12,8 @@
 
 | 檔案 | 原位置 | 說明 |
 |---|---|---|
-| `zeble.py` | `doc/zeble.py` | 舊版渲染腳本副本（非執行入口） |
+| `zeble.py` | `scripts/zeble.py` | legacy PIL 渲染入口（已棄用並封存） |
+| `doc_zeble.py` | `doc/zeble.py` | 文件目錄中的舊版副本 |
 | `zeble_render.py` | `doc/zeble_render.py` | 舊版 render 主流程快照 |
 | `zentable_render.py` | `doc/zentable_render.py` | 早期版本快照 |
 | `table_detect.py` | `doc/table_detect.py` | 舊版 table detect 腳本 |

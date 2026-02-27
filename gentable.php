@@ -17,6 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Deprecated endpoint notice (legacy zeble.py pipeline archived)
+echo json_encode([
+    'success' => false,
+    'deprecated' => true,
+    'error' => 'gentable.php 已棄用：legacy zeble.py/zentable.py pipeline 已封存。請改用 gentable_pil.php、gentable_css.php 或 gentable_ascii.php。'
+], JSON_UNESCAPED_UNICODE);
+exit;
+
 // 獲取資料
 $jsonData = $_POST['data'] ?? '';
 $theme = $_POST['theme'] ?? 'dark';
