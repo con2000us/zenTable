@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OpenClaw custom-skill renderer shim for ZenbleTable.
+"""OpenClaw custom-skill renderer shim for ZenTable.
 
 This repository contains the full ZenTable project under /var/www/html/zenTable.
 The OpenClaw skill docs expect a lightweight renderer at:
@@ -15,8 +15,8 @@ Interface (kept compatible with the SKILL.md examples):
 
 Implementation:
   - CSS themes (mobile_chat, minimal_ios, bubble_card, modern_line, compact_clean)
-    render via scripts/zeble_render.py --force-css.
-  - default_light/default_dark render via scripts/zeble_render.py --force-pil
+    render via scripts/zentable_render.py --force-css.
+  - default_light/default_dark render via scripts/zentable_render.py --force-pil
     using the bundled theme zip.
 
 Notes:
@@ -27,8 +27,10 @@ Notes:
 from __future__ import annotations
 
 import argparse
+import math
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,6 +42,7 @@ ZEN_ROOT = Path("/var/www/html/zenTable")
 ZEBLE_RENDER = ZEN_ROOT / "skills" / "zentable" / "zentable_renderer.py"
 THEMES_CSS = ZEN_ROOT / "themes" / "css"
 THEMES_PIL_ZIP = ZEN_ROOT / "themes" / "pil"
+DEFAULT_ROWS_PER_PAGE = 15
 
 def _discover_css_themes() -> set[str]:
     themes: set[str] = set()
@@ -81,6 +84,94 @@ def _write_temp_json(data_str: str, tmpdir: Path) -> Path:
     p = tmpdir / "data.json"
     p.write_text(data_str, encoding="utf-8")
     return p
+
+
+def _count_rows(data_obj: object) -> int:
+    """Count logical rows for pagination estimation."""
+    if isinstance(data_obj, list):
+        return len(data_obj)
+    if isinstance(data_obj, dict):
+        rows = data_obj.get("rows")
+        if isinstance(rows, list):
+            return len(rows)
+    return 0
+
+
+def _parse_page_spec(spec: str) -> tuple[str, int, int | None]:
+    """
+    Parse page spec into:
+      ("single", n, None)
+      ("range", a, b)
+      ("from", a, None)
+      ("all", 1, None)
+    """
+    s = (spec or "").strip().lower()
+    if not s:
+        return ("single", 1, None)
+    if s == "all":
+        return ("all", 1, None)
+    if re.fullmatch(r"\d+", s):
+        n = max(1, int(s))
+        return ("single", n, None)
+    m = re.fullmatch(r"(\d+)-(\d+)", s)
+    if m:
+        a = max(1, int(m.group(1)))
+        b = max(1, int(m.group(2)))
+        if a > b:
+            raise SystemExit(f"Invalid --page range '{spec}': start must be <= end")
+        return ("range", a, b)
+    m = re.fullmatch(r"(\d+)-", s)
+    if m:
+        a = max(1, int(m.group(1)))
+        return ("from", a, None)
+    raise SystemExit(
+        f"Invalid --page '{spec}'. Supported: N, A-B, A-, all"
+    )
+
+
+def _resolve_pages(
+    total_pages: int,
+    page_spec: str | None,
+    use_all: bool,
+    default_cap: int = 3,
+) -> tuple[list[int], bool]:
+    """
+    Return (pages, truncated_by_default_cap).
+    """
+    total_pages = max(1, int(total_pages))
+    if use_all:
+        return (list(range(1, total_pages + 1)), False)
+
+    if page_spec is None:
+        pages = list(range(1, min(default_cap, total_pages) + 1))
+        return (pages, total_pages > default_cap)
+
+    kind, a, b = _parse_page_spec(page_spec)
+    if kind == "all":
+        return (list(range(1, total_pages + 1)), False)
+    if kind == "single":
+        if a > total_pages:
+            raise SystemExit(f"--page {a} exceeds total pages ({total_pages})")
+        return ([a], False)
+    if kind == "range":
+        if a > total_pages:
+            raise SystemExit(f"--page {a}-{b} exceeds total pages ({total_pages})")
+        return (list(range(a, min(b, total_pages) + 1)), False)
+    # kind == "from"
+    if a > total_pages:
+        raise SystemExit(f"--page {a}- exceeds total pages ({total_pages})")
+    return (list(range(a, total_pages + 1)), False)
+
+
+def _output_for_page(output_path: str, page: int, pages: list[int]) -> str:
+    """Keep original path for single page; suffix .pN for multi-page output."""
+    if len(pages) == 1:
+        return output_path
+    p = Path(output_path)
+    suffix = p.suffix
+    if suffix:
+        return str(p.with_name(f"{p.stem}.p{page}{suffix}"))
+    return str(p.with_name(f"{p.name}.p{page}"))
 
 
 def _theme_to_args(theme: str, tmpdir: Path) -> list[str]:
@@ -131,18 +222,27 @@ def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("input", help="JSON file path, or '-' for stdin")
     ap.add_argument("output", help="Output PNG path")
-    ap.add_argument("--theme", default="mobile_chat")
+    ap.add_argument("--theme", "-t", default="mobile_chat")
     ap.add_argument("--transparent", action="store_true")
-    ap.add_argument("--width", type=int, default=None)
-    ap.add_argument("--text-scale", default=None)
+    ap.add_argument("--width", "-w", type=int, default=None)
+    ap.add_argument("--text-scale", "--ts", default=None)
     ap.add_argument("--text-scale-max", type=float, default=None)
     ap.add_argument("--auto-height", action="store_true")
     ap.add_argument("--auto-height-max", type=int, default=None)
     ap.add_argument("--auto-width", action="store_true")
     ap.add_argument("--no-auto-width", action="store_true")
     ap.add_argument("--auto-width-max", type=int, default=None)
-    ap.add_argument("--page", type=int, default=1)
-    ap.add_argument("--per-page", type=int, default=None)
+    ap.add_argument("--page", "--p", default=None,
+                    help="Page spec: N, A-B, A-, or all")
+    ap.add_argument("--all", action="store_true",
+                    help="Equivalent to --page all")
+    ap.add_argument("--per-page", "--pp", type=int, default=None)
+    ap.add_argument("--sort", default=None,
+                    help="Sort spec, e.g. 欄位A or 欄位A>欄位B or 欄位A:desc,欄位B:asc")
+    ap.add_argument("--asc", action="store_true")
+    ap.add_argument("--desc", action="store_true")
+    ap.add_argument("--f", "--filter", action="append", default=[],
+                    help="Filter spec, e.g. col:!備註,附件 or row:狀態!=停用")
     ap.add_argument("--smart-wrap", action="store_true")
     ap.add_argument("--no-smart-wrap", action="store_true")
     ap.add_argument("--nosw", action="store_true")
@@ -156,55 +256,17 @@ def main() -> int:
     if not ZEBLE_RENDER.exists():
         raise SystemExit(f"Missing renderer script: {ZEBLE_RENDER}")
 
-    with tempfile.TemporaryDirectory(prefix="zenbleTable_") as td:
+    with tempfile.TemporaryDirectory(prefix="zentable_") as td:
         tmpdir = Path(td)
 
         data_str = _read_json_input(args.input)
+        data_obj = json.loads(data_str)
         data_json = _write_temp_json(data_str, tmpdir)
 
-        cmd = [sys.executable, str(ZEBLE_RENDER), str(data_json), str(args.output)]
-        cmd += _theme_to_args(args.theme, tmpdir)
-
-        if args.transparent:
-            cmd += ["--transparent"]
-        if args.width is not None:
-            cmd += ["--width", str(args.width)]
-        if args.text_scale is not None:
-            cmd += ["--text-scale", str(args.text_scale)]
-        if args.text_scale_max is not None:
-            cmd += ["--text-scale-max", str(args.text_scale_max)]
-
-        if args.auto_height:
-            cmd += ["--auto-height"]
-        if args.auto_height_max is not None:
-            cmd += ["--auto-height-max", str(args.auto_height_max)]
-
-        if args.auto_width:
-            cmd += ["--auto-width"]
-        if args.no_auto_width:
-            cmd += ["--no-auto-width"]
-        if args.auto_width_max is not None:
-            cmd += ["--auto-width-max", str(args.auto_width_max)]
-
-        if args.page is not None:
-            cmd += ["--page", str(max(1, int(args.page)))]
-        if args.per_page is not None:
-            cmd += ["--per-page", str(max(1, int(args.per_page)))]
-
-        if args.tt:
-            cmd += ["--tt"]
-
-        if args.transpose or args.cc:
-            cmd += ["--transpose"]
-
-        # Smart-wrap: default is ON in renderer; allow explicit on/off passthrough
-        if args.smart_wrap:
-            cmd += ["--smart-wrap"]
-        if args.no_smart_wrap or args.nosw:
-            cmd += ["--no-smart-wrap"]
-
-        if args.verbose:
-            print("Running:", " ".join(cmd), file=sys.stderr)
+        per_page = max(1, int(args.per_page)) if args.per_page is not None else DEFAULT_ROWS_PER_PAGE
+        total_rows = _count_rows(data_obj)
+        total_pages = max(1, int(math.ceil(total_rows / float(per_page)))) if total_rows else 1
+        pages, truncated = _resolve_pages(total_pages, args.page, args.all, default_cap=3)
 
         env = os.environ.copy()
         # Default: prefer CSS render FastAPI (if running). Renderer will fallback to local Chrome on errors.
@@ -214,8 +276,70 @@ def main() -> int:
         else:
             env.setdefault("ZENTABLE_CSS_API_URL", "http://127.0.0.1:8001")
 
-        proc = subprocess.run(cmd, cwd=str(ZEN_ROOT), env=env)
-        return proc.returncode
+        if truncated:
+            remaining = total_pages - len(pages)
+            print(
+                f"[zenTable] Default output limited to first {len(pages)} pages. "
+                f"{remaining} page(s) not rendered. Use --page 4- or --all.",
+                file=sys.stderr,
+            )
+
+        last_code = 0
+        for page in pages:
+            out_path = _output_for_page(args.output, page, pages)
+            cmd = [sys.executable, str(ZEBLE_RENDER), str(data_json), str(out_path)]
+            cmd += _theme_to_args(args.theme, tmpdir)
+
+            if args.transparent:
+                cmd += ["--transparent"]
+            if args.width is not None:
+                cmd += ["--width", str(args.width)]
+            if args.text_scale is not None:
+                cmd += ["--text-scale", str(args.text_scale)]
+            if args.text_scale_max is not None:
+                cmd += ["--text-scale-max", str(args.text_scale_max)]
+
+            if args.auto_height:
+                cmd += ["--auto-height"]
+            if args.auto_height_max is not None:
+                cmd += ["--auto-height-max", str(args.auto_height_max)]
+
+            if args.auto_width:
+                cmd += ["--auto-width"]
+            if args.no_auto_width:
+                cmd += ["--no-auto-width"]
+            if args.auto_width_max is not None:
+                cmd += ["--auto-width-max", str(args.auto_width_max)]
+
+            cmd += ["--page", str(page), "--per-page", str(per_page)]
+            if args.sort:
+                cmd += ["--sort", str(args.sort)]
+            if args.desc:
+                cmd += ["--desc"]
+            elif args.asc:
+                cmd += ["--asc"]
+            for fexpr in (args.f or []):
+                cmd += ["--f", str(fexpr)]
+
+            if args.tt:
+                cmd += ["--tt"]
+            if args.transpose or args.cc:
+                cmd += ["--transpose"]
+
+            # Smart-wrap: default is ON in renderer; allow explicit on/off passthrough
+            if args.smart_wrap:
+                cmd += ["--smart-wrap"]
+            if args.no_smart_wrap or args.nosw:
+                cmd += ["--no-smart-wrap"]
+
+            if args.verbose:
+                print("Running:", " ".join(cmd), file=sys.stderr)
+
+            proc = subprocess.run(cmd, cwd=str(ZEN_ROOT), env=env)
+            last_code = proc.returncode
+            if last_code != 0:
+                return last_code
+        return last_code
 
 
 if __name__ == "__main__":

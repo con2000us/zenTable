@@ -10,7 +10,7 @@ metadata:
 allowed-tools: ["exec", "read", "write"]
 ---
 
-# zenbleTable Skill
+# ZenTable Skill
 
 將結構化表格資料渲染為高品質 PNG 圖片。
 
@@ -47,6 +47,178 @@ allowed-tools: ["exec", "read", "write"]
 - 若要保留原始文字斷句，可加 `--no-smart-wrap`（或 `--nosw`）。
 - 若上下文已有表格主題（例如 skills 清單、參數清單、比較表），直接進行渲染並回傳圖片。
 
+### 語法糖 -> Canonical 參數映射（Agent 規格）
+
+原則：`Zx` 參數可視為 **Agent 語法糖**；同時 `table_renderer.py` 也已支援常用 alias 與 `page_spec` 展開，便於直接呼叫。
+
+| 語法糖（Agent 可讀） | Canonical key（Agent 內部） | 正規化規則 | Renderer 最終參數 |
+|------|------|------|------|
+| `--width N` / `--w N` | `width` | 正整數 | `--width N` |
+| `--transpose` / `--cc` | `transpose` | 布林；任一出現即 `true` | `--transpose` |
+| `--tt` | `keep_theme_alpha` | 布林；保留 theme alpha | `--tt` |
+| `--per-page N` / `--pp N` | `per_page` | 正整數 | `--per-page N` |
+| `--page ...` / `--p ...` | `page_spec` | 接受 `N` / `A-B` / `A-` / `all` | `table_renderer.py` 會展開為頁碼範圍並逐頁呼叫 |
+| `--all` | `page_spec` | 等價 `all` | `table_renderer.py` 會展開全部頁 |
+| `--text-scale V` / `--ts V` | `text_scale` | `smallest/small/auto/large/largest` 或倍率數值 | `--text-scale V` |
+| `--sort SPEC` | `sort_spec` | 單鍵或多鍵：`欄位A`、`欄位A>欄位B`、`欄位A:desc,欄位B:asc` | `--sort SPEC` |
+| `--asc` / `--desc` | `sort_default_dir` | 多鍵未指定方向時的預設排序方向 | `--asc` / `--desc` |
+| `--f SPEC` / `--filter SPEC` | `filters` | 欄位/列過濾；可重複多次 | `--f SPEC` |
+| `--smart-wrap` | `smart_wrap` | 明確設為 `true` | `--smart-wrap`（可省略；renderer 預設開） |
+| `--no-smart-wrap` / `--nosw` | `smart_wrap` | 設為 `false` | `--no-smart-wrap` |
+| `--theme NAME` / `-t NAME` | `theme` | 主題名稱字串 | `--theme NAME` |
+
+`page_spec` 展開規則（Agent 端）：
+
+- `N` -> 只輸出第 `N` 頁。
+- `A-B` -> 輸出第 `A` 到 `B` 頁（含 `B`）。
+- `A-` -> 從第 `A` 頁輸出到最後一頁。
+- `all` 或 `--all` -> 輸出全部頁面。
+- 未指定 `page_spec` 時，預設輸出前 3 頁（`1-3`）；若仍有頁面未輸出，會提示可用 `--page 4-` 或 `--all`。
+
+Canonical 結構建議（Agent 內部）：
+
+```json
+{
+  "theme": "mobile_chat",
+  "width": 900,
+  "transpose": false,
+  "keep_theme_alpha": false,
+  "per_page": 15,
+  "page_spec": "2-",
+  "sort_spec": "分數:desc,姓名:asc",
+  "sort_default_dir": "asc",
+  "filters": ["col:!備註,附件", "row:狀態!=停用;分數>=60"],
+  "text_scale": "auto",
+  "smart_wrap": true
+}
+```
+
+轉譯責任邊界（建議）：
+
+- Agent：可先做語法正規化，確保呼叫一致。
+- `table_renderer.py`：可直接接受常見語法糖並轉成合法呼叫。
+- 核心 `zeble_render.py`：仍以 canonical 參數為主。
+
+### 實際轉譯範例（語法糖 -> canonical -> renderer）
+
+範例 1：常見單頁輸出
+
+- 使用者語法糖：`Zx --theme mobile_chat --w 900 --ts large`
+- canonical：
+
+```json
+{
+  "theme": "mobile_chat",
+  "width": 900,
+  "text_scale": "large",
+  "smart_wrap": true,
+  "page_spec": "1"
+}
+```
+
+- renderer 呼叫：
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --theme mobile_chat --width 900 --text-scale large --page 1
+```
+
+範例 2：關閉智慧換行 + 轉置
+
+- 使用者語法糖：`Zx --cc --nosw -t compact_clean`
+- canonical：
+
+```json
+{
+  "theme": "compact_clean",
+  "transpose": true,
+  "smart_wrap": false,
+  "page_spec": "1"
+}
+```
+
+- renderer 呼叫：
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --theme compact_clean --transpose --no-smart-wrap --page 1
+```
+
+範例 3：頁面範圍（A-B）展開
+
+- 使用者語法糖：`Zx --p 2-4 --pp 12`
+- canonical：
+
+```json
+{
+  "per_page": 12,
+  "page_spec": "2-4"
+}
+```
+
+- Agent 展開頁碼：`[2, 3, 4]`
+- renderer 呼叫（逐頁）：
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.p2.png --per-page 12 --page 2
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.p3.png --per-page 12 --page 3
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.p4.png --per-page 12 --page 4
+```
+
+範例 4：全部頁面（all）
+
+- 使用者語法糖：`Zx --all --pp 20 --tt`
+- canonical：
+
+```json
+{
+  "page_spec": "all",
+  "per_page": 20,
+  "keep_theme_alpha": true
+}
+```
+
+- `table_renderer.py` 會先計算總頁數 `total_pages`，再展開為 `1..total_pages` 逐頁呼叫。
+- 若未指定 `--page` / `--all`，會先輸出 3 張並提示剩餘頁數與續印指令（如 `--p 4-`）。
+
+範例 5：多鍵排序（數值優先）
+
+- 使用者語法糖：`Zx --sort 分數:desc,等級:asc,姓名:asc`
+- canonical：
+
+```json
+{
+  "sort_spec": "分數:desc,等級:asc,姓名:asc",
+  "sort_default_dir": "asc"
+}
+```
+
+- renderer 呼叫：
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --sort "分數:desc,等級:asc,姓名:asc"
+```
+
+- 規則：同欄位值相同時依下一鍵排序；可解析成數值的內容會優先以數值比較。
+
+範例 6：欄位/列過濾（f）
+
+- 使用者語法糖：`Zx --f "col:!備註,附件" --f "row:狀態!=停用;分數>=60"`
+- canonical：
+
+```json
+{
+  "filters": [
+    "col:!備註,附件",
+    "row:狀態!=停用;分數>=60"
+  ]
+}
+```
+
+- renderer 呼叫：
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --f "col:!備註,附件" --f "row:狀態!=停用;分數>=60"
+```
+
 
 ### 基礎呼叫
 
@@ -61,6 +233,9 @@ echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.
 | `--theme` | 視覺主題 | `default_light`, `default_dark`, `mobile_chat`, `minimal_ios`, `bubble_card`, `modern_line`, `compact_clean` |
 | `--transparent` | 透明背景 | 加上此參數 |
 | `--width` | 固定寬度 | 例如 `--width 800` |
+| `--sort` | 排序欄位規格 | 單鍵：`欄位`；多鍵：`欄位A>欄位B` 或 `欄位A:desc,欄位B:asc` |
+| `--asc` / `--desc` | 排序方向 | 作為未指定方向欄位的預設方向 |
+| `--f` / `--filter` | 欄位/列過濾 | 例：`col:!備註,附件`、`row:狀態!=停用;分數>=60` |
 | `--no-smart-wrap` / `--nosw` | 關閉智慧換行（保留原始文字斷句） | 二選一即可 |
 
 ### JSON 資料格式
@@ -141,7 +316,7 @@ echo '{
 
 用戶：「請把這個成績表做成圖片」
 
-Agent 思考：這需要 zenbleTable skill 來渲染表格
+Agent 思考：這需要 ZenTable skill 來渲染表格
 
 Agent 行動：
 ```bash
