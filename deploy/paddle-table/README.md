@@ -40,6 +40,18 @@ python3 normalize_rows.py --in /tmp/hybrid_table.json --out /tmp/hybrid_table_no
 jq '.tables[] | {table_index,row_count,col_count}' /tmp/hybrid_table_norm.json
 ```
 
+Optional merge step (default merge=false):
+
+```bash
+python3 merge_tables.py \
+  --in /tmp/hybrid_table_norm.json \
+  --out /tmp/hybrid_table_merged.json \
+  --merge true \
+  --merge-mode normalized
+
+jq '{merge_enabled, merge_mode, merged_rows:(.merged_table.rows|length)}' /tmp/hybrid_table_merged.json
+```
+
 ## Notes
 
 - This service is independent from existing OCR services (safe A/B testing).
