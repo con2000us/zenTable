@@ -12,7 +12,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -70,6 +70,8 @@ class TableParseResponse(BaseModel):
     success: bool
     tables: List[Dict[str, Any]]
     elapsed_ms: Optional[int] = None
+    timing: Optional[Dict[str, Any]] = None
+    debug: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
 
@@ -141,7 +143,7 @@ async def health():
 
 
 @app.post("/table-parse", response_model=TableParseResponse)
-async def table_parse(image: UploadFile = File(...)):
+async def table_parse(image: UploadFile = File(...), debug: bool = Query(False)):
     if _engine is None:
         return TableParseResponse(success=False, tables=[], error=f"engine_not_loaded: {_engine_err}")
 
@@ -161,7 +163,15 @@ async def table_parse(image: UploadFile = File(...)):
         elapsed_ms = int((time.time() - t0) * 1000)
 
         tables = _normalize_structure_output(out)
-        return TableParseResponse(success=True, tables=tables, elapsed_ms=elapsed_ms)
+        timing = {"total_ms": elapsed_ms}
+        resp = TableParseResponse(success=True, tables=tables, elapsed_ms=elapsed_ms, timing=timing)
+        if debug:
+            resp.debug = {
+                "stages": {"paddle_table_ms": elapsed_ms},
+                "table_count": len(tables),
+                "has_cell_boxes": [bool(t.get("cell_boxes")) for t in tables],
+            }
+        return resp
     except Exception as e:
         return TableParseResponse(success=False, tables=[], error=str(e))
 

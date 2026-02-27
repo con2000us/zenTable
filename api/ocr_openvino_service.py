@@ -9,7 +9,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -81,6 +81,8 @@ class OCRResponse(BaseModel):
     success: bool
     rows: List[Dict[str, Any]]
     elapsed_ms: Optional[int] = None
+    timing: Optional[Dict[str, Any]] = None
+    debug: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
 
@@ -99,7 +101,7 @@ async def health():
 
 
 @app.post("/ocr", response_model=OCRResponse)
-async def ocr(image: UploadFile = File(...)):
+async def ocr(image: UploadFile = File(...), debug: bool = Query(False)):
     if _engine is None:
         return OCRResponse(success=False, rows=[], error=f"engine_not_loaded: {_engine_err}")
 
@@ -120,13 +122,21 @@ async def ocr(image: UploadFile = File(...)):
         elapsed_ms = int((time.time() - t0) * 1000)
 
         rows = _to_rows(result)
-        return OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms)
+        timing = {"total_ms": elapsed_ms}
+        resp = OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms, timing=timing)
+        if debug:
+            resp.debug = {
+                "backend": "openvino_onnx",
+                "stages": {"ocr_ms": elapsed_ms},
+                "row_count": len(rows),
+            }
+        return resp
     except Exception as e:
         return OCRResponse(success=False, rows=[], error=str(e))
 
 
 @app.post("/ocr/base64", response_model=OCRResponse)
-async def ocr_base64(body: OCRBase64Body):
+async def ocr_base64(body: OCRBase64Body, debug: bool = Query(False)):
     if _engine is None:
         return OCRResponse(success=False, rows=[], error=f"engine_not_loaded: {_engine_err}")
 
@@ -144,7 +154,15 @@ async def ocr_base64(body: OCRBase64Body):
         elapsed_ms = int((time.time() - t0) * 1000)
 
         rows = _to_rows(result)
-        return OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms)
+        timing = {"total_ms": elapsed_ms}
+        resp = OCRResponse(success=True, rows=rows, elapsed_ms=elapsed_ms, timing=timing)
+        if debug:
+            resp.debug = {
+                "backend": "openvino_onnx",
+                "stages": {"ocr_ms": elapsed_ms},
+                "row_count": len(rows),
+            }
+        return resp
     except Exception as e:
         return OCRResponse(success=False, rows=[], error=str(e))
 

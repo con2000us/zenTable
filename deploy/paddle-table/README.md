@@ -22,6 +22,13 @@ curl -s -X POST http://127.0.0.1:8012/table-parse \
   -F "image=@/path/to/table.jpg"
 ```
 
+Debug mode (include stage timings and diagnostics):
+
+```bash
+curl -s -X POST "http://127.0.0.1:8012/table-parse?debug=true" \
+  -F "image=@/path/to/table.jpg" | jq '.timing, .debug'
+```
+
 ## Hybrid extraction (structure + OpenVINO OCR text)
 
 After `table-parse`, you can re-read each table region with OpenVINO OCR:
