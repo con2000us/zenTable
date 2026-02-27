@@ -16,7 +16,7 @@
   - rollback: `git revert d06c36c c1355aa 521c526` (or revert latest Wave 3 commit directly)
 - [x] Wave 4 completed (T-400, T-401, T-410~T-413, T-420~T-423)
 - [x] Wave 5 completed (T-500)
-- [~] Wave 6 ready to start
+- [~] Wave 6 in progress (T-600 done)
 
 ## Dependency Graph
 
