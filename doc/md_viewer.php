@@ -125,6 +125,10 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
     .file:hover { background:#1a2850; }
     .file.active { background:#243a74; color:#fff; }
     .file.focus { outline:1px solid #f6c453; background:#2c2a14; color:#ffe6a3; }
+    #fileTree { font-size: 13px; }
+    #fileTree .jstree-anchor { color:#c9d7f2; }
+    #fileTree .focus-node > .jstree-anchor { color:#ffe6a3 !important; font-weight: 700; }
+    #fileTree .active-node > .jstree-anchor { color:#ffffff !important; background:#243a74; border-radius:6px; }
     .main { display:flex; flex-direction:column; min-width:0; }
     .bar { padding:10px 12px; border-bottom:1px solid #25314f; display:flex; gap:10px; align-items:center; background:#0f1830; flex-wrap:wrap; }
     .bar .title { font-weight:600; font-size:14px; }
@@ -157,11 +161,9 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
       <?php endif; ?>
     </div>
     <?php if (!$list): ?>
-      <div class="empty">No markdown files found.</div>
+      <div class="empty">No markdown/json files found.</div>
     <?php else: ?>
-      <?php foreach ($list as $f): ?>
-        <a class="file <?php echo ($focusSet[$f] ?? false) ? 'focus' : ''; ?> <?php echo $f === $current ? 'active' : ''; ?>" href="?<?php echo $includeJson ? 'showJson=1&' : ''; ?>file=<?php echo urlencode($f); ?>"><?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?></a>
-      <?php endforeach; ?>
+      <div id="fileTree"></div>
     <?php endif; ?>
   </aside>
 
@@ -192,9 +194,16 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
     <?php endif; ?>
   </section>
 </div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jstree@3.3.17/dist/themes/default/style.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jstree@3.3.17/dist/jstree.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
 <script>
 (function () {
+  const fileList = <?php echo json_encode(array_values($list), JSON_UNESCAPED_UNICODE); ?>;
+  const focusSet = <?php echo json_encode(array_keys($focusSet), JSON_UNESCAPED_UNICODE); ?>;
+  const currentFile = <?php echo json_encode($current, JSON_UNESCAPED_UNICODE); ?>;
+  const includeJson = <?php echo $includeJson ? 'true' : 'false'; ?>;
   const slider = document.getElementById('fontSize');
   const val = document.getElementById('fontSizeVal');
   const key = 'md_viewer_font_size_px';
@@ -256,6 +265,55 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
     if (m === 'view' || m === 'raw') mode = m;
   } catch (e) {}
   setMode(mode);
+
+  // left tree navigation (jstree)
+  const treeEl = document.getElementById('fileTree');
+  if (treeEl && window.jQuery && fileList.length) {
+    const focusLookup = new Set(focusSet || []);
+    const nodes = [];
+    const dirSet = new Set(['#']);
+
+    const ensureDir = (path) => {
+      if (!path || dirSet.has(path)) return;
+      const parts = path.split('/');
+      let cur = '';
+      for (const p of parts) {
+        cur = cur ? (cur + '/' + p) : p;
+        if (!dirSet.has(cur)) {
+          const parent = cur.includes('/') ? cur.substring(0, cur.lastIndexOf('/')) : '#';
+          nodes.push({ id: 'dir:' + cur, parent: parent === '#' ? '#' : ('dir:' + parent), text: p, icon: 'jstree-folder' });
+          dirSet.add(cur);
+        }
+      }
+    };
+
+    fileList.forEach((f) => {
+      const parentPath = f.includes('/') ? f.substring(0, f.lastIndexOf('/')) : '';
+      ensureDir(parentPath);
+      const parent = parentPath ? ('dir:' + parentPath) : '#';
+      const name = f.includes('/') ? f.substring(f.lastIndexOf('/') + 1) : f;
+      const classes = [];
+      if (focusLookup.has(f)) classes.push('focus-node');
+      if (f === currentFile) classes.push('active-node');
+      nodes.push({ id: 'file:' + f, parent, text: name, icon: 'jstree-file', li_attr: { class: classes.join(' ') } });
+    });
+
+    window.jQuery(treeEl)
+      .on('select_node.jstree', function (_e, data) {
+        const id = String(data.node.id || '');
+        if (!id.startsWith('file:')) return;
+        const file = id.slice(5);
+        const u = new URL(window.location.href);
+        u.searchParams.set('file', file);
+        if (includeJson) u.searchParams.set('showJson', '1');
+        else u.searchParams.delete('showJson');
+        window.location.href = u.toString();
+      })
+      .jstree({
+        core: { data: nodes, multiple: false, themes: { dots: true, icons: true } },
+        plugins: ['wholerow']
+      });
+  }
 
   slider.addEventListener('input', (e) => apply(e.target.value));
   if (rawBtn) rawBtn.addEventListener('click', () => setMode('raw'));
