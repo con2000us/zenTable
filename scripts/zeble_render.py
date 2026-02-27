@@ -24,6 +24,7 @@ ZenTable / Zeble 表格渲染程式（專案內版本）
   --fill-width M     搭配 --width 使用：background | container | scale | no-shrink
 """
 
+import html as html_module
 import json
 import sys
 import os
@@ -492,7 +493,6 @@ _scale_css_styles_px = css_viewport._scale_css_styles_px
 estimate_css_viewport_width_height = css_viewport.estimate_css_viewport_width_height
 _inject_wrap_gap_css = css_viewport._inject_wrap_gap_css
 _strip_alpha_from_css = css_renderer._strip_alpha_from_css
-build_css_rows_html = css_renderer.build_css_rows_html
 generate_css_html = css_renderer.generate_css_html
 
 def render_css(html: str, output_path: str, transparent: bool = False, html_dir: str = None,
@@ -1521,6 +1521,64 @@ def render_pil(data: dict, theme: dict, custom_params: dict = None) -> Image.Ima
 # =============================================================================
 # DATA NORMALISATION, SORT, PAGE (SKILL.md: --page, --sort, --asc, --desc)
 # =============================================================================
+
+def build_css_rows_html(
+    rows,
+    theme: Optional[dict] = None,
+    headers: Optional[list] = None,
+    highlight_rules: Optional[list] = None,
+    col_hl: Optional[dict] = None,
+) -> str:
+    """輸出 tbody rows，支援 colspan/rowspan、row_hl、cell.hl、col_hl、highlight_rules。theme 有 highlight_styles 時輸出 hl hl-<token> class。"""
+    rows_list = rows if isinstance(rows, list) else []
+    use_hl = bool(theme and isinstance(theme.get("highlight_styles"), dict))
+    rules = highlight_rules if isinstance(highlight_rules, list) else []
+    col_hl_map = col_hl if isinstance(col_hl, dict) else None
+    header_list = headers if isinstance(headers, list) else []
+    rows_html = []
+    active_rowspans = []
+    for idx, row in enumerate(rows_list):
+        row_class = "row tr_even" if idx % 2 == 0 else "row tr_odd"
+        row_hl = row.get("row_hl") if isinstance(row, dict) and "cells" in row else None
+        raw_cells = _row_cells(row)
+        row_cells = []
+        col_cursor = 0
+        col_idx = 0
+        for raw_cell in raw_cells:
+            while col_cursor < len(active_rowspans) and active_rowspans[col_cursor] > 0:
+                col_cursor += 1
+            cell = normalize_cell(raw_cell)
+            attrs = []
+            if cell["colspan"] > 1:
+                attrs.append(f'colspan="{cell["colspan"]}"')
+            if cell["rowspan"] > 1:
+                attrs.append(f'rowspan="{cell["rowspan"]}"')
+            if use_hl:
+                col_name = header_list[col_idx] if col_idx < len(header_list) else None
+                hl_token = resolve_cell_highlight(
+                    cell, row_hl, theme,
+                    col_name=col_name,
+                    highlight_rules=rules,
+                    col_hl=col_hl_map,
+                )
+                cls = f"hl hl-{hl_token}"
+                attrs.append(f'class="{cls}"')
+            col_idx += 1
+            attr_str = f" {' '.join(attrs)}" if attrs else ""
+            text_escaped = html_module.escape(cell["text"])
+            row_cells.append(f'<td{attr_str}>{text_escaped}</td>')
+            if cell["rowspan"] > 1:
+                for i in range(cell["colspan"]):
+                    target_idx = col_cursor + i
+                    while target_idx >= len(active_rowspans):
+                        active_rowspans.append(0)
+                    active_rowspans[target_idx] = max(active_rowspans[target_idx], cell["rowspan"] - 1)
+            col_cursor += cell["colspan"]
+        for i in range(len(active_rowspans)):
+            if active_rowspans[i] > 0:
+                active_rowspans[i] -= 1
+        rows_html.append(f'<tr class="{row_class}">{"".join(row_cells)}</tr>\n')
+    return "".join(rows_html)
 
 # =============================================================================
 # MAIN
