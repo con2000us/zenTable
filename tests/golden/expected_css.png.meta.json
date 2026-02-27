@@ -6,40 +6,66 @@
   "smart_wrap_stats": {
     "applied": true,
     "changed_cells": 3,
-    "per_col_limit": 13,
+    "per_col_limit": 11,
     "col_count": 4,
-    "base_width": 710
+    "base_width": 600
   },
   "text_scale_mode": "auto",
-  "text_scale": 1.3322912594474228,
+  "text_scale": 1.0,
   "viewport": {
-    "w": 710,
-    "h": 3600
+    "w": 817,
+    "h": 2400
   },
   "output": {
-    "w": 710,
-    "h": 628
+    "w": 709,
+    "h": 384
   },
-  "css_render_ms": 1281,
-  "auto_width_steps": [],
+  "css_render_ms": 917,
+  "auto_width_steps": [
+    {
+      "reason": "dom_overflow",
+      "vw": 817,
+      "table": {
+        "scrollWidth": 706,
+        "clientWidth": 706,
+        "rectWidth": 706
+      },
+      "body": {
+        "scrollWidth": 817,
+        "clientWidth": 817,
+        "rectWidth": 817
+      }
+    }
+  ],
   "render_attempts": [
     {
       "attempt": 1,
-      "vw": 710,
-      "vh": 3600,
-      "css_render_ms": 1281,
-      "dom": null,
-      "dom_source": "table",
+      "vw": 817,
+      "vh": 2400,
+      "css_render_ms": 917,
+      "dom": {
+        "table": {
+          "scrollWidth": 706,
+          "clientWidth": 706,
+          "rectWidth": 706
+        },
+        "body": {
+          "scrollWidth": 817,
+          "clientWidth": 817,
+          "rectWidth": 817
+        }
+      },
+      "dom_source": "body",
       "edge": {
-        "x": 709,
-        "h": 3600,
+        "x": 816,
+        "h": 2400,
         "nonempty": 0,
         "ratio": 0.0,
         "best_run": 0
       },
       "edge_inset5": {
-        "x": 704,
-        "h": 3600,
+        "x": 811,
+        "h": 2400,
         "nonempty": 0,
         "ratio": 0.0,
         "best_run": 0

@@ -2506,9 +2506,9 @@ def main():
         # auto-height: 先用足夠高的 viewport 渲染，避免內容因換行而被截斷。
         if auto_height:
             vh = max(vh, auto_height_max)
-        # auto-width: 先用較寬 viewport（或後面量測後再調整）
+        # auto-width: 以估算寬度起跑，必要時再放大（避免預設直接放到超寬）
         if auto_width and not explicit_width:
-            vw = max(vw, auto_width_max)
+            vw = min(max(560, int(vw)), int(auto_width_max))
         table_width_pct = None
         use_scale_post = False
         scale_no_shrink = False
@@ -2589,6 +2589,11 @@ def main():
         # Strategy C: DOM pre-measure (local Chrome only) + pixel edge check.
         if auto_height or auto_width:
             max_hard = MAX_VIEWPORT_DIM
+            if auto_width:
+                try:
+                    max_hard = min(max_hard, int(auto_width_max))
+                except Exception:
+                    pass
             attempts = 0
             cur_vw = min(vw, max_hard)
             cur_vh = min(vh, max_hard)
@@ -2701,14 +2706,29 @@ def main():
                         cur_vh = next_vh
                         grew = True
 
-                # Auto-width edge check (no layout-modifying probe by default):
-                # We only look at an inset line to reduce false positives from outer shadows.
+                # Auto-width edge check:
+                # If DOM metrics are available and show no overflow, skip edge-growth
+                # (table width:100% can naturally touch right edge without being truncated).
                 edge_inset = 50
-                if auto_width and _right_edge_has_content(output_file, transparent=transparent_bg, x_inset=edge_inset) and cur_vw < max_hard:
+                dom_overflow_now = None
+                if isinstance(attempt_dom, dict):
+                    src = attempt_dom.get('body') or attempt_dom.get('table') or {}
+                    try:
+                        sw_now = int(src.get('scrollWidth') or 0)
+                        cw_now = int(src.get('clientWidth') or 0)
+                        dom_overflow_now = sw_now > (cw_now + 2)
+                    except Exception:
+                        dom_overflow_now = None
+
+                allow_edge_growth = True
+                if dom_overflow_now is False:
+                    allow_edge_growth = False
+
+                if auto_width and allow_edge_growth and _right_edge_has_content(output_file, transparent=transparent_bg, x_inset=edge_inset) and cur_vw < max_hard:
                     next_vw = max(cur_vw + 400, int(cur_vw * 1.25))
                     next_vw = min(next_vw, max_hard)
                     if next_vw != cur_vw:
-                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "x_inset": int(edge_inset)})
+                        width_steps.append({"reason": "edge", "from": int(cur_vw), "to": int(next_vw), "x_inset": int(edge_inset), "dom_overflow": dom_overflow_now})
                         cur_vw = next_vw
                         grew = True
 
