@@ -6,65 +6,39 @@
   "smart_wrap_stats": {
     "applied": true,
     "changed_cells": 3,
-    "per_col_limit": 11,
+    "per_col_limit": 13,
     "col_count": 4,
-    "base_width": 600
+    "base_width": 710
   },
   "text_scale_mode": "auto",
-  "text_scale": 1.0,
+  "text_scale": 1.3322912594474228,
   "viewport": {
-    "w": 2400,
+    "w": 710,
     "h": 3600
   },
   "output": {
     "w": 710,
-    "h": 384
+    "h": 628
   },
-  "css_render_ms": 1229,
-  "auto_width_steps": [
-    {
-      "reason": "dom_overflow",
-      "vw": 2400,
-      "table": {
-        "scrollWidth": 706,
-        "clientWidth": 706,
-        "rectWidth": 706
-      },
-      "body": {
-        "scrollWidth": 2400,
-        "clientWidth": 2400,
-        "rectWidth": 2400
-      }
-    }
-  ],
+  "css_render_ms": 1281,
+  "auto_width_steps": [],
   "render_attempts": [
     {
       "attempt": 1,
-      "vw": 2400,
+      "vw": 710,
       "vh": 3600,
-      "css_render_ms": 1229,
-      "dom": {
-        "table": {
-          "scrollWidth": 706,
-          "clientWidth": 706,
-          "rectWidth": 706
-        },
-        "body": {
-          "scrollWidth": 2400,
-          "clientWidth": 2400,
-          "rectWidth": 2400
-        }
-      },
-      "dom_source": "body",
+      "css_render_ms": 1281,
+      "dom": null,
+      "dom_source": "table",
       "edge": {
-        "x": 2399,
+        "x": 709,
         "h": 3600,
         "nonempty": 0,
         "ratio": 0.0,
         "best_run": 0
       },
       "edge_inset5": {
-        "x": 2394,
+        "x": 704,
         "h": 3600,
         "nonempty": 0,
         "ratio": 0.0,
