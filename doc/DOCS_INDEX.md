@@ -59,7 +59,6 @@ Generated: 2026-02-27 18:27 UTC
 | `doc/ENVIRONMENT_DEPENDENCIES.md` | active | 保留並更新路徑/命名 |
 | `doc/README.md` | active | 保留並更新路徑/命名 |
 | `doc/REQUIREMENT.md` | active | 保留並更新路徑/命名 |
-| `doc/ZEBLE_FLOW.md` | active | 保留並更新路徑/命名 |
 
 ## Archive/歷史
 
@@ -72,6 +71,7 @@ Generated: 2026-02-27 18:27 UTC
 | `doc/archive/README.md` | legacy | 僅保留歷史，避免當前流程引用 |
 | `doc/archive/SKILL_RUNNABLE_ASSESSMENT.md` | legacy | 僅保留歷史，避免當前流程引用 |
 | `doc/archive/TEST_PAGE.md` | legacy | 僅保留歷史，避免當前流程引用 |
+| `doc/archive/ZEBLE_FLOW.md` | legacy | 舊流程圖（含已淘汰入口），僅保留歷史參考 |
 
 ## 下一步（文件清理執行順序）
 
