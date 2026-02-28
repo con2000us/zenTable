@@ -81,7 +81,7 @@ CSS 主題的 `styles` 中可使用 `url('images/bg.png')` 等相對路徑。zen
 
 ### 單一主題匯出
 
-- `gentable_export.php`：POST 傳入 `theme_json`、`theme_name`、`mode`，回傳單一主題 ZIP 下載連結。
+- `gentable_export.php`：POST 傳入 `theme_json`、`theme_name`、`mode`，回傳單一主題 ZIP 下載連結（legacy 工具；主流程以 `theme_api.php` 為主）。
 - 產出 zip 內含根目錄 `template.json`，可匯入或手動放置至 `themes/<mode>/<theme_name>.zip`。
 
 ### 儲存位置說明

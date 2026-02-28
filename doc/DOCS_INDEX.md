@@ -75,7 +75,7 @@ Generated: 2026-02-27 18:27 UTC
 
 ## 下一步（文件清理執行順序）
 
-1. 先清 **active 文件** 的路徑與命名一致性（`zentable_render.py`、deprecated `gentable.php`）。
+1. 先清 **active 文件** 的路徑與命名一致性（`scripts/zentable_render.py`、deprecated `gentable.php`）。
 2. 將仍引用舊名稱的內容，改為「現況 + historical note」。
 3. 把純歷史內容移到 `doc/archive/`，並在 active 文件加上索引連結。
 4. 每批修編後跑一次 golden 與基本 smoke，再 commit。
