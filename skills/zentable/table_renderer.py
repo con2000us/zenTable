@@ -69,10 +69,15 @@ def _save_defaults(data: dict) -> None:
     DEFAULTS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _parse_pin_keys(pin_args: list[str]) -> set[str]:
+def _parse_pin_keys(pin_args: list[str]) -> tuple[set[str], bool]:
     keys: set[str] = set()
+    pin_all = False
     for raw in pin_args or []:
-        for token in re.split(r"[\s,]+", str(raw).strip()):
+        rv = str(raw).strip()
+        if rv == "__ALL__" or rv == "":
+            pin_all = True
+            continue
+        for token in re.split(r"[\s,]+", rv):
             t = token.strip().lower()
             if not t:
                 continue
@@ -85,11 +90,15 @@ def _parse_pin_keys(pin_args: list[str]) -> set[str]:
         "smart-wrap": "smart_wrap",
         "sw": "smart_wrap",
         "pp": "per_page",
+        "ts": "text_scale",
+        "text-scale-max": "text_scale_max",
+        "aw": "auto_width",
+        "ah": "auto_height",
     }
     normalized: set[str] = set()
     for k in keys:
         normalized.add(aliases.get(k, k))
-    return normalized
+    return normalized, pin_all
 
 
 def _discover_css_themes() -> set[str]:
@@ -235,8 +244,8 @@ def main() -> int:
     ap.add_argument("--transpose", action="store_true")
     ap.add_argument("--cc", action="store_true")
     ap.add_argument("--verbose", action="store_true")
-    ap.add_argument("--pin", action="append", default=[],
-                    help="Persist selected params as defaults, e.g. --pin width,nosw,theme")
+    ap.add_argument("--pin", nargs="?", const="__ALL__", action="append", default=[],
+                    help="Persist defaults. Use --pin (all current params) or --pin width,nosw,theme")
     args = ap.parse_args()
 
     defaults = _load_defaults()
@@ -257,6 +266,19 @@ def main() -> int:
         final_smart_wrap = bool(defaults.get("smart_wrap", True))
 
     final_per_page = max(1, int(args.per_page)) if args.per_page is not None else int(defaults.get("per_page") or DEFAULT_ROWS_PER_PAGE)
+
+    final_text_scale = args.text_scale if args.text_scale is not None else defaults.get("text_scale")
+    final_text_scale_max = args.text_scale_max if args.text_scale_max is not None else defaults.get("text_scale_max")
+    final_transparent = bool(args.transparent) if args.transparent else bool(defaults.get("transparent", False))
+    final_auto_height = bool(args.auto_height) if args.auto_height else bool(defaults.get("auto_height", False))
+    final_auto_height_max = args.auto_height_max if args.auto_height_max is not None else defaults.get("auto_height_max")
+
+    explicit_auto_width = bool(args.auto_width or args.no_auto_width)
+    if explicit_auto_width:
+        final_auto_width = bool(args.auto_width)
+    else:
+        final_auto_width = bool(defaults.get("auto_width", False))
+    final_auto_width_max = args.auto_width_max if args.auto_width_max is not None else defaults.get("auto_width_max")
 
     if not ZEBLE_RENDER.exists():
         raise SystemExit(f"Missing renderer script: {ZEBLE_RENDER}")
@@ -307,26 +329,26 @@ def main() -> int:
             cmd = [sys.executable, str(ZEBLE_RENDER), str(data_json), str(out_path)]
             cmd += _theme_to_args(final_theme, tmpdir)
 
-            if args.transparent:
+            if final_transparent:
                 cmd += ["--transparent"]
             if final_width is not None:
                 cmd += ["--width", str(final_width)]
-            if args.text_scale is not None:
-                cmd += ["--text-scale", str(args.text_scale)]
-            if args.text_scale_max is not None:
-                cmd += ["--text-scale-max", str(args.text_scale_max)]
+            if final_text_scale is not None:
+                cmd += ["--text-scale", str(final_text_scale)]
+            if final_text_scale_max is not None:
+                cmd += ["--text-scale-max", str(final_text_scale_max)]
 
-            if args.auto_height:
+            if final_auto_height:
                 cmd += ["--auto-height"]
-            if args.auto_height_max is not None:
-                cmd += ["--auto-height-max", str(args.auto_height_max)]
+            if final_auto_height_max is not None:
+                cmd += ["--auto-height-max", str(final_auto_height_max)]
 
-            if args.auto_width:
+            if final_auto_width:
                 cmd += ["--auto-width"]
-            if args.no_auto_width:
+            else:
                 cmd += ["--no-auto-width"]
-            if args.auto_width_max is not None:
-                cmd += ["--auto-width-max", str(args.auto_width_max)]
+            if final_auto_width_max is not None:
+                cmd += ["--auto-width-max", str(final_auto_width_max)]
 
             cmd += ["--page", str(page), "--per-page", str(per_page)]
             if args.sort:
@@ -359,7 +381,13 @@ def main() -> int:
             if last_code != 0:
                 return last_code
 
-        pin_keys = _parse_pin_keys(args.pin)
+        pin_keys, pin_all = _parse_pin_keys(args.pin)
+        if pin_all:
+            pin_keys = pin_keys | {
+                "theme", "width", "smart_wrap", "per_page", "text_scale", "text_scale_max",
+                "transparent", "auto_height", "auto_height_max", "auto_width", "auto_width_max"
+            }
+
         if pin_keys:
             new_defaults = dict(defaults)
             if "theme" in pin_keys:
@@ -370,8 +398,23 @@ def main() -> int:
                 new_defaults["smart_wrap"] = bool(final_smart_wrap)
             if "per_page" in pin_keys:
                 new_defaults["per_page"] = int(per_page)
+            if "text_scale" in pin_keys:
+                new_defaults["text_scale"] = final_text_scale
+            if "text_scale_max" in pin_keys:
+                new_defaults["text_scale_max"] = final_text_scale_max
+            if "transparent" in pin_keys:
+                new_defaults["transparent"] = bool(final_transparent)
+            if "auto_height" in pin_keys:
+                new_defaults["auto_height"] = bool(final_auto_height)
+            if "auto_height_max" in pin_keys:
+                new_defaults["auto_height_max"] = final_auto_height_max
+            if "auto_width" in pin_keys:
+                new_defaults["auto_width"] = bool(final_auto_width)
+            if "auto_width_max" in pin_keys:
+                new_defaults["auto_width_max"] = final_auto_width_max
             _save_defaults(new_defaults)
-            print(f"[zenTable] pinned defaults: {', '.join(sorted(pin_keys))}", file=sys.stderr)
+            mode = "all-current" if pin_all else "selected"
+            print(f"[zenTable] pinned defaults ({mode}): {', '.join(sorted(pin_keys))}", file=sys.stderr)
 
         return last_code
 

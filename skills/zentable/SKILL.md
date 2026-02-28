@@ -47,7 +47,7 @@ allowed-tools: ["exec", "read", "write"]
   - 無法判定資料來源（本則/上則都無可用圖文）
   - 語氣明顯不像要輸出圖表（例如純閒聊、無表格意圖）
   - 關鍵欄位缺失導致輸出高度可能錯誤
-- 其餘情況一律直接用預設設定出圖（預設 CSS + `minimal_ios_mobile` + `width=450`）。\n- `table_renderer.py` 已跟隨此預設（未指定時自動套用）。
+- 其餘情況一律直接用預設設定出圖（預設 CSS + `minimal_ios_mobile` + `width=450`）。\n- `table_renderer.py` 已跟隨此預設（未指定時自動套用 `minimal_ios_mobile + width=450`）。
 - **MUST 規則**：出圖回覆時，不要只給連結；只要平台支援圖片附件/內嵌，就必須直接回傳圖片本體。
 - `Zx` 預設視為「使用 zenTable 輸出表格圖片（而非純文字精簡回覆）」。
 - `Zx` 的來源優先序：**本則附圖 OCR** → **本則文字整理表格** → **上一則附圖 OCR** → **上一則文字整理表格**。
@@ -247,14 +247,29 @@ python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --th
 
 ### 固定預設（pin）
 
-可用 `--pin` 把本次參數記成往後預設（寫入 `skills/zentable/zx_defaults.json`）：
+可用 `--pin` 把本次參數記成往後預設（寫入 `skills/zentable/zx_defaults.json`）。
+
+1) **選擇性 pin（指定鍵）**
 
 ```bash
-# 把 theme/width/關閉 smart-wrap 設成之後預設
+# 只固定 theme/width/smart-wrap(=nosw)
 echo '{"headers":["A"],"rows":[["1"]]}' \
 | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/pin.png \
   --theme compact_clean --width 700 --nosw --pin width,nosw,theme
 ```
+
+2) **全量 pin（只打 `--pin`）**
+
+```bash
+# 代表把「這次有效參數」整批設為之後預設
+echo '{"headers":["A"],"rows":[["1"]]}' \
+| python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/pin_all.png \
+  --theme compact_clean --width 700 --nosw --text-scale small --auto-width --pin
+```
+
+> `--pin`（不帶值）= pin all-current params
+
+支援固定的預設鍵：`theme`, `width`, `smart_wrap`(`nosw`), `per_page`, `text_scale`, `text_scale_max`, `transparent`, `auto_height`, `auto_height_max`, `auto_width`, `auto_width_max`。
 
 之後若不帶這些參數，會自動沿用 pinned 預設。
 
