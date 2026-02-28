@@ -18,6 +18,21 @@ docker compose up -d --build
 curl http://127.0.0.1:8001/health
 ```
 
+## Skill Hub deployment (two FastAPI containers)
+
+For skill-oriented deployment (CSS render API + OCR API), use:
+
+```bash
+cd /var/www/html/zenTable/deploy/skill-fastapi
+cp .env.example .env
+docker compose up -d --build
+```
+
+Default ports:
+
+- CSS API: `http://127.0.0.1:8002/health`
+- OCR API: `http://127.0.0.1:8001/health`
+
 ## Environment variables
 
 Use `.env` to control OCR backend without code changes:

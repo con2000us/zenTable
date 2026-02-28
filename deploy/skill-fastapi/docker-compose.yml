@@ -1,0 +1,40 @@
+services:
+  zentable-css-api:
+    build:
+      context: ../..
+      dockerfile: deploy/skill-fastapi/Dockerfile.css-api
+    container_name: zentable-css-api
+    restart: unless-stopped
+    ports:
+      - "${CSS_API_PORT:-8002}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  zentable-ocr-api:
+    build:
+      context: ../..
+      dockerfile: deploy/ocr-fastapi/Dockerfile
+    container_name: zentable-ocr-api
+    restart: unless-stopped
+    ports:
+      - "${OCR_API_PORT:-8001}:8000"
+    environment:
+      OCR_LANG: ${OCR_LANG:-ch}
+      USE_ANGLE_CLS: ${USE_ANGLE_CLS:-true}
+      OCR_HOST: 0.0.0.0
+      OCR_PORT: 8000
+      FLAGS_enable_pir_api: "0"
+      FLAGS_enable_new_executor: "0"
+      FLAGS_use_mkldnn: "0"
+      FLAGS_use_onednn: "0"
+      FLAGS_enable_onednn: "0"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
