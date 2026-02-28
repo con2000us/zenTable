@@ -6,7 +6,6 @@
 /var/www/html/zenTable/
 ├── scripts/
 │   ├── zentable_render.py        # 唯一 CLI 入口（CSS/PIL/ASCII）
-│   ├── zentable_render.py     # symlink -> zentable_render.py（相容名）
 │   └── zentable/              # 模組化實作（input/transform/output/orchestration）
 ├── themes/                    # css/pil/text 主題
 ├── tests/golden/              # golden baseline 與驗證腳本
@@ -26,9 +25,9 @@
 
 ## 主要 API 端點
 
-- `gentable_css.php` → `zentable_render.py --force-css`
-- `gentable_pil.php` → `zentable_render.py --force-pil`
-- `gentable_ascii.php` → `zentable_render.py --force-ascii`
+- `gentable_css.php` → `scripts/zentable_render.py --force-css`
+- `gentable_pil.php` → `scripts/zentable_render.py --force-pil`
+- `gentable_ascii.php` → `scripts/zentable_render.py --force-ascii`
 - `gentable.php` → **deprecated**（僅回傳棄用訊息）
 
 ## 備註

@@ -41,7 +41,7 @@
 
 ---
 
-## 一、zentable_renderer.py CLI 參數（全部）
+## 一、scripts/zentable_render.py CLI 參數（全部）
 
 | 參數 | 說明 | 適用模式 | Theme 編輯頁有？ |
 |------|------|----------|-----------------|
@@ -135,7 +135,7 @@ Theme 的 `highlight_styles` 定義語意 token（如 success、warning、danger
 | header_align | a_header_align | ✓ |
 | ascii_debug | （無，後端自動） | ✓（輸出 debug JSON：stage1/stage2/stage3_details） |
 
-**說明**：gentable_ascii 已接收 style、padding、align、header_align、border_mode、row_interval、col_interval、grid_config 等，zeble_render 支援 `--params` 覆蓋。
+**說明**：gentable_ascii 已接收 style、padding、align、header_align、border_mode、row_interval、col_interval、grid_config 等，scripts/zentable_render.py 支援 `--params` 覆蓋。
 
 #### ASCII grid_config 套用規則
 
@@ -194,6 +194,6 @@ Theme 的 `highlight_styles` 定義語意 token（如 success、warning、danger
 
 ## 五、總結
 
-- **zeble_render CLI**：約 17 個參數
+- **scripts/zentable_render.py CLI**：約 17 個參數
 - **Theme 編輯頁已涵蓋**：模式、主題、透空、分頁、排序、PIL 全部參數（含 font_family）、ASCII 全部參數（含 header_align）、進階選項（width、scale、fill-width、bg）
-- **ASCII 即時參數**：style、padding、align、header_align 已由 gentable_ascii 傳入，zeble_render 支援 `--params` 覆蓋
+- **ASCII 即時參數**：style、padding、align、header_align 已由 gentable_ascii 傳入，scripts/zentable_render.py 支援 `--params` 覆蓋

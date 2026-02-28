@@ -5,7 +5,6 @@
 | 檔案 | 說明 |
 |------|------|
 | **calibrate_analyze.py** | 校準分析：上傳截圖後分析校準區塊、產生 calibration JSON。**不參與 CSS 後端渲染**。 |
-| **doc/zentable_render.py** | 文件用參考腳本，不參與執行。 |
 | **scripts/zentable_render.py**（實際執行） | 表格渲染主程式：支援 CSS + Chrome、PIL、ASCII 三種模式。**CSS 後端渲染由此腳本完成。** |
 
 > 後端實際呼叫的是本專案 `scripts/zentable_render.py`，由 `gentable_css.php` 以 CLI 呼叫。
@@ -18,11 +17,11 @@
 
 ```
 gentable_css.php
-  └─ shell_exec: python3 zentable_renderer.py <input.json> <output.png> [--theme <file>|--theme-name <name>] [--page N] [--per-page N] [--sort X] [--asc|--desc] [--transparent] [--width N] [--scale N] [--fill-width M] [--bg ...]
-       └─ zentable_renderer.py 被執行，從 sys.argv 讀取參數
+  └─ shell_exec: python3 scripts/zentable_render.py <input.json> <output.png> [--theme <file>|--theme-name <name>] [--page N] [--per-page N] [--sort X] [--asc|--desc] [--transparent] [--width N] [--scale N] [--fill-width M] [--bg ...]
+       └─ scripts/zentable_render.py 被執行，從 sys.argv 讀取參數
 ```
 
-### 2.2 zentable_renderer.py 主流程（CSS 路徑）
+### 2.2 scripts/zentable_render.py 主流程（CSS 路徑）
 
 ```
 main()                                    # 行 2307 入口
@@ -133,7 +132,7 @@ main()                                    # 行 2307 入口
 gentable_css.php
     │
     ▼
-python3 zentable_renderer.py <data.json> <out.png> [--theme-name NAME] [--width N] ...
+python3 scripts/zentable_render.py <data.json> <out.png> [--theme-name NAME] [--width N] ...
     │
     ▼
 main()
@@ -169,6 +168,5 @@ main()
 ## 四、其他 Python 檔案（不參與 CSS 渲染）
 
 - **calibrate_analyze.py**：由 `calibrate_upload.php` 等上傳流程呼叫，負責解析校準截圖、輸出 calibration 與步驟摘要，與表格「渲染」無關。
-- **doc/zentable_render.py**：僅供文件對照，執行時不會被呼叫。
 
 以上即為「現在所有 Python 檔案」與「以 CSS mode 後端渲染為例的 function 呼叫流程」整理。
