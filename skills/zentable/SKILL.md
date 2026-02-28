@@ -273,6 +273,14 @@ echo '{"headers":["A"],"rows":[["1"]]}' \
 
 之後若不帶這些參數，會自動沿用 pinned 預設。
 
+### 清除 pinned 預設（reset）
+
+```bash
+python3 ~/.openclaw/custom-skills/zentable/table_renderer.py /path/in.json /tmp/out.png --pin-reset
+```
+
+執行後會回到基線預設：`minimal_ios_mobile + width=450 + smart_wrap=true + per_page=15`。
+
 
 ```bash
 echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - 輸出路徑.png --theme 主題名稱

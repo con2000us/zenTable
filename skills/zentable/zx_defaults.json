@@ -1,13 +1,6 @@
 {
-  "theme": "compact_clean",
-  "width": 666,
-  "smart_wrap": false,
-  "per_page": 15,
-  "text_scale": "small",
-  "text_scale_max": null,
-  "transparent": false,
-  "auto_height": false,
-  "auto_height_max": null,
-  "auto_width": true,
-  "auto_width_max": null
+  "theme": "minimal_ios_mobile",
+  "width": 450,
+  "smart_wrap": true,
+  "per_page": 15
 }

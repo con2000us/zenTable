@@ -10,6 +10,13 @@
 - 新增參數：`--pin`
 - 預設寫入檔案：`skills/zentable/zx_defaults.json`
 
+### 3) 新增 `--pin-reset`
+- `--pin-reset` 會將 pinned defaults 回復到基線：
+  - `theme=minimal_ios_mobile`
+  - `width=450`
+  - `smart_wrap=true`
+  - `per_page=15`
+
 ## `--pin` 兩種用法
 
 ### A. 指定鍵 pin（既有）

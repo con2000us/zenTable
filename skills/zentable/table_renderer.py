@@ -52,6 +52,12 @@ DEFAULT_ROWS_PER_PAGE = 15
 DEFAULT_THEME = "minimal_ios_mobile"
 DEFAULT_WIDTH = 450
 DEFAULTS_FILE = ZEN_ROOT / "skills" / "zentable" / "zx_defaults.json"
+BASE_DEFAULTS = {
+    "theme": DEFAULT_THEME,
+    "width": DEFAULT_WIDTH,
+    "smart_wrap": True,
+    "per_page": DEFAULT_ROWS_PER_PAGE,
+}
 
 def _load_defaults() -> dict:
     try:
@@ -246,7 +252,13 @@ def main() -> int:
     ap.add_argument("--verbose", action="store_true")
     ap.add_argument("--pin", nargs="?", const="__ALL__", action="append", default=[],
                     help="Persist defaults. Use --pin (all current params) or --pin width,nosw,theme")
+    ap.add_argument("--pin-reset", action="store_true",
+                    help="Reset persisted defaults to baseline (minimal_ios_mobile + width=450, smart_wrap=true, per_page=15)")
     args = ap.parse_args()
+
+    if args.pin_reset:
+        _save_defaults(dict(BASE_DEFAULTS))
+        print("[zenTable] defaults reset to baseline", file=sys.stderr)
 
     defaults = _load_defaults()
     final_theme = args.theme if args.theme else str(defaults.get("theme") or DEFAULT_THEME)
