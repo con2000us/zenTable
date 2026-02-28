@@ -76,7 +76,7 @@ allowed-tools: ["exec", "read", "write"]
 | `--smart-wrap` | `smart_wrap` | 明確設為 `true` | `--smart-wrap`（可省略；renderer 預設開） |
 | `--no-smart-wrap` / `--nosw` | `smart_wrap` | 設為 `false` | `--no-smart-wrap` |
 | `--theme NAME` / `-t NAME` | `theme` | 主題名稱字串 | `--theme NAME` |
-| `--both` / `--bo` | `output_both` | 布林；除 PNG 外同時輸出 ASCII（同主檔名 .txt） | `--both` |
+| `--both` / `--bo` | `output_both` | 布林；除 PNG 外同時輸出 ASCII（同主檔名 .txt，若 theme 無 text 版會自動 fallback 到 `default`） | `--both` |
 | `--pin KEYS` | `pin_keys` | 將本次有效參數寫成未來預設；`KEYS` 以逗號分隔，支援 `theme,width,nosw,per_page` | `--pin width,nosw,theme` |\n
 `page_spec` 展開規則（Agent 端）：
 

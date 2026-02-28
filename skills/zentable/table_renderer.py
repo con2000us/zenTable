@@ -48,6 +48,7 @@ from zentable.transform.sort_page import _parse_page_spec, _resolve_page_list
 ZEBLE_RENDER = ZEN_ROOT / "skills" / "zentable" / "zentable_renderer.py"
 THEMES_CSS = ZEN_ROOT / "themes" / "css"
 THEMES_PIL_ZIP = ZEN_ROOT / "themes" / "pil"
+THEMES_TEXT = ZEN_ROOT / "themes" / "text"
 DEFAULT_ROWS_PER_PAGE = 15
 DEFAULT_THEME = "minimal_ios_mobile"
 DEFAULT_WIDTH = 450
@@ -129,6 +130,21 @@ def _discover_pil_themes() -> set[str]:
 
 CSS_THEMES = _discover_css_themes()
 PIL_THEMES = _discover_pil_themes()
+
+
+def _discover_text_themes() -> set[str]:
+    themes: set[str] = set()
+    if THEMES_TEXT.exists():
+        for p in THEMES_TEXT.iterdir():
+            if p.is_dir() and (p / "template.json").exists():
+                themes.add(p.name)
+            elif p.is_file() and p.suffix == ".zip":
+                themes.add(p.stem)
+    return themes
+
+
+
+TEXT_THEMES = _discover_text_themes()
 
 
 def _read_json_input(input_path: str) -> str:
@@ -214,6 +230,27 @@ def _theme_to_args(theme: str, tmpdir: Path) -> list[str]:
         + " (plus aliases: default, light, dark)"
     )
 
+
+
+def _ascii_theme_fallback(theme: str) -> str:
+    t = (theme or "").strip()
+    if t in TEXT_THEMES:
+        return t
+    # map visual themes to text defaults
+    aliases = {
+        "default_dark": "default",
+        "default_light": "default",
+        "dark": "default",
+        "light": "default",
+    }
+    t2 = aliases.get(t, t)
+    if t2 in TEXT_THEMES:
+        return t2
+    if "default" in TEXT_THEMES:
+        return "default"
+    if TEXT_THEMES:
+        return sorted(TEXT_THEMES)[0]
+    return "default"
 
 def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
@@ -371,8 +408,6 @@ def main() -> int:
                 cmd += ["--asc"]
             for fexpr in (args.f or []):
                 cmd += ["--f", str(fexpr)]
-            if args.both:
-                cmd += ["--both"]
 
             if args.tt:
                 cmd += ["--tt"]
@@ -392,6 +427,35 @@ def main() -> int:
             last_code = proc.returncode
             if last_code != 0:
                 return last_code
+
+            if args.both:
+                txt_out = str(Path(out_path).with_suffix('.txt'))
+                ascii_theme = _ascii_theme_fallback(final_theme)
+                cmd_ascii = [
+                    sys.executable, str(ZEBLE_RENDER), str(data_json), str(out_path),
+                    "--force-ascii", "--output-ascii", txt_out,
+                    "--theme-name", ascii_theme,
+                    "--page", str(page), "--per-page", str(per_page),
+                ]
+                if args.sort:
+                    cmd_ascii += ["--sort", str(args.sort)]
+                if args.desc:
+                    cmd_ascii += ["--desc"]
+                elif args.asc:
+                    cmd_ascii += ["--asc"]
+                for fexpr in (args.f or []):
+                    cmd_ascii += ["--f", str(fexpr)]
+                if args.transpose or args.cc:
+                    cmd_ascii += ["--transpose"]
+                if final_smart_wrap:
+                    cmd_ascii += ["--smart-wrap"]
+                else:
+                    cmd_ascii += ["--no-smart-wrap"]
+                if args.verbose:
+                    print("Running:", " ".join(cmd_ascii), file=sys.stderr)
+                proc2 = subprocess.run(cmd_ascii, cwd=str(ZEN_ROOT), env=env)
+                if proc2.returncode != 0:
+                    print(f"⚠️  both 模式寫入 ASCII 失敗: text theme fallback={ascii_theme}", file=sys.stderr)
 
         pin_keys, pin_all = _parse_pin_keys(args.pin)
         if pin_all:

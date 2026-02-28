@@ -44,6 +44,13 @@
 - `auto_width`
 - `auto_width_max`
 
+## 4) 修正 `--both` 的 ASCII fallback bug
+- 問題：當主題是 CSS/PIL 專用（例如 `minimal_ios_mobile`、`default_dark`）時，`--both` 會在 ASCII 輸出失敗。
+- 修正：`table_renderer.py` 改為 **分兩段執行**：
+  1. 先輸出 PNG（原主題）
+  2. 再以可用 text theme（優先同名，否則 fallback `default`）輸出 `.txt`
+- 結果：`--both` 現在可穩定產出 PNG + ASCII。
+
 ## 文件同步
 - `skills/zentable/SKILL.md` 已更新
 - `doc/skills/zentable/SKILL.md`（mirror）已同步
