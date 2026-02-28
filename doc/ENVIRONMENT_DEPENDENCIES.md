@@ -1,6 +1,6 @@
 # Skill 環境依賴（依目前 skill 程式）
 
-以下依 **zentable_renderer.py**、**table_detect.py** 等 skill 程式整理，執行時需要的環境與資源。
+以下依 **scripts/zentable_render.py**、**scripts/table_detect.py** 等目前程式整理，執行時需要的環境與資源。
 
 ---
 
@@ -20,7 +20,7 @@
 ### 1. Python
 
 - **版本**：Python 3（建議 3.8+）
-- **用途**：執行 `zentable_renderer.py`、`table_detect.py`
+- **用途**：執行 `scripts/zentable_render.py`、`scripts/table_detect.py`
 - **標準庫**：`json`, `sys`, `os`, `re`, `glob`, `subprocess`, `typing`, `dataclasses`（皆內建）
 
 ### 2. Chrome / Chromium（僅 CSS 模式）

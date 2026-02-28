@@ -6,9 +6,9 @@
 
 ```
 themes/
-├── css/<theme_id>/template.json   # CSS 模式
-├── pil/<theme_id>/template.json   # PIL 模式
-└── text/<theme_id>/template.json  # ASCII 模式
+├── css/<theme_id>.zip   # CSS 模式（zip 內含 template.json）
+├── pil/<theme_id>.zip   # PIL 模式（zip 內含 template.json）
+└── text/<theme_id>.zip  # ASCII 模式（zip 內含 template.json）
 ```
 
 載入順序：固定使用本專案 `themes/`（`/var/www/html/zenTable/themes/`）。
@@ -22,8 +22,8 @@ themes/
 | 來源 | 位置 | 說明 |
 |------|------|------|
 | **BUILTIN_THEMES** | zentable_render.py（已刪除） | 內建 CSS 主題字典（default_dark, default_light, cyberpunk, gradient_modern, glass, forest） |
-| **render_pil 內建 theme_colors** | zentable_renderer.py | PIL 的內建主題顏色 dict（default_dark, default_light, cyberpunk, gradient_modern, glass） |
-| **render_pil theme_name_map** | zentable_renderer.py | 前端 theme id 對應內建 key（dark→default_dark, light→default_light 等） |
+| **render_pil 內建 theme_colors** | scripts/zentable_render.py（舊版） | PIL 的內建主題顏色 dict（default_dark, default_light, cyberpunk, gradient_modern, glass） |
+| **render_pil theme_name_map** | scripts/zentable_render.py（舊版） | 前端 theme id 對應內建 key（dark→default_dark, light→default_light 等） |
 | **theme_api 靜態 text 主題** | theme_api.php | load 時對 simple/grid/double 回傳的內聯 JSON template |
 | **theme_api 靜態 text 列表** | theme_api.php | list 時對 mode=text 回傳的固定 [simple, grid, double] 列表 |
 
@@ -33,9 +33,9 @@ themes/
 
 | 項目 | 位置 | 說明 |
 |------|------|------|
-| **ASCII_STYLES** | zentable_renderer.py | 框線字元實作（single/double/grid/markdown），由 theme 的 `params.style` 選擇使用哪一種，非主題定義本身 |
+| **ASCII_STYLES** | scripts/zentable_render.py | 框線字元實作（single/double/grid/markdown），由 theme 的 `params.style` 選擇使用哪一種，非主題定義本身 |
 
-**注意**：theme_api 已不再支援扁平 `themes/*.json`，僅讀取 `themes/<mode>/<theme_id>/template.json`。見 [THEME_STRUCTURE.md](THEME_STRUCTURE.md)。
+**注意**：theme_api 已不再支援扁平 `themes/*.json`，僅讀取 `themes/<mode>/<theme_id>.zip`（zip 內含 `template.json`）。見 [THEME_STRUCTURE.md](THEME_STRUCTURE.md)。
 
 ---
 
