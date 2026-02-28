@@ -1,9 +1,6 @@
 [
-  "interaction/DOC_CLEANUP_CHANGELOG_2026-02-28.md",
-  "skills/zentable/SKILL.md",
-  "architecture/THREE_LAYER_ARCHITECTURE.md",
-  "architecture/CALIBRATION_PIXEL_PIPELINE.md",
-  "interaction/ZX_PIN_DEFAULTS_UPDATE_2026-03-01.md",
+  "interaction/ASCII_CALIBRATION_REDESIGN_TODO.md",
   "interaction/CALIBRATION_JSON_MANAGEMENT.md",
-  "interaction/ASCII_CALIBRATION_REDESIGN_TODO.md"
+  "interaction/SKILLHUB_RELEASE_CHECKLIST.md",
+  "skills/zentable/SKILL.md"
 ]

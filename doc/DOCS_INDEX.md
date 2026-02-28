@@ -63,6 +63,7 @@ Generated: 2026-02-27 18:27 UTC
 | `doc/architecture/THREE_LAYER_ARCHITECTURE.md` | active | 三層架構導讀（自 refactor todo 摘要） |
 | `doc/interaction/CALIBRATION_JSON_MANAGEMENT.md` | active | 校準檔管理層需求（profile/merge/reset） |
 | `doc/interaction/ASCII_CALIBRATION_REDESIGN_TODO.md` | active | ASCII 重設 TODO（雙模型+測量圖+管理層+進度清單） |
+| `doc/interaction/SKILLHUB_RELEASE_CHECKLIST.md` | active | SkillHub 發布檢查清單（含英文文檔要求） |
 | `doc/architecture/CALIBRATION_PIXEL_PIPELINE.md` | active | 校準區塊像素解析步驟（動態 pattern / gap -> calibration） |
 
 ## Archive/歷史

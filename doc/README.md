@@ -15,6 +15,7 @@
 - [md_viewer.php](md_viewer.php) — 文件瀏覽/編輯器（左側樹狀清單、Highlighted files 快速區、右鍵「將此檔案高亮」、快速移除高亮）
 - [interaction/CALIBRATION_JSON_MANAGEMENT.md](interaction/CALIBRATION_JSON_MANAGEMENT.md) — 校準檔管理層需求與 profile 規則
 - [interaction/ASCII_CALIBRATION_REDESIGN_TODO.md](interaction/ASCII_CALIBRATION_REDESIGN_TODO.md) — ASCII 校準重設 TODO 與完成度 checklist
+- [interaction/SKILLHUB_RELEASE_CHECKLIST.md](interaction/SKILLHUB_RELEASE_CHECKLIST.md) — SkillHub 發布檢查清單（含英文文檔 gate）
 
 - [../NAMING_MIGRATION.md](../NAMING_MIGRATION.md) — 命名統一策略（Phase 1: 相容優先）
 
