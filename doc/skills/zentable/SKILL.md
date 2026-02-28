@@ -41,6 +41,20 @@ allowed-tools: ["exec", "read", "write"]
 - 用戶明確要求「不要圖片」
 - 需要可編輯的表格（改用 CSV/Excel）
 
+## 支援矩陣（Skill Hub 發布）
+
+| 能力 | 狀態 | 說明 |
+|---|---|---|
+| CSS 輸出 | ✅ Stable | 發布主路徑；預設 `minimal_ios_mobile + width=450` |
+| PIL 輸出 | ✅ Stable | 無 Chrome 時可用；適合保守 fallback |
+| ASCII 輸出 | ⚠️ Beta | 可用但跨平台易受字型/空白規則影響；需 profile 校準 |
+
+## 已知限制（發布版）
+
+- ASCII 在部分聊天平台會遇到空白折疊、字型 fallback 寬度偏移。
+- 建議同平台建立獨立 calibration profile，不跨平台共用。
+- `--both` 已修正 text theme fallback；若主題無 text 版會自動回退 `default`。
+
 ## 使用方法
 
 ### Shorthand（本專案約定）
@@ -52,7 +66,8 @@ allowed-tools: ["exec", "read", "write"]
   - 無法判定資料來源（本則/上則都無可用圖文）
   - 語氣明顯不像要輸出圖表（例如純閒聊、無表格意圖）
   - 關鍵欄位缺失導致輸出高度可能錯誤
-- 其餘情況一律直接用預設設定出圖（預設 CSS + `minimal_ios_mobile` + `width=450`）。\n- `table_renderer.py` 已跟隨此預設（未指定時自動套用 `minimal_ios_mobile + width=450`）。
+- 其餘情況一律直接用預設設定出圖（預設 CSS + `minimal_ios_mobile` + `width=450`）。
+- `table_renderer.py` 已跟隨此預設（未指定時自動套用 `minimal_ios_mobile + width=450`）。
 - **MUST 規則**：出圖回覆時，不要只給連結；只要平台支援圖片附件/內嵌，就必須直接回傳圖片本體。
 - `Zx` 預設視為「使用 zenTable 輸出表格圖片（而非純文字精簡回覆）」。
 - `Zx` 的來源優先序：**本則附圖 OCR** → **本則文字整理表格** → **上一則附圖 OCR** → **上一則文字整理表格**。
@@ -82,7 +97,9 @@ allowed-tools: ["exec", "read", "write"]
 | `--no-smart-wrap` / `--nosw` | `smart_wrap` | 設為 `false` | `--no-smart-wrap` |
 | `--theme NAME` / `-t NAME` | `theme` | 主題名稱字串 | `--theme NAME` |
 | `--both` / `--bo` | `output_both` | 布林；除 PNG 外同時輸出 ASCII（同主檔名 .txt，若 theme 無 text 版會自動 fallback 到 `default`） | `--both` |
-| `--pin KEYS` | `pin_keys` | 將本次有效參數寫成未來預設；`KEYS` 以逗號分隔，支援 `theme,width,nosw,per_page` | `--pin width,nosw,theme` |\n
+| `--pin KEYS` | `pin_keys` | 將本次有效參數寫成未來預設；`KEYS` 以逗號分隔，支援 `theme,width,nosw,per_page`；僅 `--pin` 代表全部當前參數 | `--pin width,nosw,theme` / `--pin` |
+| `--pin-reset` | `pin_reset` | 將 pinned defaults 重設回基線（`minimal_ios_mobile`, `width=450`, `smart_wrap=true`, `per_page=15`） | `--pin-reset` |
+
 `page_spec` 展開規則（Agent 端）：
 
 - `N` -> 只輸出第 `N` 頁。
@@ -125,7 +142,7 @@ Canonical 結構建議（Agent 內部）：
 
 ```json
 {
-  "theme": "mobile_chat",
+  "theme": "minimal_ios_mobile",
   "width": 900,
   "text_scale": "large",
   "smart_wrap": true,
@@ -402,6 +419,18 @@ echo '{"title":"期末成績","headers":["姓名","國文","數學","英文"],"r
 - 輸出路徑建議使用 `/tmp/` 避免權限問題
 - 大表格（>20 行）建議用 `compact_clean` 主題
 - 單張圖片建議不要超過 50 行資料
+
+## 發布前 Smoke 測試（建議）
+
+```bash
+# CSS（主路徑）
+echo '{"headers":["A","B"],"rows":[["1","2"]]}' \
+| python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/zt_css_smoke.png --theme minimal_ios_mobile --width 450
+
+# PIL（fallback）
+echo '{"headers":["A","B"],"rows":[["1","2"]]}' \
+| python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/zt_pil_smoke.png --theme default_dark
+```
 
 ## 進一步說明（文件）
 
