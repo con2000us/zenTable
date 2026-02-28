@@ -6,6 +6,9 @@
 
 常用文件：
 
+- [DOCS_INDEX.md](DOCS_INDEX.md) — 文件分類總表（active / legacy）
+- [archive/README.md](archive/README.md) — 歸檔文件索引（歷史參考）
+
 - [md_viewer.php](md_viewer.php) — 文件瀏覽/編輯器（左側樹狀清單、Highlighted files 快速區、右鍵「將此檔案高亮」、快速移除高亮）
 
 - [../NAMING_MIGRATION.md](../NAMING_MIGRATION.md) — 命名統一策略（Phase 1: 相容優先）

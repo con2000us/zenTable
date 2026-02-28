@@ -4,6 +4,8 @@ Generated: 2026-02-27 18:27 UTC
 
 本文件為 ZenTable 文件總目錄（第一版），用於後續逐檔清理、搬移與修編。
 
+> 入口建議：日常先看 `doc/README.md`；需要追歷史內容時看 `doc/archive/README.md`。
+
 ## 分類總覽
 
 | 分類 | 說明 |
@@ -73,9 +75,15 @@ Generated: 2026-02-27 18:27 UTC
 | `doc/archive/ZEBLE_FLOW.md` | legacy | 舊流程圖（含已淘汰入口），僅保留歷史參考 |
 | `doc/archive/INTEGRATION.md` | legacy | 早期整合示例草稿（含過時呼叫方式），僅供歷史參考 |
 
-## 下一步（文件清理執行順序）
+## 文件清理進度（Step A→D）
 
-1. 先清 **active 文件** 的路徑與命名一致性（`scripts/zentable_render.py`、deprecated `gentable.php`）。
-2. 將仍引用舊名稱的內容，改為「現況 + historical note」。
-3. 把純歷史內容移到 `doc/archive/`，並在 active 文件加上索引連結。
-4. 每批修編後跑一次 golden 與基本 smoke，再 commit。
+1. ✅ Step A：文件盤點與總表建立（本檔）。
+2. ✅ Step B：純歷史文件移入 `doc/archive/`（例如 `ZEBLE_FLOW.md`、`INTEGRATION.md`）。
+3. ✅ Step C：active 文件 canonical 路徑/命名修正（`scripts/zentable_render.py`、deprecated `gentable.php` 註記）。
+4. ✅ Step D：active/legacy 索引連結補齊（`doc/README.md`、`doc/archive/README.md`、本檔互相導覽）。
+
+## 維護規則（後續持續）
+
+- 每次內容變更時，同步更新對應 md。
+- 每批修編後跑一次 smoke / golden 再 commit。
+- 新增文件時先判定 active 或 legacy，避免主目錄再混雜歷史稿。
