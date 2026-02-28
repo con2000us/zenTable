@@ -57,23 +57,72 @@ function safe_abs_from_rel(string $rel, string $root): ?string {
     return $abs;
 }
 
+function load_focus_list(string $focusFile): array {
+    $focusSet = [];
+    if (!file_exists($focusFile)) return $focusSet;
+    $rawFocus = @file_get_contents($focusFile);
+    $arr = json_decode($rawFocus ?: '[]', true);
+    if (!is_array($arr)) return $focusSet;
+    foreach ($arr as $f) {
+        if (!is_string($f)) continue;
+        $f = str_replace('\\', '/', trim($f));
+        if ($f !== '') $focusSet[$f] = true;
+    }
+    return $focusSet;
+}
+
+function save_focus_list(string $focusFile, array $focusSet): bool {
+    $list = array_keys($focusSet);
+    sort($list, SORT_NATURAL | SORT_FLAG_CASE);
+    $json = json_encode(array_values($list), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    if ($json === false) return false;
+    return @file_put_contents($focusFile, $json . "\n") !== false;
+}
+
 $message = '';
 $error = '';
+$focusFile = $docRoot . DIRECTORY_SEPARATOR . 'md_focus.json';
+$focusSet = load_focus_list($focusFile);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $rel = $_POST['file'] ?? '';
-    $content = $_POST['content'] ?? '';
-    $abs = safe_abs_from_rel($rel, $docRoot);
-    if ($abs === null || !preg_match('/\.(md|json)$/i', $rel)) {
-        $error = 'Invalid file path';
-    } elseif (!file_exists($abs)) {
-        $error = 'File does not exist';
-    } else {
-        $ok = @file_put_contents($abs, $content);
-        if ($ok === false) {
-            $error = 'Save failed';
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'focus_add' || $action === 'focus_remove') {
+        $rel = str_replace('\\', '/', trim((string)($_POST['file'] ?? '')));
+        $isValid = $rel !== '' && preg_match('/\.(md|json)$/i', $rel);
+        if ($isValid) {
+            if ($action === 'focus_add') $focusSet[$rel] = true;
+            if ($action === 'focus_remove') unset($focusSet[$rel]);
+            $ok = save_focus_list($focusFile, $focusSet);
+            if (!$ok) $error = 'Focus update failed';
         } else {
-            $message = 'Saved: ' . htmlspecialchars($rel, ENT_QUOTES, 'UTF-8');
+            $error = 'Invalid file path';
+        }
+
+        if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => $error === '',
+                'error' => $error,
+                'focus' => array_keys($focusSet),
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    } else {
+        $rel = $_POST['file'] ?? '';
+        $content = $_POST['content'] ?? '';
+        $abs = safe_abs_from_rel($rel, $docRoot);
+        if ($abs === null || !preg_match('/\.(md|json)$/i', $rel)) {
+            $error = 'Invalid file path';
+        } elseif (!file_exists($abs)) {
+            $error = 'File does not exist';
+        } else {
+            $ok = @file_put_contents($abs, $content);
+            if ($ok === false) {
+                $error = 'Save failed';
+            } else {
+                $message = 'Saved: ' . htmlspecialchars($rel, ENT_QUOTES, 'UTF-8');
+            }
         }
     }
 }
@@ -81,20 +130,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $includeJson = isset($_GET['showJson']) && $_GET['showJson'] === '1';
 $all = collect_doc_files($docRoot, $includeJson);
 $list = array_map(fn($p) => rel_path($p, $docRoot), $all);
-
-$focusFile = $docRoot . DIRECTORY_SEPARATOR . 'md_focus.json';
-$focusSet = [];
-if (file_exists($focusFile)) {
-    $rawFocus = @file_get_contents($focusFile);
-    $arr = json_decode($rawFocus ?: '[]', true);
-    if (is_array($arr)) {
-        foreach ($arr as $f) {
-            if (!is_string($f)) continue;
-            $f = str_replace('\\', '/', trim($f));
-            if ($f !== '') $focusSet[$f] = true;
-        }
-    }
-}
 
 $current = $_GET['file'] ?? ($_POST['file'] ?? ($list[0] ?? ''));
 $currentAbs = safe_abs_from_rel($current, $docRoot);
@@ -146,6 +181,15 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
     .mode-btn.active { background:#3b7cff; color:#fff; border-color:#3b7cff; }
     button { background:#3b7cff; color:#fff; border:0; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:600; }
     button:hover { filter:brightness(1.05); }
+    .focus-block { margin-bottom:10px; padding:8px; border:1px solid #2b3f77; border-radius:10px; background:#111d3b; }
+    .focus-title { font-size:12px; font-weight:700; color:#d7e2ff; margin-bottom:6px; }
+    .focus-list { display:flex; flex-direction:column; gap:6px; }
+    .focus-item { display:flex; align-items:center; gap:6px; }
+    .focus-link { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .focus-remove { background:#3a2230; border:1px solid #6a324d; color:#ffb8c9; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer; }
+    .ctx-menu { position:fixed; display:none; z-index:9999; background:#111d3b; border:1px solid #2f4b8f; border-radius:8px; padding:4px; min-width:170px; box-shadow:0 8px 30px rgba(0,0,0,.35); }
+    .ctx-menu button { width:100%; text-align:left; background:transparent; border:0; color:#d7e2ff; padding:8px 10px; border-radius:6px; font-size:12px; }
+    .ctx-menu button:hover { background:#1f315f; }
     .empty { padding:16px; color:#9bb0de; }
   </style>
 </head>
@@ -159,6 +203,10 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
       <?php else: ?>
         <a class="file" style="display:inline-block;padding:4px 8px;" href="?showJson=1&file=<?php echo urlencode($current ?: 'md_focus.json'); ?>">顯示 .md + .json</a>
       <?php endif; ?>
+    </div>
+    <div class="focus-block">
+      <div class="focus-title">Highlighted files</div>
+      <div id="focusQuickList" class="focus-list"></div>
     </div>
     <?php if (!$list): ?>
       <div class="empty">No markdown/json files found.</div>
@@ -194,6 +242,7 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
     <?php endif; ?>
   </section>
 </div>
+<div id="fileCtxMenu" class="ctx-menu"><button id="ctxAddHighlight" type="button">將此檔案高亮</button></div>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jstree@3.3.17/dist/themes/default/style.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jstree@3.3.17/dist/jstree.min.js"></script>
@@ -204,6 +253,10 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
   const focusSet = <?php echo json_encode(array_keys($focusSet), JSON_UNESCAPED_UNICODE); ?>;
   const currentFile = <?php echo json_encode($current, JSON_UNESCAPED_UNICODE); ?>;
   const includeJson = <?php echo $includeJson ? 'true' : 'false'; ?>;
+  const focusListEl = document.getElementById('focusQuickList');
+  const ctxMenu = document.getElementById('fileCtxMenu');
+  const ctxAddBtn = document.getElementById('ctxAddHighlight');
+  let ctxTargetFile = null;
   const slider = document.getElementById('fontSize');
   const val = document.getElementById('fontSizeVal');
   const key = 'md_viewer_font_size_px';
@@ -259,6 +312,58 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
   } catch (e) {}
   apply(initial);
 
+  const focusLookup = new Set(focusSet || []);
+
+  const postFocusAction = async (action, file) => {
+    const body = new URLSearchParams();
+    body.set('action', action);
+    body.set('file', file);
+    body.set('ajax', '1');
+    const res = await fetch(window.location.pathname + window.location.search, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString(),
+      credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'focus update failed');
+    focusLookup.clear();
+    (data.focus || []).forEach((f) => focusLookup.add(f));
+    renderFocusList();
+    refreshTreeFocusStyles();
+  };
+
+  const renderFocusList = () => {
+    if (!focusListEl) return;
+    const items = Array.from(focusLookup).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+    if (!items.length) {
+      focusListEl.innerHTML = '<div style="font-size:12px;color:#9bb0de;">（目前沒有）</div>';
+      return;
+    }
+    focusListEl.innerHTML = items.map((f) => {
+      const href = '?file=' + encodeURIComponent(f) + (includeJson ? '&showJson=1' : '');
+      return '<div class="focus-item">'
+        + '<a class="file focus-link" href="' + href + '" title="' + escapeHtml(f) + '">' + escapeHtml(f) + '</a>'
+        + '<button class="focus-remove" type="button" data-file="' + encodeURIComponent(f) + '">移除</button>'
+        + '</div>';
+    }).join('');
+  };
+
+  const refreshTreeFocusStyles = () => {
+    if (!window.jQuery) return;
+    const tree = window.jQuery('#fileTree').jstree(true);
+    if (!tree) return;
+    (fileList || []).forEach((f) => {
+      const node = tree.get_node('file:' + f, true);
+      if (!node || !node.length) return;
+      node.removeClass('focus-node');
+      if (focusLookup.has(f)) node.addClass('focus-node');
+    });
+  };
+
+  renderFocusList();
+
   let mode = 'raw';
   try {
     const m = localStorage.getItem(modeKey);
@@ -269,7 +374,6 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
   // left tree navigation (jstree)
   const treeEl = document.getElementById('fileTree');
   if (treeEl && window.jQuery && fileList.length) {
-    const focusLookup = new Set(focusSet || []);
     const nodes = [];
     const dirSet = new Set(['#']);
 
@@ -309,11 +413,56 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
         else u.searchParams.delete('showJson');
         window.location.href = u.toString();
       })
+      .on('ready.jstree', function () {
+        this.jstree(true).open_all();
+      })
+      .on('contextmenu', '.jstree-anchor', function (e) {
+        const nodeEl = e.currentTarget.parentElement;
+        const nodeId = nodeEl ? nodeEl.id : '';
+        if (!nodeId || !nodeId.startsWith('file:')) return;
+        e.preventDefault();
+        ctxTargetFile = nodeId.slice(5);
+        if (!ctxMenu) return;
+        ctxMenu.style.left = e.clientX + 'px';
+        ctxMenu.style.top = e.clientY + 'px';
+        ctxMenu.style.display = 'block';
+      })
       .jstree({
         core: { data: nodes, multiple: false, themes: { dots: true, icons: true } },
         plugins: ['wholerow']
       });
   }
+
+  if (focusListEl) {
+    focusListEl.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button.focus-remove');
+      if (!btn) return;
+      const f = decodeURIComponent(btn.getAttribute('data-file') || '');
+      if (!f) return;
+      try { await postFocusAction('focus_remove', f); } catch (err) { alert('移除高亮失敗：' + err.message); }
+    });
+  }
+
+  if (ctxAddBtn) {
+    ctxAddBtn.addEventListener('click', async () => {
+      if (!ctxTargetFile) return;
+      try { await postFocusAction('focus_add', ctxTargetFile); }
+      catch (err) { alert('新增高亮失敗：' + err.message); }
+      if (ctxMenu) ctxMenu.style.display = 'none';
+      ctxTargetFile = null;
+    });
+  }
+
+  document.addEventListener('click', () => {
+    if (ctxMenu) ctxMenu.style.display = 'none';
+    ctxTargetFile = null;
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && ctxMenu) {
+      ctxMenu.style.display = 'none';
+      ctxTargetFile = null;
+    }
+  });
 
   slider.addEventListener('input', (e) => apply(e.target.value));
   if (rawBtn) rawBtn.addEventListener('click', () => setMode('raw'));

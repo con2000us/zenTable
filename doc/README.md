@@ -6,6 +6,8 @@
 
 常用文件：
 
+- [md_viewer.php](md_viewer.php) — 文件瀏覽/編輯器（左側樹狀清單、Highlighted files 快速區、右鍵「將此檔案高亮」、快速移除高亮）
+
 - [../NAMING_MIGRATION.md](../NAMING_MIGRATION.md) — 命名統一策略（Phase 1: 相容優先）
 
 - [HIGHLIGHT_AND_RULES.md](HIGHLIGHT_AND_RULES.md) — Highlight 與規則使用說明
