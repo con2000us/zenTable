@@ -1,7 +1,7 @@
 # SkillHub Release Checklist (ZenTable)
 
 ## A. Release positioning
-- [ ] Decide release channel: `beta` (recommended) or `stable`
+- [x] Decide release channel: `beta` (recommended) or `stable`
 - [ ] Mark ASCII as `beta/experimental` in all public docs
 
 ## B. Functional readiness
