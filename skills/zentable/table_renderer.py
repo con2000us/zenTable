@@ -49,6 +49,48 @@ ZEBLE_RENDER = ZEN_ROOT / "skills" / "zentable" / "zentable_renderer.py"
 THEMES_CSS = ZEN_ROOT / "themes" / "css"
 THEMES_PIL_ZIP = ZEN_ROOT / "themes" / "pil"
 DEFAULT_ROWS_PER_PAGE = 15
+DEFAULT_THEME = "minimal_ios_mobile"
+DEFAULT_WIDTH = 450
+DEFAULTS_FILE = ZEN_ROOT / "skills" / "zentable" / "zx_defaults.json"
+
+def _load_defaults() -> dict:
+    try:
+        if DEFAULTS_FILE.exists():
+            data = json.loads(DEFAULTS_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return {}
+
+
+def _save_defaults(data: dict) -> None:
+    DEFAULTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    DEFAULTS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _parse_pin_keys(pin_args: list[str]) -> set[str]:
+    keys: set[str] = set()
+    for raw in pin_args or []:
+        for token in re.split(r"[\s,]+", str(raw).strip()):
+            t = token.strip().lower()
+            if not t:
+                continue
+            keys.add(t)
+    aliases = {
+        "w": "width",
+        "t": "theme",
+        "nosw": "smart_wrap",
+        "no-smart-wrap": "smart_wrap",
+        "smart-wrap": "smart_wrap",
+        "sw": "smart_wrap",
+        "pp": "per_page",
+    }
+    normalized: set[str] = set()
+    for k in keys:
+        normalized.add(aliases.get(k, k))
+    return normalized
+
 
 def _discover_css_themes() -> set[str]:
     themes: set[str] = set()
@@ -162,7 +204,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("input", help="JSON file path, or '-' for stdin")
     ap.add_argument("output", help="Output PNG path")
-    ap.add_argument("--theme", "-t", default="mobile_chat")
+    ap.add_argument("--theme", "-t", default=None)
     ap.add_argument("--transparent", action="store_true")
     ap.add_argument("--width", "-w", type=int, default=None)
     ap.add_argument("--text-scale", "--ts", default=None)
@@ -193,7 +235,28 @@ def main() -> int:
     ap.add_argument("--transpose", action="store_true")
     ap.add_argument("--cc", action="store_true")
     ap.add_argument("--verbose", action="store_true")
+    ap.add_argument("--pin", action="append", default=[],
+                    help="Persist selected params as defaults, e.g. --pin width,nosw,theme")
     args = ap.parse_args()
+
+    defaults = _load_defaults()
+    final_theme = args.theme if args.theme else str(defaults.get("theme") or DEFAULT_THEME)
+
+    final_width = args.width
+    if final_width is None:
+        dwidth = defaults.get("width")
+        if isinstance(dwidth, int) and dwidth > 0:
+            final_width = dwidth
+        else:
+            final_width = DEFAULT_WIDTH
+
+    explicit_sw = bool(args.smart_wrap or args.no_smart_wrap or args.nosw)
+    if explicit_sw:
+        final_smart_wrap = bool(args.smart_wrap) and not bool(args.no_smart_wrap or args.nosw)
+    else:
+        final_smart_wrap = bool(defaults.get("smart_wrap", True))
+
+    final_per_page = max(1, int(args.per_page)) if args.per_page is not None else int(defaults.get("per_page") or DEFAULT_ROWS_PER_PAGE)
 
     if not ZEBLE_RENDER.exists():
         raise SystemExit(f"Missing renderer script: {ZEBLE_RENDER}")
@@ -205,7 +268,7 @@ def main() -> int:
         data_obj = json.loads(data_str)
         data_json = _write_temp_json(data_str, tmpdir)
 
-        per_page = max(1, int(args.per_page)) if args.per_page is not None else DEFAULT_ROWS_PER_PAGE
+        per_page = final_per_page
         total_rows = _count_rows(data_obj)
         total_pages = max(1, int(math.ceil(total_rows / float(per_page)))) if total_rows else 1
 
@@ -242,12 +305,12 @@ def main() -> int:
         for page in pages:
             out_path = _output_for_page(args.output, page, pages)
             cmd = [sys.executable, str(ZEBLE_RENDER), str(data_json), str(out_path)]
-            cmd += _theme_to_args(args.theme, tmpdir)
+            cmd += _theme_to_args(final_theme, tmpdir)
 
             if args.transparent:
                 cmd += ["--transparent"]
-            if args.width is not None:
-                cmd += ["--width", str(args.width)]
+            if final_width is not None:
+                cmd += ["--width", str(final_width)]
             if args.text_scale is not None:
                 cmd += ["--text-scale", str(args.text_scale)]
             if args.text_scale_max is not None:
@@ -282,10 +345,10 @@ def main() -> int:
             if args.transpose or args.cc:
                 cmd += ["--transpose"]
 
-            # Smart-wrap: default is ON in renderer; allow explicit on/off passthrough
-            if args.smart_wrap:
+            # Smart-wrap default can be pinned; explicit flags still take precedence.
+            if final_smart_wrap:
                 cmd += ["--smart-wrap"]
-            if args.no_smart_wrap or args.nosw:
+            else:
                 cmd += ["--no-smart-wrap"]
 
             if args.verbose:
@@ -295,6 +358,21 @@ def main() -> int:
             last_code = proc.returncode
             if last_code != 0:
                 return last_code
+
+        pin_keys = _parse_pin_keys(args.pin)
+        if pin_keys:
+            new_defaults = dict(defaults)
+            if "theme" in pin_keys:
+                new_defaults["theme"] = final_theme
+            if "width" in pin_keys:
+                new_defaults["width"] = int(final_width) if final_width is not None else DEFAULT_WIDTH
+            if "smart_wrap" in pin_keys:
+                new_defaults["smart_wrap"] = bool(final_smart_wrap)
+            if "per_page" in pin_keys:
+                new_defaults["per_page"] = int(per_page)
+            _save_defaults(new_defaults)
+            print(f"[zenTable] pinned defaults: {', '.join(sorted(pin_keys))}", file=sys.stderr)
+
         return last_code
 
 

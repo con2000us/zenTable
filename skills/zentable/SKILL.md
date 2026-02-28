@@ -40,13 +40,15 @@ allowed-tools: ["exec", "read", "write"]
 
 ### Shorthand（本專案約定）
 
+- **MUST 規則**：使用者輸入 `Zx` 時，必須直接執行出圖流程（預設不反問、不先做解釋型回覆）。
 - 使用者輸入 `Zx` 時，**視為直接執行指令**：立即進入 zenTable 出圖流程（預設不反問）。
 - `Zx` 代表使用者對「出圖」有強烈意願；除非有**高度不確定性**才回問。
 - 僅在以下情況允許先問：
   - 無法判定資料來源（本則/上則都無可用圖文）
   - 語氣明顯不像要輸出圖表（例如純閒聊、無表格意圖）
   - 關鍵欄位缺失導致輸出高度可能錯誤
-- 其餘情況一律直接用預設設定出圖（預設 CSS + `minimal_ios_mobile`）。
+- 其餘情況一律直接用預設設定出圖（預設 CSS + `minimal_ios_mobile` + `width=450`）。\n- `table_renderer.py` 已跟隨此預設（未指定時自動套用）。
+- **MUST 規則**：出圖回覆時，不要只給連結；只要平台支援圖片附件/內嵌，就必須直接回傳圖片本體。
 - `Zx` 預設視為「使用 zenTable 輸出表格圖片（而非純文字精簡回覆）」。
 - `Zx` 的來源優先序：**本則附圖 OCR** → **本則文字整理表格** → **上一則附圖 OCR** → **上一則文字整理表格**。
 - 若 `Zx` 觸發但上下文沒有可用圖文資料，先回問一次補充（避免輸出空表）。
@@ -75,7 +77,7 @@ allowed-tools: ["exec", "read", "write"]
 | `--no-smart-wrap` / `--nosw` | `smart_wrap` | 設為 `false` | `--no-smart-wrap` |
 | `--theme NAME` / `-t NAME` | `theme` | 主題名稱字串 | `--theme NAME` |
 | `--both` / `--bo` | `output_both` | 布林；除 PNG 外同時輸出 ASCII（同主檔名 .txt） | `--both` |
-
+| `--pin KEYS` | `pin_keys` | 將本次有效參數寫成未來預設；`KEYS` 以逗號分隔，支援 `theme,width,nosw,per_page` | `--pin width,nosw,theme` |\n
 `page_spec` 展開規則（Agent 端）：
 
 - `N` -> 只輸出第 `N` 頁。
@@ -242,6 +244,20 @@ python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/out.png --th
 
 
 ### 基礎呼叫
+
+### 固定預設（pin）
+
+可用 `--pin` 把本次參數記成往後預設（寫入 `skills/zentable/zx_defaults.json`）：
+
+```bash
+# 把 theme/width/關閉 smart-wrap 設成之後預設
+echo '{"headers":["A"],"rows":[["1"]]}' \
+| python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - /tmp/pin.png \
+  --theme compact_clean --width 700 --nosw --pin width,nosw,theme
+```
+
+之後若不帶這些參數，會自動沿用 pinned 預設。
+
 
 ```bash
 echo '{JSON資料}' | python3 ~/.openclaw/custom-skills/zentable/table_renderer.py - 輸出路徑.png --theme 主題名稱
