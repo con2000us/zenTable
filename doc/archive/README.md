@@ -8,6 +8,7 @@
 |------|------|
 | PLAN_COMPLETED_AND_CALL_GRAPH.md | 過往計畫完成清單與調用關係圖；部分路徑與流程可能與現況不同。 |
 | ZEBLE_FLOW.md | 舊版流程圖，含已淘汰入口（如 `gentable_*` / 舊路徑命名），僅供歷史參考。 |
+| INTEGRATION.md | 早期整合示例草稿，含過時呼叫方式與示意程式碼。 |
 
 ## deprecated_code/
 

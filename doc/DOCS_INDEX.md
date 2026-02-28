@@ -22,7 +22,6 @@ Generated: 2026-02-27 18:27 UTC
 | `doc/DEVELOPMENT.md` | active | 保持與實際入口一致（scripts/zentable_render.py） |
 | `doc/HIGHLIGHT_AND_RULES.md` | active | 保留並更新路徑/命名 |
 | `doc/HIGHLIGHT_STYLE_PLAN.md` | active | 保留並更新路徑/命名 |
-| `doc/INTEGRATION.md` | active | 保留並更新路徑/命名 |
 | `doc/MODULE_API_FOR_COMFYUI_N8N.md` | active | 保留並更新路徑/命名 |
 | `doc/OCR_TABLE_SEGMENT_STRATEGY.md` | active | 保留並更新路徑/命名 |
 | `doc/OCR_TEST_SPEC.md` | active | 保留並更新路徑/命名 |
@@ -72,6 +71,7 @@ Generated: 2026-02-27 18:27 UTC
 | `doc/archive/SKILL_RUNNABLE_ASSESSMENT.md` | legacy | 僅保留歷史，避免當前流程引用 |
 | `doc/archive/TEST_PAGE.md` | legacy | 僅保留歷史，避免當前流程引用 |
 | `doc/archive/ZEBLE_FLOW.md` | legacy | 舊流程圖（含已淘汰入口），僅保留歷史參考 |
+| `doc/archive/INTEGRATION.md` | legacy | 早期整合示例草稿（含過時呼叫方式），僅供歷史參考 |
 
 ## 下一步（文件清理執行順序）
 
