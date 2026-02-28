@@ -3,6 +3,7 @@
 本目錄為專案說明與規格，**Skill 使用入口**請見：
 
 - **[skills/zentable/SKILL.md](../skills/zentable/SKILL.md)** — 何時用、怎麼呼叫、參數與範例、進一步說明連結
+- **[doc/skills/zentable/SKILL.md](skills/zentable/SKILL.md)** — 網站掃描範圍內鏡像副本（方便在 doc viewer 直接閱讀）
 
 常用文件：
 
