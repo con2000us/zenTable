@@ -157,13 +157,14 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
     .sidebar { border-right:1px solid #25314f; overflow:auto; padding:12px; background:#0f1830; }
     .sidebar h2 { margin:6px 0 10px; font-size:15px; }
     .file { display:block; color:#b9c7ea; text-decoration:none; padding:6px 8px; border-radius:8px; margin:2px 0; font-size:13px; }
-    .file:hover { background:#1a2850; }
+    .file:hover { background:#1f315f; color:#eef4ff; }
     .file.active { background:#243a74; color:#fff; }
-    .file.focus { outline:1px solid #f6c453; background:#2c2a14; color:#ffe6a3; }
+    .file.focus { outline:1px solid #f6c453; background:#3a2f10; color:#fff0c2; }
     #fileTree { font-size: 13px; }
-    #fileTree .jstree-anchor { color:#c9d7f2; }
-    #fileTree .focus-node > .jstree-anchor { color:#ffe6a3 !important; font-weight: 700; }
-    #fileTree .active-node > .jstree-anchor { color:#ffffff !important; background:#243a74; border-radius:6px; }
+    #fileTree .jstree-anchor { color:#c9d7f2; border-radius:6px; }
+    #fileTree .jstree-hovered { background:#203969 !important; color:#f4f8ff !important; }
+    #fileTree .focus-node > .jstree-anchor { color:#fff0c2 !important; background:#4a3b12 !important; font-weight: 700; }
+    #fileTree .active-node > .jstree-anchor { color:#ffffff !important; background:#2c4d91 !important; border-radius:6px; }
     .main { display:flex; flex-direction:column; min-width:0; }
     .bar { padding:10px 12px; border-bottom:1px solid #25314f; display:flex; gap:10px; align-items:center; background:#0f1830; flex-wrap:wrap; }
     .bar .title { font-weight:600; font-size:14px; }
@@ -185,7 +186,8 @@ if ($currentAbs && file_exists($currentAbs) && preg_match('/\.(md|json)$/i', $cu
     .focus-title { font-size:12px; font-weight:700; color:#d7e2ff; margin-bottom:6px; }
     .focus-list { display:flex; flex-direction:column; gap:6px; }
     .focus-item { display:flex; align-items:center; gap:6px; }
-    .focus-link { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .focus-link { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#dfe9ff; padding:3px 6px; border-radius:6px; }
+    .focus-link:hover { background:#25457f; color:#ffffff; }
     .focus-remove { background:#3a2230; border:1px solid #6a324d; color:#ffb8c9; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer; }
     .ctx-menu { position:fixed; display:none; z-index:9999; background:#111d3b; border:1px solid #2f4b8f; border-radius:8px; padding:4px; min-width:170px; box-shadow:0 8px 30px rgba(0,0,0,.35); }
     .ctx-menu button { width:100%; text-align:left; background:transparent; border:0; color:#d7e2ff; padding:8px 10px; border-radius:6px; font-size:12px; }
