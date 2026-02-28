@@ -60,6 +60,7 @@ Generated: 2026-02-27 18:27 UTC
 | `doc/ENVIRONMENT_DEPENDENCIES.md` | active | 保留並更新路徑/命名 |
 | `doc/README.md` | active | 保留並更新路徑/命名 |
 | `doc/REQUIREMENT.md` | active | 保留並更新路徑/命名 |
+| `doc/architecture/THREE_LAYER_ARCHITECTURE.md` | active | 三層架構導讀（自 refactor todo 摘要） |
 
 ## Archive/歷史
 
