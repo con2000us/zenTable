@@ -2,14 +2,14 @@
 
 ## 一、工作流中的主程式（被 API 呼叫）
 
-### 1. zentable_render.py
+### 1. scripts/zentable_render.py
 
 | 項目 | 說明 |
 |------|------|
-| **呼叫者** | gentable_css.php、gentable_pil.php、gentable_ascii.php |
+| **呼叫者** | `gentable_css.php`、`gentable_pil.php`、`gentable_ascii.php`（`gentable.php` 已 deprecated） |
 | **角色** | 主渲染程式，支援 CSS/PIL/ASCII 三種模式 |
 | **輸入** | 1) `<input.json>` 路徑，2) `<output.png>` 路徑（ASCII 時可為 dummy.png） |
-| **輸入格式** | 陣列 of 物件 `[{...},{...}]` 或 `{ headers, rows, title?, footer? }`；gentable 會寫入 `_theme`、自訂 `_params` |
+| **輸入格式** | 陣列 of 物件 `[{...},{...}]` 或 `{ headers, rows, title?, footer? }`；呼叫端會寫入 `_theme`、自訂 `_params` |
 
 | 參數 | 說明 | 由誰傳入 |
 |------|------|----------|
@@ -53,82 +53,15 @@
 
 ---
 
-## 二、CLI / 輔助程式（非 API 呼叫）
+## 二、Legacy 程式與歷史腳本
 
-### 3. zeble.py
+下列內容已移至 `doc/archive/`（僅歷史參考，不屬現行工作流）：
 
-| 項目 | 說明 |
-|------|------|
-| **呼叫者** | （已棄用，無正式呼叫者） |
-| **角色** | legacy PIL 渲染器（已封存到 doc/archive/deprecated_code/） |
-| **輸入** | `<input.json>`、`<output.png>` |
+- `zeble.py`
+- `zeble_interactive.py`
+- `doc/archive/deprecated_code/*`
 
-| 參數 | 說明 |
-|------|------|
-| `--dark` | 深色主題 |
-| `--light` | 淺色主題 |
-| `--cyberpunk` | 賽博龐克 |
-| `--forest` | 森林 |
-| `--ocean` | 海洋 |
-| `--sunset` | 日落 |
-| `--rose` | 玫瑰 |
-| `--midnight` | 午夜 |
-| `--page N` | 第 N 頁 |
-| `--sort <欄位>` | 排序 |
-| `--asc` / `--desc` | 升序 / 降序 |
-
-| 輸出 | 說明 |
-|------|------|
-| PNG 檔案 | 表格圖片 |
-| JSON 內 `bg_image`、`border_image` | 可指定背景圖、邊框圖 |
-
----
-
-### 4. zentable_render.py
-
-| 項目 | 說明 |
-|------|------|
-| **呼叫者** | 相容名（`scripts/zentable_render.py` 為 `zentable_render.py` symlink） |
-| **角色** | 另套渲染引擎，argparse、CSS 子集、PIL fallback |
-| **輸入** | `-t` 範本、`-d` 資料、`-o` 輸出 |
-
-| 參數 | 說明 |
-|------|------|
-| `-t, --template` | 範本檔案或內聯 CSS |
-| `-d, --data` | 資料 JSON 檔案或內聯 |
-| `-o, --output` | 輸出 PNG |
-| `-f, --force-pil` | 強制 PIL |
-| `-e, --env` | 環境 linux/macos/windows/auto |
-| `-c, --chrome` | Chrome 路徑 |
-| `-v, --verbose` | 詳細輸出 |
-
-| 輸出 | 說明 |
-|------|------|
-| PNG 檔案 | 表格圖片 |
-
----
-
-### 5. zeble_interactive.py
-
-| 項目 | 說明 |
-|------|------|
-| **呼叫者** | 無（測試工具） |
-| **角色** | 舊測試工具（已封存，不在主流程） |
-| **輸入** | 無（內建範例） |
-| **輸出** | 產出 test_*.json、test_*.png |
-
----
-
-### 6. smart_table_output.py
-
-| 項目 | 說明 |
-|------|------|
-| **呼叫者** | OpenClaw / Agent（若整合） |
-| **角色** | 舊輔助腳本（已封存，不在主流程） |
-| **輸入** | 無 CLI，函式 `should_use_image()` 等 |
-| **輸出** | 布林或偏好設定 |
-
----
+請以 `scripts/zentable_render.py` 與 `scripts/table_detect.py` 作為現行 canonical 入口。
 
 ## 三、工具腳本（非工作流核心）
 
@@ -143,7 +76,7 @@
 ## 四、工作流總覽
 
 ```
-[使用者] → index.html / zeble_test.html
+[使用者] → index.html / 測試頁
               │
               ├─ theme_api.php ────────────→ themes/ 目錄（讀取，非 Python）
               │
@@ -151,14 +84,14 @@
               │                                  │
               │                                  └→ stdout: JSON { needs_table, reason, confidence }
               │
-              ├─ gentable_css.php ──────────→ zentable_renderer.py --force-css --theme-name X [--transparent]
+              ├─ gentable_css.php ──────────→ scripts/zentable_render.py --force-css --theme-name X [--transparent]
               │                                  └→ PNG
               │
-              ├─ gentable_pil.php ───────────→ zentable_renderer.py --force-pil --theme-name X [--params {...}] [--page] [--sort] [--asc|--desc]
+              ├─ gentable_pil.php ───────────→ scripts/zentable_render.py --force-pil --theme-name X [--params {...}] [--page] [--sort] [--asc|--desc]
               │                                  └→ PNG
               │
-              └─ gentable_ascii.php ────────→ zentable_renderer.py --force-ascii --output-ascii <path> [--page] [--sort]
+              └─ gentable_ascii.php ────────→ scripts/zentable_render.py --force-ascii --output-ascii <path> [--page] [--sort]
                                                  └→ TXT
 
-[舊 API]  gentable.php ───────────────────→ deprecated JSON 提示（不再呼叫 zeble.py）
+[舊 API]  gentable.php ───────────────────→ deprecated JSON 提示（不再參與渲染）
 ```

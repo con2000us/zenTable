@@ -3,7 +3,7 @@
 ## 一、現況與目標
 
 - **校準**：`calibrate_analyze.py` 以 CLI 執行，主邏輯在 `analyze_widths(image_path, custom_chars, use_ocr)`。
-- **渲染**：`zentable_render.py` 以 CLI 執行，`main()` 內依參數分支呼叫 `render_ascii` / `generate_css_html` + `render_css` / `render_pil`。
+- **渲染**：`scripts/zentable_render.py` 以 CLI 執行，`main()` 內依參數分支呼叫 `render_ascii` / `generate_css_html` + `render_css` / `render_pil`。
 
 目標：抽出**可 import 的函數 API**，讓 ComfyUI 自訂節點或 n8n 的 Python/HTTP 節點能直接呼叫，而不必組 `sys.argv` 或跑 subprocess。
 
@@ -16,9 +16,9 @@ zenTable/
 ├── zentable/                    # 可安裝的套件（選用）
 │   ├── __init__.py
 │   ├── calibration.py          # 校準：從 calibrate_analyze.py 抽出
-│   └── render.py                # 渲染：從 zentable_renderer.py 抽出
+│   └── render.py                # 渲染：從 scripts/zentable_render.py 抽出
 ├── calibrate_analyze.py         # CLI 入口，改為 import zentable.calibration 再呼叫
-├── zentable_renderer.py              # 或在 skill 目錄，CLI 入口改為 import zentable.render
+├── scripts/zentable_render.py        # CLI 入口，改為 import zentable.render
 └── doc/
     └── MODULE_API_FOR_COMFYUI_N8N.md
 ```
@@ -30,12 +30,12 @@ zenTable/
 ├── api/
 │   ├── __init__.py
 │   ├── calibration_api.py      # 薄包裝：呼叫 calibrate_analyze.analyze_widths
-│   └── render_api.py            # 薄包裝：呼叫 zeble_render 的 run_render
+│   └── render_api.py            # 薄包裝：呼叫 scripts/zentable_render.py
 ├── calibrate_analyze.py
-└── (zeble_render 在 skill 目錄)
+└── scripts/zentable_render.py
 ```
 
-以下以「薄包裝 + zeble_render 新增 run_render」為例，不強制改目錄結構。
+以下以「薄包裝 + scripts/zentable_render.py」為例，不強制改目錄結構。
 
 ---
 
@@ -48,7 +48,7 @@ zenTable/
 | **analyze_widths** | 2383 | `analyze_widths(image_path: str, custom_chars: str = "", use_ocr: bool = True) -> Dict[str, Any]` | 主入口。回傳 `{ "calibration": {...}, "pixel_per_unit": float, "ocr_lines": [...], "char_measurements": [...] }` |
 | **analyze_widths_by_pixel** | 2257 | `analyze_widths_by_pixel(image_path: str, custom_chars: str = "") -> Dict` | 不用 OCR，純像素計數。 |
 
-**回傳的 calibration** 可直接給 `zentable_render.py` 的 ASCII 模式（`--calibration` JSON）。
+**回傳的 calibration** 可直接給 `scripts/zentable_render.py` 的 ASCII 模式（`--calibration` JSON）。
 
 ### 3.2 模組包裝範例（可放在 api/calibration_api.py）
 
@@ -86,12 +86,12 @@ ComfyUI / n8n 只要把 `zenTable` 或 `api` 加入 `sys.path`，即可 `from ap
 
 ## 四、渲染 API（給 ComfyUI / n8n 呼叫）
 
-### 4.1 zentable_renderer.py 需新增「程式入口」
+### 4.1 scripts/zentable_render.py 需新增「程式入口」
 
 目前只有 `main()` 讀 `sys.argv`。建議新增一個**純參數的入口**，例如：
 
 ```python
-# 在 zentable_renderer.py 末尾、main() 之後或之前新增
+# 在 scripts/zentable_render.py（或其可 import 模組）新增
 
 def run_render(
     data: dict,
@@ -133,7 +133,7 @@ def run_render(
 這樣 ComfyUI 或 n8n 的 Python 節點即可：
 
 ```python
-from zentable.render import run_render  # 或 from api.render_api import run_render
+from api.render_api import render_table
 result = run_render(
     data={"headers": ["A","B"], "rows": [["1","2"]], "title": "Test", "footer": ""},
     output_path="/tmp/out.png",
@@ -192,10 +192,10 @@ class ZenTableCalibrateNode:
 # 再 load_image(output_path) 轉成 ComfyUI IMAGE
 ```
 
-關鍵：ComfyUI 需能 **import 到** `calibrate_analyze` 與 `zeble_render`（或其薄包裝）。做法二擇一：
+關鍵：ComfyUI 需能 **import 到** `calibrate_analyze` 與 `scripts/zentable_render.py`（或其薄包裝）。做法二擇一：
 
 - 把 `zenTable` 目錄（或 `api`）加入 `sys.path`，例如在節點 `__init__.py` 裡 `sys.path.insert(0, "/var/www/html/zenTable")`；或
-- 把 `calibrate_analyze.py` / `zentable_render.py` 複製或 symlink 到 `custom_nodes/comfyui_zentable/`，再在節點內 import。
+- 把 `calibrate_analyze.py` / `scripts/zentable_render.py` 複製或 symlink 到 `custom_nodes/comfyui_zentable/`，再在節點內 import。
 
 ---
 
@@ -218,7 +218,7 @@ n8n 用 **HTTP Request** 節點呼叫既有 API，無需改 Python：
 // n8n Code 節點（執行在 n8n 的 Node 環境，若同機可 subprocess）
 const { execSync } = require('child_process');
 const data = $input.first().json.data;  // 表資料
-const out = execSync(`python3 /var/www/html/zenTable/scripts/zentable_renderer.py /tmp/in.json /tmp/out.png --force-css --theme-name neon_cyber`, {
+const out = execSync(`python3 /var/www/html/zenTable/scripts/zentable_render.py /tmp/in.json /tmp/out.png --force-css --theme-name neon_cyber`, {
   input: JSON.stringify(data),
   encoding: 'utf-8'
 });
@@ -231,8 +231,8 @@ return { json: { path: '/tmp/out.png' } };
 # 假設 n8n 能執行 Python 並指定 zenTable 路徑
 import sys
 sys.path.insert(0, "/var/www/html/zenTable")
-from api.render_api import run_render
-result = run_render(data, "/tmp/out.png", mode="css", theme_name="neon_cyber")
+from api.render_api import render_table
+result = render_table(data, output_path="/tmp/out.png", mode="css", theme_name="neon_cyber")
 ```
 
 ### 6.3 獨立 HTTP 服務（Flask/FastAPI）包一層
@@ -251,7 +251,7 @@ result = run_render(data, "/tmp/out.png", mode="css", theme_name="neon_cyber")
 | 項目 | 說明 |
 |------|------|
 | 校準 | `calibrate_analyze.analyze_widths` 已是純函數，可直接 import；可加薄包裝 `analyze_from_image` 並處理 `sys.path`。 |
-| 渲染 | 在 `zentable_render.py` 新增 `run_render(data, output_path, mode=..., theme_name=..., **kwargs)`，把 `main()` 的邏輯用參數驅動重現。 |
+| 渲染 | 優先使用 `api/render_api.py::render_table`；CLI canonical 入口是 `scripts/zentable_render.py`。 |
 | ComfyUI | 新增 custom node，內部 import 校準/渲染 API，輸入輸出對應 ComfyUI 的 IMAGE / STRING。 |
 | n8n | 選一種：現成 PHP API、Execute Command 呼叫 CLI、或獨立 Flask/FastAPI 包一層再 HTTP 呼叫。 |
 
