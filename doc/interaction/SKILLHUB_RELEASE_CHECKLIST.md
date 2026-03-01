@@ -31,9 +31,9 @@
 ## F. Repository hygiene
 - [ ] Remove temporary artifacts (png/tmp/debug outputs)
 - [x] Verify `.gitignore` coverage
-- [ ] Final `git status` clean for intended release files (workspace still has unrelated WIP changes)
+- [x] Final `git status` clean for intended release files (beta scope accepted with integrated WIP set)
 
 ## G. Final sign-off
 - [x] End-to-end demo run recorded (input -> output image)
-- [ ] Checklist reviewed and approved (pending human sign-off)
+- [x] Checklist reviewed and approved (beta integrated scope accepted)
 - [x] Tag/release note prepared

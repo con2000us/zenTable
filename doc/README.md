@@ -18,6 +18,7 @@
 - [interaction/SKILLHUB_RELEASE_CHECKLIST.md](interaction/SKILLHUB_RELEASE_CHECKLIST.md) — SkillHub 發布檢查清單（含英文文檔 gate）
 - [interaction/SKILLHUB_RELEASE_ASSETS_EN.md](interaction/SKILLHUB_RELEASE_ASSETS_EN.md) — SkillHub 英文發布文案素材（description/highlights/limitations/quickstart）
 - [interaction/SKILLHUB_RELEASE_NOTES_BETA.md](interaction/SKILLHUB_RELEASE_NOTES_BETA.md) — SkillHub beta 版 release notes 與阻塞事項
+- [interaction/SKILLHUB_BETA_INTEGRATED_SCOPE.md](interaction/SKILLHUB_BETA_INTEGRATED_SCOPE.md) — SkillHub beta 整包納入 WIP 範圍聲明
 
 - [../NAMING_MIGRATION.md](../NAMING_MIGRATION.md) — 命名統一策略（Phase 1: 相容優先）
 
