@@ -52,6 +52,8 @@ def _render_html_to_png(
         cmd = [
             "xvfb-run", "-a", "google-chrome",
             "--headless",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
             f"--screenshot={out_path}",
             f"--virtual-time-budget={int(timeout_ms)}",
             "--hide-scrollbars",

@@ -14,7 +14,7 @@
 - ASCII output remains **beta/experimental**.
 - Cross-platform text alignment may vary due to font fallback and whitespace behavior.
 - Discord plain text collapses repeated normal spaces; Unicode spacing characters may be needed.
-- Current `zentable-css-api` health is green, but `/render/html` still returns 500 in this environment (`xvfb-run: xauth command not found`) until rebuilt with updated CSS Dockerfile.
+- `zentable-css-api` health and `/render/html` are verified in this environment after adding root-container flags (`--no-sandbox`, `--disable-dev-shm-usage`) and ensuring `xauth` is available.
 
 ## Verification snapshot
 - Local renderer end-to-end image demo: PASS (`/tmp/zentable_signoff/e2e_demo.png`)
