@@ -1,6 +1,13 @@
 # ZenTable Beta Release — skillhub-zentable-beta-2026-03-01
 
-ZenTable beta focuses on hard table workflows: converting noisy inputs (A4 photo capture, broken ASCII, fragmented crops) into clean, decision-ready visual outputs.
+## Intro (use-case first)
+
+ZenTable is built to solve messy table problems in real workflows:
+- phone photos of A4 sheets that need extraction and clean re-rendering
+- broken ASCII tables that collapse in chat environments
+- fragmented/cropped table sources that must be merged into one coherent decision view
+
+Then it applies practical operations like sorting, filtering, threshold highlighting, and export to share-ready visual tables.
 
 ## Highlights
 
@@ -48,6 +55,11 @@ echo '{"headers":["A","B"],"rows":[["1","2"]]}' \
 ls -lh /tmp/zt_smoke.png
 ```
 
-## Demo status
+## Demo status (use-case preview)
 
-Demo video is coming soon. We prioritized shipping beta first for early real-workflow validation.
+Demo video is in progress. The upcoming walkthrough covers:
+1. A4 photo → OCR extract → sort → threshold highlight → final output
+2. Broken ASCII → structured CSS table
+3. Fragmented table crops → merge → filtered/highlighted output
+
+Beta is already available now for real-world testing and feedback.
