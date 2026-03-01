@@ -48,6 +48,7 @@ Render structured table data into high-quality PNG images.
 - Create separate calibration profiles per platform; do not share blindly.
 - `--both` already includes text-theme fallback to `default` when no text theme exists.
 - Discord plain text collapses repeated normal spaces; Unicode spacing characters may be required for spacing preservation.
+- This beta was validated primarily on Discord; other chat platforms may require agent-side output adaptation (image/message formatting differences).
 
 ## Zx shorthand policy (project rule)
 

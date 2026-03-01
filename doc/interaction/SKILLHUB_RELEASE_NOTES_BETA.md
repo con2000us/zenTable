@@ -14,6 +14,7 @@
 - ASCII output remains **beta/experimental**.
 - Cross-platform text alignment may vary due to font fallback and whitespace behavior.
 - Discord plain text collapses repeated normal spaces; Unicode spacing characters may be needed.
+- Current beta validation is Discord-first; other channels may need agent-side message/image output adjustments.
 - `zentable-css-api` health and `/render/html` are verified in this environment after adding root-container flags (`--no-sandbox`, `--disable-dev-shm-usage`) and ensuring `xauth` is available.
 
 ## Verification snapshot
