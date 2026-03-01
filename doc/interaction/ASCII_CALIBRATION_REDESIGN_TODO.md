@@ -84,3 +84,18 @@
   2. 兩模型落地
   3. JSON 管理層完成
   4. 再做細節優化
+
+## E. Unicode 空白字元策略（Discord plain text）
+
+背景：已確認 Discord 裸文字會收折一般空白，但 Unicode 空白字元可保留間距，需納入 ASCII 設計與回歸。
+
+- [ ] E1 將以下字元納入測量/校準樣本：
+  - NBSP `U+00A0`
+  - Thin Space `U+2009`
+  - Narrow No-Break Space `U+202F`
+  - Em Space `U+2003`
+  - En Space `U+2002`
+  - Hair Space `U+200A`
+- [ ] E2 在 Discord profile 增加「space-preservation」策略（必要時以 Unicode 空白替代一般空白）
+- [ ] E3 新增回歸測試：一般空白 vs Unicode 空白的視覺與字寬穩定性
+- [ ] E4 文件補充：跨平台字型差異下的可攜性與風險註記
