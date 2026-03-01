@@ -2,7 +2,7 @@
 
 ## A. Release positioning
 - [x] Decide release channel: `beta` (recommended) or `stable`
-- [ ] Mark ASCII as `beta/experimental` in all public docs
+- [x] Mark ASCII as `beta/experimental` in all public docs
 
 ## B. Functional readiness
 - [ ] CSS rendering smoke test passes
@@ -19,14 +19,14 @@
 ## D. Documentation gate (EN-only for SkillHub)
 - [ ] `skills/zentable/SKILL.md` is fully English
 - [ ] `doc/skills/zentable/SKILL.md` mirror synced in English
-- [ ] Public release summary/highlights/known issues are English
+- [x] Public release summary/highlights/known issues are English
 - [ ] Remove mixed Chinese content from publish-facing docs
 
 ## E. Publish assets
-- [ ] One-paragraph SkillHub description (EN)
-- [ ] Feature bullets (EN)
-- [ ] Known limitations section (EN)
-- [ ] Quickstart command block (EN)
+- [x] One-paragraph SkillHub description (EN)
+- [x] Feature bullets (EN)
+- [x] Known limitations section (EN)
+- [x] Quickstart command block (EN)
 
 ## F. Repository hygiene
 - [ ] Remove temporary artifacts (png/tmp/debug outputs)

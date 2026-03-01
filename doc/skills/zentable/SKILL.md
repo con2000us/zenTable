@@ -47,7 +47,7 @@ allowed-tools: ["exec", "read", "write"]
 |---|---|---|
 | CSS 輸出 | ✅ Stable | 發布主路徑；預設 `minimal_ios_mobile + width=450` |
 | PIL 輸出 | ✅ Stable | 無 Chrome 時可用；適合保守 fallback |
-| ASCII 輸出 | ⚠️ Beta | 可用但跨平台易受字型/空白規則影響；需 profile 校準 |
+| ASCII Output | ⚠️ Beta / Experimental | Usable, but cross-platform layout can drift due to font fallback and whitespace behavior; profile calibration is recommended. |
 
 ## 已知限制（發布版）
 
