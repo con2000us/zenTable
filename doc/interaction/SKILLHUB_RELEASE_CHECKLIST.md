@@ -30,10 +30,10 @@
 
 ## F. Repository hygiene
 - [ ] Remove temporary artifacts (png/tmp/debug outputs)
-- [ ] Verify `.gitignore` coverage
+- [x] Verify `.gitignore` coverage
 - [ ] Final `git status` clean for intended release files
 
 ## G. Final sign-off
-- [ ] End-to-end demo run recorded (input -> output image)
+- [x] End-to-end demo run recorded (input -> output image)
 - [ ] Checklist reviewed and approved
-- [ ] Tag/release note prepared
+- [x] Tag/release note prepared

@@ -17,6 +17,7 @@
 - [interaction/ASCII_CALIBRATION_REDESIGN_TODO.md](interaction/ASCII_CALIBRATION_REDESIGN_TODO.md) — ASCII 校準重設 TODO 與完成度 checklist
 - [interaction/SKILLHUB_RELEASE_CHECKLIST.md](interaction/SKILLHUB_RELEASE_CHECKLIST.md) — SkillHub 發布檢查清單（含英文文檔 gate）
 - [interaction/SKILLHUB_RELEASE_ASSETS_EN.md](interaction/SKILLHUB_RELEASE_ASSETS_EN.md) — SkillHub 英文發布文案素材（description/highlights/limitations/quickstart）
+- [interaction/SKILLHUB_RELEASE_NOTES_BETA.md](interaction/SKILLHUB_RELEASE_NOTES_BETA.md) — SkillHub beta 版 release notes 與阻塞事項
 
 - [../NAMING_MIGRATION.md](../NAMING_MIGRATION.md) — 命名統一策略（Phase 1: 相容優先）
 
