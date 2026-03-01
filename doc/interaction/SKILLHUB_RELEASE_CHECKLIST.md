@@ -5,16 +5,16 @@
 - [x] Mark ASCII as `beta/experimental` in all public docs
 
 ## B. Functional readiness
-- [ ] CSS rendering smoke test passes
-- [ ] PIL rendering smoke test passes
-- [ ] OCR API health check passes
-- [ ] CSS API health check passes
-- [ ] `--pin`, `--pin-reset`, `--both` paths verified
+- [x] CSS rendering smoke test passes
+- [x] PIL rendering smoke test passes
+- [x] OCR API health check passes
+- [x] CSS API health check passes
+- [x] `--pin`, `--pin-reset`, `--both` paths verified
 
 ## C. Docker/runtime readiness
-- [ ] `deploy/skill-fastapi/docker-compose.yml` boots both services
-- [ ] Ports and env vars documented and validated
-- [ ] Clean rollback path documented
+- [x] `deploy/skill-fastapi/docker-compose.yml` boots both services
+- [x] Ports and env vars documented and validated
+- [x] Clean rollback path documented
 
 ## D. Documentation gate (EN-only for SkillHub)
 - [ ] `skills/zentable/SKILL.md` is fully English

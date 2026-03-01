@@ -3,7 +3,7 @@
 此部署提供 skill 常用的兩個 FastAPI：
 
 1. `zentable-css-api`：HTML -> PNG（Headless Chrome）
-2. `zentable-ocr-api`：OCR（PaddleOCR）
+2. `zentable-ocr-api`：OCR（OpenVINO route, unified OCR API）
 
 ## 檔案
 
@@ -41,10 +41,19 @@ curl -X POST http://127.0.0.1:8002/render/html \
   --output /tmp/css_api_test.png
 ```
 
+## Rollback
+
+```bash
+cd /var/www/html/zenTable/deploy/skill-fastapi
+docker compose down
+# optional: remove local images
+# docker image rm skill-fastapi-zentable-css-api skill-fastapi-zentable-ocr-api
+```
+
 ## 依賴拆分（為何不用單一 requirements.txt）
 
 - `requirements-css-api.txt`：只給 CSS Render API
-- `requirements-ocr.txt`：只給 OCR API
+- `requirements-openvino.txt`：OCR OpenVINO API 依賴（由 `Dockerfile.openvino` 使用）
 
 好處：
 - 映像體積較小

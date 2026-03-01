@@ -27,7 +27,7 @@ RUN pip install --upgrade pip && \
       --retries=20
 
 # App code
-COPY api/ocr_openvino_service.py /app/api/ocr_openvino_service.py
+COPY api /app/api
 
 EXPOSE 8010
 
