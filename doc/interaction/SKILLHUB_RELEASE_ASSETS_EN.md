@@ -12,6 +12,7 @@ ZenTable is a production-oriented table rendering skill that converts structured
 
 ## Known limitations
 - ASCII output is **beta/experimental** and may drift across platforms due to font fallback and whitespace behavior.
+- In Discord plain text, repeated regular spaces are collapsed; Unicode spacing characters (e.g., NBSP/Thin/NNBSP/Em/En/Hair) can be used when preserving spacing is required.
 - OCR dependency stack is heavy and may take longer on first build.
 - Chrome-based rendering requires headless browser dependencies in runtime containers.
 
