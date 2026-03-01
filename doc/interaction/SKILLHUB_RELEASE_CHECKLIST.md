@@ -17,10 +17,10 @@
 - [x] Clean rollback path documented
 
 ## D. Documentation gate (EN-only for SkillHub)
-- [ ] `skills/zentable/SKILL.md` is fully English
-- [ ] `doc/skills/zentable/SKILL.md` mirror synced in English
+- [x] `skills/zentable/SKILL.md` is fully English
+- [x] `doc/skills/zentable/SKILL.md` mirror synced in English
 - [x] Public release summary/highlights/known issues are English
-- [ ] Remove mixed Chinese content from publish-facing docs (platform behavior notes can remain if mirrored in EN)
+- [x] Remove mixed Chinese content from publish-facing docs (platform behavior notes can remain if mirrored in EN)
 
 ## E. Publish assets
 - [x] One-paragraph SkillHub description (EN)
