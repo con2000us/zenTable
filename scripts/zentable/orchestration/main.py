@@ -327,32 +327,11 @@ def run_cli_main(zr):
     # 預設智慧換行：渲染前先在語意斷點插入換行，減少窄寬表格斷句破壞
     smart_wrap_stats = {"applied": False}
     
-    # 決定渲染方式（提前檢查，為 DOM 預檢使用）
+    # 決定渲染方式
     chrome_available = check_chrome_available()
     
-    # 如果是固定寬度且使用 CSS，先進行 DOM 預檢查以確定最佳寬度
+    # 初始化預檢寬度
     precheck_width = None
-    print(f"🔍 DOM 預檢條件: smart_wrap={smart_wrap}, width_set={width_set}, chrome={chrome_available}, auto_width={auto_width}", file=sys.stderr)
-    if smart_wrap and width_set and chrome_available and not auto_width:
-        print(f"🔍 進入 DOM 預檢", file=sys.stderr)
-        # 暫時套用 smart-wrap 進行測試
-        test_data, _ = apply_smart_wrap(data.copy(), width=force_width)
-        # 延遲匯入，避免循環依賴
-        from zentable.output.css import chrome as css_chrome
-        # 生成測試 HTML
-        test_html = _get_css_renderer()(test_data, theme, parse_width_px=lambda x: None, transparent=False)
-        # DOM 測量
-        dom_info = css_chrome.measure_dom_overflow(test_html, "/tmp", viewport_width=force_width, viewport_height=800)
-        print(f"🔍 DOM 測量結果: {dom_info}", file=sys.stderr)
-        if isinstance(dom_info, dict):
-            body = dom_info.get('body') or {}
-            scroll_w = int(body.get('scrollWidth') or 0)
-            print(f"🔍 scrollWidth={scroll_w}, force_width={force_width}, 溢出={scroll_w > (force_width + 20)}", file=sys.stderr)
-            if scroll_w > (force_width + 20):
-                # 需要更大的寬度
-                precheck_width = min(scroll_w + 60, auto_width_max or 2400)
-                print(f"🔍 預檢建議寬度: {precheck_width}px", file=sys.stderr)
-                print(f"🔍 DOM 預檢：指定寬度 {force_width}px 不足，建議使用 {precheck_width}px", file=sys.stderr)
     
     if smart_wrap:
         # 使用預檢後的寬度（如果有）
@@ -365,11 +344,6 @@ def run_cli_main(zr):
                 file=sys.stderr,
             )
     
-    # 更新 force_width 為預檢後的寬度
-    if precheck_width and precheck_width > force_width:
-        force_width = precheck_width
-        vw = precheck_width
-
     # 決定渲染方式
     if force_ascii:
         mode = "ASCII"
@@ -424,6 +398,33 @@ def run_cli_main(zr):
             try: auto_height = bool(defaults.get('auto_height'))
             except Exception: pass
 
+    # DOM 預檢：當指定寬度時，提前檢查是否需要更大寬度
+    if smart_wrap and width_set and chrome_available and not auto_width and mode.startswith("CSS"):
+        print(f"🔍 DOM 預檢：檢查寬度 {force_width}px 是否足夠", file=sys.stderr)
+        # 暫時套用 smart-wrap 進行測試
+        test_data, _ = apply_smart_wrap(data.copy(), width=force_width)
+        # 延遲匯入，避免循環依賴
+        from zentable.output.css import chrome as css_chrome
+        # 生成測試 HTML（使用當前 theme）
+        test_html = _get_css_renderer()(test_data, theme, parse_width_px=lambda x: None, transparent=False)
+        # DOM 測量
+        dom_info = css_chrome.measure_dom_overflow(test_html, "/tmp", viewport_width=force_width, viewport_height=800)
+        print(f"🔍 DOM 測量結果: {dom_info}", file=sys.stderr)
+        if isinstance(dom_info, dict):
+            body = dom_info.get('body') or {}
+            scroll_w = int(body.get('scrollWidth') or 0)
+            print(f"🔍 scrollWidth={scroll_w}, force_width={force_width}, 溢出={scroll_w > (force_width + 20)}", file=sys.stderr)
+            if scroll_w > (force_width + 5):  # 只需要 5px 邊距，更容易觸發
+                # 需要更大的寬度
+                precheck_width = min(scroll_w + 40, auto_width_max or 2400)
+                print(f"🔍 DOM 預檢：建議寬度 {precheck_width}px", file=sys.stderr)
+    
+    # 更新 force_width 為預檢後的寬度
+    if precheck_width and precheck_width > force_width:
+        force_width = precheck_width
+        vw = precheck_width
+        print(f"📏 更新寬度為 {force_width}px", file=sys.stderr)
+    
     # 規則：只要有設定 --width（或由 theme defaults 套入 width），就自動關閉 auto-width。
     # 避免最終輸出寬度被 auto-width 擴張，導致文字看起來變小。
     if width_set:
