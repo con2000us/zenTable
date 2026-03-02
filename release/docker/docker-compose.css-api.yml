@@ -2,7 +2,7 @@ services:
   zentable-css-api:
     build:
       context: ../..
-      dockerfile: deploy/skill-fastapi/Dockerfile.css-api
+      dockerfile: release/docker/Dockerfile.css-api
     container_name: zentable-css-api
     restart: unless-stopped
     ports:

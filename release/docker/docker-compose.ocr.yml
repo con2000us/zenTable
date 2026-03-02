@@ -2,7 +2,7 @@ services:
   zentable-ocr:
     build:
       context: ../..
-      dockerfile: deploy/ocr-fastapi/Dockerfile
+      dockerfile: release/docker/Dockerfile.ocr
     container_name: zentable-ocr
     restart: unless-stopped
     ports:
