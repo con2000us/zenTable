@@ -193,7 +193,7 @@ def _theme_to_args(theme: str, tmpdir: Path) -> list[str]:
     # CSS theme as folder: themes/css/<theme>/template.json
     theme_file = THEMES_CSS / theme / "template.json"
     if theme_file.exists():
-        return ["--force-css", "--theme", str(theme_file)]
+        return ["--force-css", "--theme", str(theme_file), "--auto-height"]
 
     # CSS theme distributed as zip under themes/css/*.zip
     zip_path = THEMES_CSS / f"{theme}.zip"
@@ -204,7 +204,7 @@ def _theme_to_args(theme: str, tmpdir: Path) -> list[str]:
         theme_file = extract_dir / "template.json"
         if not theme_file.exists():
             raise SystemExit(f"CSS theme template.json missing after unzip: {theme_file}")
-        return ["--force-css", "--theme", str(theme_file)]
+        return ["--force-css", "--theme", str(theme_file), "--auto-height"]
 
     if theme in PIL_THEMES:
         zip_path = THEMES_PIL_ZIP / f"{theme}.zip"
@@ -216,7 +216,7 @@ def _theme_to_args(theme: str, tmpdir: Path) -> list[str]:
         theme_file = extract_dir / "template.json"
         if not theme_file.exists():
             raise SystemExit(f"Theme template.json missing after unzip: {theme_file}")
-        return ["--force-pil", "--theme", str(theme_file)]
+        return ["--force-pil", "--theme", str(theme_file), "--auto-height"]
 
     # Back-compat aliases (accept 'default' => default_light)
     if theme in {"default", "light"}:
@@ -256,7 +256,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("input", help="JSON file path, or '-' for stdin")
     ap.add_argument("output", help="Output PNG path")
-    ap.add_argument("--theme", "-t", default=None)
+    ap.add_argument("--theme", "-t", default="minimal_ios_mobile")
     ap.add_argument("--transparent", action="store_true")
     ap.add_argument("--width", "-w", type=int, default=None)
     ap.add_argument("--text-scale", "--ts", default=None)
