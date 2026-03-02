@@ -597,7 +597,7 @@ def run_cli_main(zr):
         # Auto width: 使用 autowidth-wrapper 包裹，wrapper 設為 90%，內部 container 保持 100%
         auto_width_wrapper_pct = None
         if auto_width and not explicit_width and not table_width_pct:
-            auto_width_wrapper_pct = 90  # wrapper 寬度 90%，內部保持 100%
+            auto_width_wrapper_pct = 80  # wrapper 寬度 80%，內部保持 100%
         
         html = _get_css_renderer()(data, theme, parse_width_px=_parse_width_px, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt, auto_width_wrapper_pct=auto_width_wrapper_pct)
 

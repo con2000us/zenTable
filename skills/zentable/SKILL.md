@@ -38,7 +38,7 @@ Render structured table data into high-quality PNG images.
 
 | Capability | Status | Notes |
 |---|---|---|
-| CSS output | ✅ Stable | Primary release path; default `minimal_ios_mobile + width=450` |
+| CSS output | ✅ Stable | Primary release path; default `minimal_ios_mobile + width=650` |
 | PIL output | ✅ Stable | Safe fallback when Chrome is unavailable |
 | ASCII output | ⚠️ Beta / Experimental | Works, but alignment can drift cross-platform due to font and whitespace behavior |
 
@@ -55,7 +55,7 @@ Render structured table data into high-quality PNG images.
 When user input is `Zx`, treat it as a strong render intent:
 
 1. Execute rendering directly by default (no preliminary Q&A).
-2. Default path: CSS + `minimal_ios_mobile` + `width=450`.
+2. Default path: CSS + `minimal_ios_mobile` + `width=650`.
 3. Ask follow-up only under high uncertainty:
    - no usable source data in current/previous context,
    - intent does not look like table rendering,
@@ -91,7 +91,7 @@ Data source priority for `Zx`:
 
 Pinned default baseline:
 - `theme=minimal_ios_mobile`
-- `width=450`
+- `width=650`
 - `smart_wrap=true`
 - `per_page=15`
 

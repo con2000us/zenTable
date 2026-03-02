@@ -51,7 +51,7 @@ THEMES_PIL_ZIP = ZEN_ROOT / "themes" / "pil"
 THEMES_TEXT = ZEN_ROOT / "themes" / "text"
 DEFAULT_ROWS_PER_PAGE = 15
 DEFAULT_THEME = "minimal_ios_mobile"
-DEFAULT_WIDTH = 450
+DEFAULT_WIDTH = 650
 DEFAULTS_FILE = ZEN_ROOT / "skills" / "zentable" / "zx_defaults.json"
 BASE_DEFAULTS = {
     "theme": DEFAULT_THEME,
