@@ -92,6 +92,13 @@ def run_cli_main(zr):
     text_scale_set = False
     text_scale_max_set = False
 
+    # 延遲匯入 CSS renderer（避免循環依賴）
+    def _get_css_renderer():
+        if not hasattr(_get_css_renderer, '_cached'):
+            from zentable.output.css.renderer import generate_css_html
+            _get_css_renderer._cached = generate_css_html
+        return _get_css_renderer._cached
+
     debug_auto_width = False
     debug_auto_width_strip = 40
 
@@ -319,18 +326,51 @@ def run_cli_main(zr):
 
     # 預設智慧換行：渲染前先在語意斷點插入換行，減少窄寬表格斷句破壞
     smart_wrap_stats = {"applied": False}
+    
+    # 決定渲染方式（提前檢查，為 DOM 預檢使用）
+    chrome_available = check_chrome_available()
+    
+    # 如果是固定寬度且使用 CSS，先進行 DOM 預檢查以確定最佳寬度
+    precheck_width = None
+    print(f"🔍 DOM 預檢條件: smart_wrap={smart_wrap}, width_set={width_set}, chrome={chrome_available}, auto_width={auto_width}", file=sys.stderr)
+    if smart_wrap and width_set and chrome_available and not auto_width:
+        print(f"🔍 進入 DOM 預檢", file=sys.stderr)
+        # 暫時套用 smart-wrap 進行測試
+        test_data, _ = apply_smart_wrap(data.copy(), width=force_width)
+        # 延遲匯入，避免循環依賴
+        from zentable.output.css import chrome as css_chrome
+        # 生成測試 HTML
+        test_html = _get_css_renderer()(test_data, theme, parse_width_px=lambda x: None, transparent=False)
+        # DOM 測量
+        dom_info = css_chrome.measure_dom_overflow(test_html, "/tmp", viewport_width=force_width, viewport_height=800)
+        print(f"🔍 DOM 測量結果: {dom_info}", file=sys.stderr)
+        if isinstance(dom_info, dict):
+            body = dom_info.get('body') or {}
+            scroll_w = int(body.get('scrollWidth') or 0)
+            print(f"🔍 scrollWidth={scroll_w}, force_width={force_width}, 溢出={scroll_w > (force_width + 20)}", file=sys.stderr)
+            if scroll_w > (force_width + 20):
+                # 需要更大的寬度
+                precheck_width = min(scroll_w + 60, auto_width_max or 2400)
+                print(f"🔍 預檢建議寬度: {precheck_width}px", file=sys.stderr)
+                print(f"🔍 DOM 預檢：指定寬度 {force_width}px 不足，建議使用 {precheck_width}px", file=sys.stderr)
+    
     if smart_wrap:
-        data, smart_wrap_stats = apply_smart_wrap(data, width=force_width)
+        # 使用預檢後的寬度（如果有）
+        wrap_width = precheck_width if precheck_width else force_width
+        data, smart_wrap_stats = apply_smart_wrap(data, width=wrap_width)
         if smart_wrap_stats.get("applied"):
             print(
                 f"🧠 smart-wrap 已介入：changed_cells={smart_wrap_stats.get('changed_cells')}, "
                 f"per_col_limit≈{smart_wrap_stats.get('per_col_limit')}",
                 file=sys.stderr,
             )
+    
+    # 更新 force_width 為預檢後的寬度
+    if precheck_width and precheck_width > force_width:
+        force_width = precheck_width
+        vw = precheck_width
 
     # 決定渲染方式
-    chrome_available = check_chrome_available()
-
     if force_ascii:
         mode = "ASCII"
     elif force_pil:
@@ -553,11 +593,12 @@ def run_cli_main(zr):
                 use_scale_post = True
                 scale_no_shrink = True
                 vw, vh = vw, vh
-        # Auto width: 當啟動 auto width 時，設定 table 寬度為 80%，留出邊距
+        # Auto width: 使用 autowidth-wrapper 包裹，wrapper 設為 90%，內部 container 保持 100%
+        auto_width_wrapper_pct = None
         if auto_width and not explicit_width and not table_width_pct:
-            table_width_pct = 80
+            auto_width_wrapper_pct = 90  # wrapper 寬度 90%，內部保持 100%
         
-        html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt)
+        html = _get_css_renderer()(data, theme, parse_width_px=_parse_width_px, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt, auto_width_wrapper_pct=auto_width_wrapper_pct)
 
         # Explicit, user-controlled wrap gap (only when user passed --width).
         if width_set and force_width and wrap_gap:
@@ -772,13 +813,16 @@ def run_cli_main(zr):
                     crop_to_content_height(output_file, transparent=transparent_bg)
                 else:
                     crop_to_content_bounds(output_file, padding=2, transparent=transparent_bg)
+            print(f"🔍 主循環結束: width_set={width_set}, auto_width={auto_width}", file=sys.stderr)
         else:
+            print(f"🔍 進入 else 分支: width_set={width_set}", file=sys.stderr)
             success = render_css(html, output_file, transparent=transparent_bg, html_dir=cache_dir,
                                 viewport_width=vw, viewport_height=vh, bg_color=bg_color,
                                 skip_crop=width_set)
             
             # 方案 C：當指定寬度但內容溢出時，自動擴大到最小容納寬度
-            if success and width_set and not auto_width and chrome_available:
+            print(f"🔍 檢查溢出: width_set={width_set}, chrome={chrome_available}", file=sys.stderr)
+            if success and width_set and chrome_available:
                 # 使用 DOM 測量檢查溢出
                 from zentable.output.css import chrome as css_chrome
                 from zentable.output.css import crop as css_crop
@@ -794,15 +838,15 @@ def run_cli_main(zr):
                     )
                     
                     overflow_detected = False
+                    needed_width = cur_vw
                     if isinstance(dom_info, dict):
                         body = dom_info.get('body') or {}
                         table = dom_info.get('table') or {}
                         scroll_w = int(body.get('scrollWidth') or table.get('scrollWidth') or 0)
-                        client_w = int(body.get('clientWidth') or table.get('clientWidth') or cur_vw)
-                        
-                        if scroll_w > (client_w + 10):  # 有 10px 以上溢出
+                        # 關鍵：比較 scrollWidth 與 viewport 寬度，不是 clientWidth
+                        if scroll_w > (cur_vw + 10):  # 內容撐開超過 viewport
                             overflow_detected = True
-                            needed_width = scroll_w + 40  # 加邊距
+                            needed_width = scroll_w + 60  # 加邊距
                             
                     if not overflow_detected:
                         break
@@ -829,6 +873,11 @@ def run_cli_main(zr):
                 # 最後裁切到內容邊界
                 if success:
                     css_crop.crop_to_content_bounds(output_file, padding=2, transparent=transparent_bg)
+                
+                # 更新 force_width 為實際使用的寬度，避免後製縮放
+                if attempts > 0 and cur_vw > force_width:
+                    print(f"📏 更新輸出寬度為 {cur_vw}px（原指定 {force_width}px）", file=sys.stderr)
+                    force_width = cur_vw
 
         if success and use_scale_post and force_width:
             try:

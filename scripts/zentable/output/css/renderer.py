@@ -122,7 +122,7 @@ def build_css_rows_html(rows, theme=None, headers=None, highlight_rules=None, co
     return ''.join(rows_html)
 
 
-def generate_css_html(data: dict, theme: dict, parse_width_px, transparent: bool = False, table_width_pct: int = None, tt: bool = False) -> str:
+def generate_css_html(data: dict, theme: dict, parse_width_px, transparent: bool = False, table_width_pct: int = None, tt: bool = False, auto_width_wrapper_pct: int = None) -> str:
     headers = data.get('headers', [])
     rows = data.get('rows', [])
     title = data.get('title', '')
@@ -177,7 +177,12 @@ def generate_css_html(data: dict, theme: dict, parse_width_px, transparent: bool
         css += '\n' + hl_css
     css += '\nhtml, body { background: transparent !important; background-image: none !important; }'
 
-    if table_width_pct:
+    if auto_width_wrapper_pct:
+        # 使用 autowidth-wrapper：wrapper 設為指定百分比，內部 container 保持 100%
+        css += f'\n.autowidth-wrapper {{ width: {auto_width_wrapper_pct}%; margin: 0 auto; }}'
+        css += '\n.container { width: 100% !important; max-width: 100%; margin: 0; }'
+        css += '\ntable { width: 100% !important; table-layout: auto; }'
+    elif table_width_pct:
         css += f'\n.container {{ width: 95% !important; max-width: {table_width_pct}% !important; margin: 0 auto; box-sizing: border-box; }}'
         css += '\ntable { width: 100% !important; table-layout: auto; }'
     else:
