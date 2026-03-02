@@ -1,0 +1,11 @@
+{
+  "title": "KPI Dashboard",
+  "headers": ["Metric", "Value", "Status"],
+  "rows": [
+    ["Revenue", {"text": "+18.2%", "hl": "success"}, "Good"],
+    ["Churn", {"text": "6.3%", "hl": "warning"}, "Watch"],
+    ["Errors", {"text": "27", "hl": "danger"}, "Alert"],
+    {"row_hl": "info", "cells": ["Note", "Model refreshed", "FYI"]}
+  ],
+  "footer": "Updated 5 min ago"
+}

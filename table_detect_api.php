@@ -17,6 +17,17 @@ $pythonCmd = (file_exists($venvPython)) ? $venvPython : 'python3';
 $input = file_get_contents('php://input');
 $body = json_decode($input, true);
 $message = $body['message'] ?? $_POST['message'] ?? '';
+$previousMessage = $body['previous_message'] ?? $_POST['previous_message'] ?? '';
+$hasImage = $body['has_image'] ?? $_POST['has_image'] ?? false;
+$previousHasImage = $body['previous_has_image'] ?? $_POST['previous_has_image'] ?? false;
+
+// Fallback: infer image existence from array payloads.
+if (!$hasImage && isset($body['images']) && is_array($body['images'])) {
+    $hasImage = count($body['images']) > 0;
+}
+if (!$previousHasImage && isset($body['previous_images']) && is_array($body['previous_images'])) {
+    $previousHasImage = count($body['previous_images']) > 0;
+}
 
 if ($message === '' && isset($_POST['message'])) {
     $message = $_POST['message'];
@@ -35,7 +46,14 @@ if (!file_exists($script)) {
     exit;
 }
 
-$escaped = escapeshellarg($message);
+$payload = [
+    'message' => $message,
+    'previous_message' => $previousMessage,
+    'has_image' => filter_var($hasImage, FILTER_VALIDATE_BOOLEAN),
+    'previous_has_image' => filter_var($previousHasImage, FILTER_VALIDATE_BOOLEAN),
+];
+$payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+$escaped = escapeshellarg($payloadJson ?: json_encode(['message' => $message]));
 $cmd = escapeshellarg($pythonCmd) . " " . escapeshellarg($script) . " " . $escaped . " 2>/dev/null";
 $output = @shell_exec($cmd);
 
@@ -63,5 +81,9 @@ echo json_encode([
     'success' => true,
     'needs_table' => $result['needs_table'] ?? false,
     'reason' => $result['reason'] ?? '',
-    'confidence' => $result['confidence'] ?? 0
+    'confidence' => $result['confidence'] ?? 0,
+    'zx_mode' => $result['zx_mode'] ?? false,
+    'source_priority' => $result['source_priority'] ?? [],
+    'selected_source' => $result['selected_source'] ?? '',
+    'action' => $result['action'] ?? ''
 ]);

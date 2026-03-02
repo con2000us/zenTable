@@ -14,7 +14,7 @@
     "body": "margin: 0; padding: 2px 2px; background-color: #f2f2f7; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;",
     ".container": "max-width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden;",
     ".title": "color: #000000; padding: 2px 2px; font-size: 20px; font-weight: 700; text-align: center; letter-spacing: -0.5px; border-bottom: 0.5px solid #e5e5ea;",
-    "table": "width: 100%; border-collapse: separate; border-spacing: 0; background-color: #ffffff;",
+    "table": "width: 80%; border-collapse: separate; border-spacing: 0; background-color: #ffffff; margin: 0 auto;",
     "thead": "background-color: #ffffff;",
     "th": "padding: 5px 2px; text-align: left; font-size: 13px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 0.5px solid #e5e5ea;",
     "tbody": "background-color: #ffffff;",

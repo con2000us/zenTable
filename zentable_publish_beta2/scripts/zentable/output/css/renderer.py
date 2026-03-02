@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+"""CSS HTML generation helpers."""
+
+from __future__ import annotations
+
+import html as html_module
+import re
+
+from ...transform.cell import normalize_cell, _row_cells
+from ...transform.highlight import resolve_cell_highlight, _highlight_styles_to_css
+
+
+class TemplateEngine:
+    def _eval_value(self, expr, context):
+        expr = expr.strip()
+        if expr in context:
+            return context[expr]
+        parts = expr.split('.')
+        v = context.get(parts[0])
+        for p in parts[1:]:
+            if isinstance(v, dict):
+                v = v.get(p)
+            else:
+                return ''
+        return v
+
+
+def _strip_alpha_from_css(css_text: str) -> str:
+    """Best-effort: strip alpha from colors, but keep shadow alpha."""
+    if not isinstance(css_text, str) or not css_text:
+        return css_text
+
+    def strip_alpha_colors(text: str) -> str:
+        text = re.sub(
+            r'rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)',
+            r'rgb(\1,\2,\3)',
+            text,
+            flags=re.I,
+        )
+        text = re.sub(r'hsla\(([^,]+),([^,]+),([^,]+),([^\)]+)\)', r'hsl(\1,\2,\3)', text, flags=re.I)
+        text = re.sub(r'#([0-9a-fA-F]{6})([0-9a-fA-F]{2})\b', r'#\1', text)
+        return text
+
+    raw_parts = css_text.split(';')
+    out_parts = []
+    has_decl = False
+    for part in raw_parts:
+        decl = part.strip()
+        if not decl:
+            continue
+        if ':' not in decl:
+            out_parts.append(strip_alpha_colors(decl))
+            continue
+        has_decl = True
+        prop, val = decl.split(':', 1)
+        prop_name = prop.strip().lower()
+        val_text = val.strip()
+        keep_alpha = (
+            prop_name in {'box-shadow', 'text-shadow'}
+            or (prop_name == 'filter' and 'drop-shadow(' in val_text.lower())
+        )
+        out_val = val_text if keep_alpha else strip_alpha_colors(val_text)
+        out_parts.append(f"{prop.strip()}: {out_val}")
+
+    if not out_parts:
+        return css_text
+    out = '; '.join(out_parts)
+    if has_decl or css_text.rstrip().endswith(';'):
+        out += ';'
+    return out
+
+
+def build_css_rows_html(rows, theme=None, headers=None, highlight_rules=None, col_hl=None) -> str:
+    rows_list = rows if isinstance(rows, list) else []
+    use_hl = bool(theme and isinstance(theme.get('highlight_styles'), dict))
+    rules = highlight_rules if isinstance(highlight_rules, list) else []
+    col_hl_map = col_hl if isinstance(col_hl, dict) else None
+    header_list = headers if isinstance(headers, list) else []
+    rows_html = []
+    active_rowspans = []
+
+    for idx, row in enumerate(rows_list):
+        row_class = 'row tr_even' if idx % 2 == 0 else 'row tr_odd'
+        row_hl = row.get('row_hl') if isinstance(row, dict) and 'cells' in row else None
+        raw_cells = _row_cells(row)
+        row_cells = []
+        col_cursor = 0
+        col_idx = 0
+        for raw_cell in raw_cells:
+            while col_cursor < len(active_rowspans) and active_rowspans[col_cursor] > 0:
+                col_cursor += 1
+            cell = normalize_cell(raw_cell)
+            attrs = []
+            if cell['colspan'] > 1:
+                attrs.append(f'colspan="{cell["colspan"]}"')
+            if cell['rowspan'] > 1:
+                attrs.append(f'rowspan="{cell["rowspan"]}"')
+            if use_hl:
+                col_name = header_list[col_idx] if col_idx < len(header_list) else None
+                hl_token = resolve_cell_highlight(
+                    cell, row_hl, theme,
+                    col_name=col_name,
+                    highlight_rules=rules,
+                    col_hl=col_hl_map,
+                )
+                attrs.append(f'class="hl hl-{hl_token}"')
+            col_idx += 1
+            attr_str = f" {' '.join(attrs)}" if attrs else ""
+            text_escaped = html_module.escape(cell['text'])
+            row_cells.append(f'<td{attr_str}>{text_escaped}</td>')
+            if cell['rowspan'] > 1:
+                for i in range(cell['colspan']):
+                    target_idx = col_cursor + i
+                    while target_idx >= len(active_rowspans):
+                        active_rowspans.append(0)
+                    active_rowspans[target_idx] = max(active_rowspans[target_idx], cell['rowspan'] - 1)
+            col_cursor += cell['colspan']
+        for i in range(len(active_rowspans)):
+            if active_rowspans[i] > 0:
+                active_rowspans[i] -= 1
+        rows_html.append(f'<tr class="{row_class}">{"".join(row_cells)}</tr>\n')
+    return ''.join(rows_html)
+
+
+def generate_css_html(data: dict, theme: dict, parse_width_px, transparent: bool = False, table_width_pct: int = None, tt: bool = False) -> str:
+    headers = data.get('headers', [])
+    rows = data.get('rows', [])
+    title = data.get('title', '')
+    footer = data.get('footer', 'Generated by ZenTable')
+
+    rows_html = build_css_rows_html(
+        rows, theme,
+        headers=headers,
+        highlight_rules=data.get('highlight_rules'),
+        col_hl=data.get('col_hl'),
+    )
+    headers_html = ''.join(f'<th>{h}</th>' for h in headers)
+    styles = theme.get('styles', {})
+
+    if not tt and isinstance(styles, dict):
+        styles = {k: _strip_alpha_from_css(v) if isinstance(v, str) else v for k, v in styles.items()}
+
+    tt_css = ''
+    if tt:
+        tt_css += '\n.container, table { background: transparent !important; background-image: none !important; }'
+
+    TAG_SELECTORS = {'body', 'table', 'thead', 'tbody', 'tr', 'th', 'td'}
+
+    def css_selector(key):
+        if key in ('.header', 'header'):
+            return '.title'
+        if key in ('.cell-header', 'cell-header'):
+            return 'th'
+        if key in ('.cell', 'cell'):
+            return 'td'
+        if key.startswith('.'):
+            return key
+        if key in TAG_SELECTORS:
+            return key
+        if key == 'tbody_tr':
+            return 'tbody tr'
+        if key == 'tr_even':
+            return 'tr.tr_even'
+        if key == 'tr_odd':
+            return 'tr.tr_odd'
+        if ':' in key or ' ' in key or '>' in key or '+' in key or '~' in key or '[' in key:
+            return key
+        if key.startswith('col_') and key[4:].isdigit():
+            n = key[4:]
+            return f'th:nth-child({n}), td:nth-child({n})'
+        return '.' + key
+
+    css = '\n'.join(f'{css_selector(k)} {{{v}}}' for k, v in styles.items())
+    css += tt_css
+    hl_css = _highlight_styles_to_css(theme)
+    if hl_css:
+        css += '\n' + hl_css
+    css += '\nhtml, body { background: transparent !important; background-image: none !important; }'
+
+    if table_width_pct:
+        css += f'\n.container {{ width: 95% !important; max-width: {table_width_pct}% !important; margin: 0 auto; box-sizing: border-box; }}'
+        css += '\ntable { width: 100% !important; table-layout: auto; }'
+    else:
+        _container_style = styles.get('container', '') or styles.get('.container', '')
+        if parse_width_px(_container_style) is None:
+            css += '\n.container { width: fit-content !important; max-width: 100%; }'
+
+    has_table_wrapper = bool(styles.get('.table-wrapper') or styles.get('table-wrapper'))
+    table_html = f"""<table class=\"data-table\">\n{ f'<thead><tr>{headers_html}</tr></thead>' if headers else '' }\n<tbody>\n{rows_html}\n</tbody>\n</table>"""
+    if has_table_wrapper:
+        table_html = f"<div class=\"table-wrapper\">\n{table_html}\n</div>"
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=\"UTF-8\">
+    <style>
+        {css}
+    </style>
+</head>
+<body>
+<div class=\"container\">
+{ f'<div class=\"title\">{title}</div>' if title else '' }
+{table_html}
+{ f'<div class=\"footer\">{footer}</div>' if footer else '' }
+</div>
+</body>
+</html>"""
+    return html

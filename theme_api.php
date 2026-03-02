@@ -82,13 +82,16 @@ function listThemes($themesDir, $mode) {
         $path = $modeDir . $entry;
         $id = null;
         $data = null;
+        $sourceType = null;
         if (preg_match('/\.zip$/i', $entry)) {
             $id = preg_replace('/\.zip$/i', '', $entry);
             $data = readTemplateFromZip($path, $mode, $id);
+            $sourceType = 'zip';
         } elseif (is_dir($path) && file_exists($path . '/template.json')) {
             $id = $entry;
             $content = file_get_contents($path . '/template.json');
             $data = json_decode($content, true);
+            $sourceType = 'json';
         }
         if ($id && $data && isset($data['name']) && !isset($seen[$id])) {
             $seen[$id] = true;
@@ -99,6 +102,7 @@ function listThemes($themesDir, $mode) {
                 'version' => $data['version'] ?? '1.0.0',
                 'tags' => $data['tags'] ?? [],
                 'theme_color' => getThemeColor($data),
+                'source_type' => $sourceType ?: 'unknown',
             ];
         }
     }

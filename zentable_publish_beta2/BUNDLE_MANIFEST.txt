@@ -1,0 +1,9 @@
+This package intentionally includes runnable code to match SKILL.md claims.
+Key executables:
+- skills/zentable/table_renderer.py
+- scripts/zentable_render.py
+
+Included support:
+- scripts/zentable/*
+- themes/*
+- optional API/deploy assets

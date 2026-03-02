@@ -553,10 +553,6 @@ def run_cli_main(zr):
                 use_scale_post = True
                 scale_no_shrink = True
                 vw, vh = vw, vh
-        # Auto width: 當啟動 auto width 時，設定 table 寬度為 90%，留出邊距
-        if auto_width and not explicit_width and not table_width_pct:
-            table_width_pct = 90
-        
         html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt)
 
         # Explicit, user-controlled wrap gap (only when user passed --width).
