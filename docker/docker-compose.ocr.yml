@@ -1,0 +1,32 @@
+services:
+  zentable-ocr:
+    build:
+      context: ../..
+      dockerfile: deploy/ocr-fastapi/Dockerfile
+    container_name: zentable-ocr
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      OCR_LANG: ${OCR_LANG:-ch}
+      USE_ANGLE_CLS: ${USE_ANGLE_CLS:-true}
+      OCR_HOST: 0.0.0.0
+      OCR_PORT: 8000
+      # Workaround: avoid Paddle oneDNN/PIR runtime crash on some hosts
+      FLAGS_enable_pir_api: "0"
+      FLAGS_enable_new_executor: "0"
+      FLAGS_use_mkldnn: "0"
+      FLAGS_use_onednn: "0"
+      FLAGS_enable_onednn: "0"
+    # iGPU 測試時可保留；若主機沒有 /dev/dri 可先註解
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "44"   # video (常見)
+      - "109"  # render (常見)
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
