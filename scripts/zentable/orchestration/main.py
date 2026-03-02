@@ -553,9 +553,9 @@ def run_cli_main(zr):
                 use_scale_post = True
                 scale_no_shrink = True
                 vw, vh = vw, vh
-        # Auto width: 當啟動 auto width 時，設定 table 寬度為 90%，留出邊距
+        # Auto width: 當啟動 auto width 時，設定 table 寬度為 80%，留出邊距
         if auto_width and not explicit_width and not table_width_pct:
-            table_width_pct = 90
+            table_width_pct = 80
         
         html = generate_css_html(data, theme, transparent=transparent_bg, table_width_pct=table_width_pct, tt=tt)
 
@@ -776,6 +776,59 @@ def run_cli_main(zr):
             success = render_css(html, output_file, transparent=transparent_bg, html_dir=cache_dir,
                                 viewport_width=vw, viewport_height=vh, bg_color=bg_color,
                                 skip_crop=width_set)
+            
+            # 方案 C：當指定寬度但內容溢出時，自動擴大到最小容納寬度
+            if success and width_set and not auto_width and chrome_available:
+                # 使用 DOM 測量檢查溢出
+                from zentable.output.css import chrome as css_chrome
+                from zentable.output.css import crop as css_crop
+                max_hard = min(int(auto_width_max), 2400)
+                attempts = 0
+                cur_vw = int(vw)
+                
+                while attempts < 3:
+                    # 測量 DOM 溢出
+                    dom_info = css_chrome.measure_dom_overflow(
+                        html, cache_dir or "/tmp", 
+                        viewport_width=cur_vw, viewport_height=vh
+                    )
+                    
+                    overflow_detected = False
+                    if isinstance(dom_info, dict):
+                        body = dom_info.get('body') or {}
+                        table = dom_info.get('table') or {}
+                        scroll_w = int(body.get('scrollWidth') or table.get('scrollWidth') or 0)
+                        client_w = int(body.get('clientWidth') or table.get('clientWidth') or cur_vw)
+                        
+                        if scroll_w > (client_w + 10):  # 有 10px 以上溢出
+                            overflow_detected = True
+                            needed_width = scroll_w + 40  # 加邊距
+                            
+                    if not overflow_detected:
+                        break
+                    
+                    # 計算新寬度
+                    next_vw = max(cur_vw + 200, int(cur_vw * 1.15), needed_width)
+                    next_vw = min(next_vw, max_hard)
+                    
+                    if next_vw <= cur_vw:
+                        break
+                    
+                    print(f"⚠️ 指定寬度 {cur_vw}px 導致內容溢出 (需要 {scroll_w}px)，自動擴大到 {next_vw}px", file=sys.stderr)
+                    cur_vw = next_vw
+                    attempts += 1
+                    
+                    # 用新寬度重新渲染
+                    success = render_css(html, output_file, transparent=transparent_bg, html_dir=cache_dir,
+                                        viewport_width=cur_vw, viewport_height=vh, bg_color=bg_color,
+                                        skip_crop=False)
+                    
+                    if not success:
+                        break
+                
+                # 最後裁切到內容邊界
+                if success:
+                    css_crop.crop_to_content_bounds(output_file, padding=2, transparent=transparent_bg)
 
         if success and use_scale_post and force_width:
             try:
