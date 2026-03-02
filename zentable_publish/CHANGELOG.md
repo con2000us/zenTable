@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.0-beta.5
+## 0.9.1
 - Fixed table width issues: theme now uses 100%, auto-width uses 90% wrapper
 - Added DOM precheck: auto-expands width when content overflows
 - Fixed content cutoff issues on narrow viewports
